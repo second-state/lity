@@ -1048,6 +1048,21 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 		case FunctionType::Kind::GasLeft:
 			m_context << Instruction::GAS;
 			break;
+		case FunctionType::Kind::ENI:
+		{
+			TypePointers argumentTypes;
+			for (auto const& arg: arguments)
+			{
+				arg->accept(*this);
+				argumentTypes.push_back(arg->annotation().type);
+			}
+			utils().fetchFreeMemoryPointer();
+			solAssert(!function.padArguments(), "");
+			utils().packedEncode(argumentTypes, TypePointers());
+			utils().toSizeAfterFreeMemoryPointer();
+			m_context << Instruction::ENI;
+			break;
+		}
 		default:
 			solAssert(false, "Invalid function type.");
 		}
