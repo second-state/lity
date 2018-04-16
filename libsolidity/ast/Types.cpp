@@ -2517,6 +2517,7 @@ string FunctionType::richIdentifier() const
 	case Kind::ABIEncodePacked: id += "abiencodepacked"; break;
 	case Kind::ABIEncodeWithSelector: id += "abiencodewithselector"; break;
 	case Kind::ABIEncodeWithSignature: id += "abiencodewithsignature"; break;
+	case Kind::ENI: id += "eni"; break;
 	default: solAssert(false, "Unknown function location."); break;
 	}
 	id += "_" + stateMutabilityToString(m_stateMutability);
@@ -2883,7 +2884,8 @@ bool FunctionType::isPure() const
 		m_kind == Kind::ABIEncode ||
 		m_kind == Kind::ABIEncodePacked ||
 		m_kind == Kind::ABIEncodeWithSelector ||
-		m_kind == Kind::ABIEncodeWithSignature;
+		m_kind == Kind::ABIEncodeWithSignature ||
+		m_kind == Kind::ENI;
 }
 
 TypePointers FunctionType::parseElementaryTypeVector(strings const& _types)

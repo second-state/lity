@@ -922,7 +922,8 @@ public:
 		ABIEncodePacked,
 		ABIEncodeWithSelector,
 		ABIEncodeWithSignature,
-		GasLeft ///< gasleft()
+		GasLeft, ///< gasleft()
+		ENI
 	};
 
 	virtual Category category() const override { return Category::Function; }
@@ -1057,7 +1058,7 @@ public:
 	ASTPointer<ASTString> documentation() const;
 
 	/// true iff arguments are to be padded to multiples of 32 bytes for external calls
-	bool padArguments() const { return !(m_kind == Kind::SHA3 || m_kind == Kind::SHA256 || m_kind == Kind::RIPEMD160 || m_kind == Kind::ABIEncodePacked); }
+	bool padArguments() const { return !(m_kind == Kind::SHA3 || m_kind == Kind::SHA256 || m_kind == Kind::RIPEMD160 || m_kind == Kind::ABIEncodePacked || m_kind == Kind::ENI); }
 	bool takesArbitraryParameters() const { return m_arbitraryParameters; }
 	/// true iff the function takes a single bytes parameter and it is passed on without padding.
 	/// @todo until 0.5.0, this is just a "recommendation".
