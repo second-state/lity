@@ -104,6 +104,9 @@ GasMeter::GasConsumption GasMeter::estimateMax(AssemblyItem const& _item, bool _
 			gas += wordGas(GasCosts::keccak256WordGas, m_state->relativeStackElement(-1));
 			gas += memoryGas(0, -1);
 			break;
+		case Instruction::ENI:
+			//TODO: how many gas does ENI need?
+			break;
 		case Instruction::CALLDATACOPY:
 		case Instruction::CODECOPY:
 		case Instruction::RETURNDATACOPY:
