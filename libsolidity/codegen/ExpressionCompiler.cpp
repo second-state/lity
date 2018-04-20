@@ -1673,12 +1673,18 @@ void ExpressionCompiler::appendArithmeticOperatorCode(Token::Value _operator, Ty
 	if (_type.category() == Type::Category::FixedPoint)
 		solUnimplemented("Not yet implemented - FixedPointType.");
 
-	IntegerType const& type = dynamic_cast<IntegerType const&>(_type);
-	bool const c_isSigned = type.isSigned();
-	bool const c_isSafeUint = type.isSafeUint();
+	auto const* intType = dynamic_cast<IntegerType const*>(&_type);
+	auto const* fixedType = dynamic_cast<FixedPointType const*>(&_type);
+
+	solAssert(intType || fixedType, "Expected either integer or fixed point type.");
+
+	bool const c_isSigned = intType ? intType->isSigned() : fixedType->isSigned();
+	bool const c_isSafeUint = intType ? intType->isSafeUint() : false;
 
 	if (c_isSafeUint)
 		appendSafeArithmeticCheckCode(_operator, _type);
+
+	u256 fixedFactor = fixedType ? pow(u256(10), fixedType->fractionalDigits()) : u256(1);
 
 	switch (_operator)
 	{
@@ -1690,6 +1696,13 @@ void ExpressionCompiler::appendArithmeticOperatorCode(Token::Value _operator, Ty
 		break;
 	case Token::Mul:
 		m_context << (c_isSigned ? Instruction::SMUL : Instruction::MUL);
+		if (fixedType)
+		{
+			solUnimplementedAssert(fixedFactor < (u256(1) << (fixedType->numBits() / 2)), "Not yet implemented - large FixedPointType multiplication");
+			m_context << fixedFactor
+					  << Instruction::SWAP1
+					  << (c_isSigned ? Instruction::SDIV : Instruction::DIV);
+		}
 		break;
 	case Token::Div:
 	case Token::Mod:
@@ -1699,13 +1712,27 @@ void ExpressionCompiler::appendArithmeticOperatorCode(Token::Value _operator, Ty
 		m_context.appendConditionalInvalid();
 
 		if (_operator == Token::Div)
+		{
+			if (fixedType)
+			{
+				solUnimplementedAssert(fixedFactor < (u256(1) << (fixedType->numBits() / 2)), "Not yet implemented - large FixedPointType division");
+				// Division would cancel out factor, this gives the numerator an extra factor so it remains in result
+				m_context << fixedFactor
+						  << Instruction::MUL;
+			}
 			m_context << (c_isSigned ? Instruction::SDIV : Instruction::DIV);
+		}
 		else
 			m_context << (c_isSigned ? Instruction::SMOD : Instruction::MOD);
 		break;
 	}
 	case Token::Exp:
-		m_context << Instruction::EXP;
+		if (intType)
+			m_context << Instruction::EXP;
+		else
+		{
+			solUnimplemented("Not yet implemented - FixedPointType exponentiation");
+		}
 		break;
 	default:
 		solAssert(false, "Unknown arithmetic operator.");
