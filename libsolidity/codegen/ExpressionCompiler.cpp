@@ -2212,7 +2212,9 @@ bool ExpressionCompiler::cleanupNeededForOp(Type::Category _type, Token::Value _
 {
 	if (Token::isCompareOp(_op) || Token::isShiftOp(_op))
 		return true;
-	else if (_type == Type::Category::Integer && (_op == Token::Div || _op == Token::Mod))
+	else if (_op == Token::Div || _op == Token::Mod)
+		return true;
+	else if (_type == Type::Category::FixedPoint && (_op == Token::Div || _op == Token::Mul || _op == Token::Mod))
 		return true;
 	else
 		return false;
