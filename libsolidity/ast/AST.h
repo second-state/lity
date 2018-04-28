@@ -1503,6 +1503,18 @@ private:
 	std::vector<ASTPointer<ASTString>> m_names;
 };
 
+class EniCall: public FunctionCall
+{
+public:
+	EniCall(
+		SourceLocation const& _location,
+		ASTPointer<Expression> const& _expression,
+		std::vector<ASTPointer<Expression>> const& _arguments,
+		std::vector<ASTPointer<ASTString>> const& _names
+	):
+		FunctionCall(_location, _expression, _arguments, _names) {}
+};
+
 /**
  * Expression that creates a new contract or memory-array,
  * e.g. the "new SomeContract" part in "new SomeContract(1, 2)".
