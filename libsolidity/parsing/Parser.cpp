@@ -1365,6 +1365,7 @@ ASTPointer<Expression> Parser::parseLeftHandSideExpression(
 	ASTPointer<Expression> const& _partiallyParsedExpression
 )
 {
+	bool isEniEntry = false;
 	RecursionGuard recursionGuard(*this);
 	ASTNodeFactory nodeFactory = _partiallyParsedExpression ?
 		ASTNodeFactory(*this, _partiallyParsedExpression) : ASTNodeFactory(*this);
@@ -1381,6 +1382,11 @@ ASTPointer<Expression> Parser::parseLeftHandSideExpression(
 		else
 			nodeFactory.markEndPosition();
 		expression = nodeFactory.createNode<NewExpression>(typeName);
+	}
+	else if(m_scanner->currentLiteral() == "eni" )
+	{
+		expression = parsePrimaryExpression();
+		isEniEntry = true;
 	}
 	else
 		expression = parsePrimaryExpression();
@@ -1415,7 +1421,11 @@ ASTPointer<Expression> Parser::parseLeftHandSideExpression(
 			std::tie(arguments, names) = parseFunctionCallArguments();
 			nodeFactory.markEndPosition();
 			expectToken(Token::RParen);
-			expression = nodeFactory.createNode<FunctionCall>(expression, arguments, names);
+
+			if( isEniEntry )
+				expression = nodeFactory.createNode<EniCall>(expression, arguments, names);
+			else
+				expression = nodeFactory.createNode<FunctionCall>(expression, arguments, names);
 			break;
 		}
 		default:
