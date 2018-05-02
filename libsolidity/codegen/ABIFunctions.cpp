@@ -316,7 +316,7 @@ string ABIFunctions::conversionFunction(Type const& _from, Type const& _to)
 				{
 					body =
 						Whiskers("converted := <toFixed>(<cleanInt>(value))")
-						("toFixed", scaleFixedFunction(0, toFixedPointType.fractionalDigits(), dynamic_cast<IntegerType const &>(_from).isSigned()))
+						("toFixed", scaleFixedFunction(0, toFixedPointType.fractionalDigits(), dynamic_cast<IntegerType const&>(_from).isSigned()))
 						("cleanInt", cleanupFunction(_from, false))
 						.render();
 				}
@@ -329,8 +329,7 @@ string ABIFunctions::conversionFunction(Type const& _from, Type const& _to)
 					const int toFractionalDigits = toFixedPointType.fractionalDigits();
 					body =
 						Whiskers("converted := <scale>(value)")
-						("scale",
-						 scaleFixedFunction(fromFractionalDigits, toFractionalDigits, fromRationalType.isNegative()))
+						("scale", scaleFixedFunction(fromFractionalDigits, toFractionalDigits, fromRationalType.isNegative()))
 						.render();
 				}
 				else
