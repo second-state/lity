@@ -12273,8 +12273,7 @@ BOOST_AUTO_TEST_CASE(fixed_retrieval)
 		}
 	)";
 	compileAndRun(sourceCode, 0, "test");
-	bytes const &result = callContractFunction("f()");
-	ABI_CHECK(result, encodeArgs(createFixed(-314, 100, 18)));
+	ABI_CHECK(callContractFunction("f()"), encodeArgs(createFixed(-314, 100, 18)));
 }
 
 BOOST_AUTO_TEST_CASE(ufixed_echo)
@@ -12499,39 +12498,6 @@ BOOST_AUTO_TEST_CASE(fixed_modulo)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(createFixed(7, 10, 18)));
 }
 
-/*
-BOOST_AUTO_TEST_CASE(ufixed_exponentiation)
-{
-	char const* sourceCode = R"(
-		contract test {
-			ufixed a = 3.5;
-			ufixed b = 3;
-
-			function f() returns (ufixed) {
-				return a ** b;
-			}
-		}
-    )";
-	compileAndRun(sourceCode, 0, "test");
-	ABI_CHECK(callContractFunction("f()"), encodeArgs(createFixed(42875, 1000, 18)));
-}
-
-BOOST_AUTO_TEST_CASE(fixed_exponentiation)
-{
-	char const* sourceCode = R"(
-    contract test {
-		fixed a = -3.5;
-		fixed b = 3;
-
-        function f() returns (fixed) {
-            return a ** b;
-        }
-    }
-    )";
-	compileAndRun(sourceCode, 0, "test");
-	ABI_CHECK(callContractFunction("f()"), encodeArgs(createFixed(-42875, 1000, 18)));
-}*/
-
 BOOST_AUTO_TEST_CASE(ufixed_comparison)
 {
 	char const* sourceCode = R"(
@@ -12542,10 +12508,15 @@ BOOST_AUTO_TEST_CASE(ufixed_comparison)
 			function f() returns (bool) {
 				return a > b;
 			}
+
+			function g() returns (bool) {
+				return a < b;
+			}
 		}
 	)";
 	compileAndRun(sourceCode, 0, "test");
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(true));
+	ABI_CHECK(callContractFunction("g()"), encodeArgs(false));
 }
 
 BOOST_AUTO_TEST_CASE(fixed_comparison)
@@ -12558,10 +12529,73 @@ BOOST_AUTO_TEST_CASE(fixed_comparison)
 			function f() returns (bool) {
 				return a > b;
 			}
+
+			function g() returns (bool) {
+				return a < b;
+			}
 		}
 	)";
 	compileAndRun(sourceCode, 0, "test");
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(false));
+	ABI_CHECK(callContractFunction("g()"), encodeArgs(true));
+}
+
+BOOST_AUTO_TEST_CASE(ufixed_comparison_eq)
+{
+	char const* sourceCode = R"(
+		contract test {
+			ufixed a = 1.25;
+			ufixed b = 1.25;
+			ufixed c = 3.5;
+
+			function f() returns (bool) {
+				return a >= b && b >= a;
+			}
+			function g() returns (bool) {
+				return !(a>=c) && (c>=a);
+			}
+			function h() returns (bool) {
+				return a <= b && b <= a;
+			}
+			function i() returns (bool) {
+				return (a<=c) && !(c<=a);
+			}
+		}
+	)";
+	compileAndRun(sourceCode, 0, "test");
+	ABI_CHECK(callContractFunction("f()"), encodeArgs(true));
+	ABI_CHECK(callContractFunction("g()"), encodeArgs(true));
+	ABI_CHECK(callContractFunction("h()"), encodeArgs(true));
+	ABI_CHECK(callContractFunction("i()"), encodeArgs(true));
+}
+
+BOOST_AUTO_TEST_CASE(fixed_comparison_eq)
+{
+	char const* sourceCode = R"(
+		contract test {
+			fixed a = -1.25;
+			fixed b = -1.25;
+			fixed c = -3.5;
+
+			function f() returns (bool) {
+				return a >= b && b >= a;
+			}
+			function g() returns (bool) {
+				return (a>=c) && !(c>=a);
+			}
+			function h() returns (bool) {
+				return a <= b && b <= a;
+			}
+			function i() returns (bool) {
+				return !(a<=c) && (c<=a);
+			}
+		}
+	)";
+	compileAndRun(sourceCode, 0, "test");
+	ABI_CHECK(callContractFunction("f()"), encodeArgs(true));
+	ABI_CHECK(callContractFunction("g()"), encodeArgs(true));
+	ABI_CHECK(callContractFunction("h()"), encodeArgs(true));
+	ABI_CHECK(callContractFunction("i()"), encodeArgs(true));
 }
 
 BOOST_AUTO_TEST_CASE(ufixed_lengthening_conversion)
