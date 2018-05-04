@@ -29,9 +29,13 @@ Language Features:
 
 ### 0.5.0 (unreleased)
 
+Features:
 
+
+Bugfixes:
 
 ### 0.4.24 (2018-05-16)
+
 
 Language Features:
  * Code Generator: Use native shift instructions on target Constantinople.
