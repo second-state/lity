@@ -1,0 +1,25 @@
+image: registry-cybermiles.skymizer.com/cybermiles/environment:ci
+
+before_script:
+  - git submodule update --init --recursive
+
+build:
+  stage: build
+  cache:
+    paths:
+      - build
+    policy: push
+  script:
+    - mkdir build
+    - cd build
+    - cmake ..
+    - make -j8
+
+test:
+  stage: test
+  cache:
+    paths:
+      - build
+    policy: pull
+  script:
+    - ./build/test/soltest -- --no-smt --no-ipc --testpath ./test
