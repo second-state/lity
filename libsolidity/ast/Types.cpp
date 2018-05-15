@@ -289,6 +289,8 @@ TypePointer Type::fromElementaryTypeName(ElementaryTypeNameToken const& _type)
 		return make_shared<IntegerType>(256, IntegerType::Modifier::Signed);
 	case Token::UInt:
 		return make_shared<IntegerType>(256, IntegerType::Modifier::Unsigned);
+	case Token::TokenT:
+		return make_shared<IntegerType>(256 , IntegerType::Modifier::Token);
 	case Token::Fixed:
 		return make_shared<FixedPointType>(128, 18, FixedPointType::Modifier::Signed);
 	case Token::UFixed:
@@ -454,6 +456,8 @@ string IntegerType::richIdentifier() const
 {
 	if (isAddress())
 		return "t_address";
+	if (isToken())
+		return "t_token";
 	else
 		return "t_" + string(isSigned() ? "" : "u") + "int" + std::to_string(numBits());
 }
@@ -467,6 +471,8 @@ bool IntegerType::isImplicitlyConvertibleTo(Type const& _convertTo) const
 			return false;
 		if (isAddress())
 			return convertTo.isAddress();
+		if (isToken())
+			return convertTo.isToken();
 		else if (isSigned())
 			return convertTo.isSigned();
 		else
@@ -477,6 +483,8 @@ bool IntegerType::isImplicitlyConvertibleTo(Type const& _convertTo) const
 		FixedPointType const& convertTo = dynamic_cast<FixedPointType const&>(_convertTo);
 
 		if (isAddress())
+			return false;
+		if (isToken())
 			return false;
 		else
 			return maxValue() <= convertTo.maxIntegerValue() && minValue() >= convertTo.minIntegerValue();
@@ -523,6 +531,8 @@ string IntegerType::toString(bool) const
 {
 	if (isAddress())
 		return "address";
+	if (isToken())
+		return "token_t";
 	string prefix = isSigned() ? "int" : "uint";
 	return prefix + dev::toString(m_bits);
 }

@@ -316,7 +316,7 @@ class IntegerType: public Type
 public:
 	enum class Modifier
 	{
-		Unsigned, Signed, Address
+		Unsigned, Signed, Address, Token
 	};
 	virtual Category category() const override { return Category::Integer; }
 
@@ -346,6 +346,7 @@ public:
 	unsigned numBits() const { return m_bits; }
 	bool isAddress() const { return m_modifier == Modifier::Address; }
 	bool isSigned() const { return m_modifier == Modifier::Signed; }
+	bool isToken() const { return m_modifier == Modifier::Token; }
 
 	bigint minValue() const;
 	bigint maxValue() const;
