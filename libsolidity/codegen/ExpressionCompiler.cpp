@@ -1649,9 +1649,13 @@ void ExpressionCompiler::appendArithmeticOperatorCode(Token::Value _operator, Ty
 {
 	IntegerType const& type = dynamic_cast<IntegerType const&>(_type);
 	bool const c_isSigned = type.isSigned();
+	bool const c_isToken = type.isToken();
 
 	if (_type.category() == Type::Category::FixedPoint)
 		solUnimplemented("Not yet implemented - FixedPointType.");
+
+	if( c_isToken )
+		appendSafeArithmeticCheckCode(_operator, _type);
 
 	switch (_operator)
 	{
@@ -1679,6 +1683,56 @@ void ExpressionCompiler::appendArithmeticOperatorCode(Token::Value _operator, Ty
 	}
 	case Token::Exp:
 		m_context << Instruction::EXP;
+		break;
+	default:
+		solAssert(false, "Unknown arithmetic operator.");
+	}
+}
+
+void ExpressionCompiler::appendSafeArithmeticCheckCode(Token::Value _operator, Type const& _type)
+{
+	//TODO: Check Type
+	solAssert(dynamic_cast<IntegerType const*>(&_type), "Only integer supported for safe math.");
+
+	IntegerType const& type = dynamic_cast<IntegerType const&>(_type);
+	bool const c_isSigned = type.isSigned();
+
+	if( c_isSigned )
+		solUnimplemented("Not yet implemented - Signed integer type.");
+
+	switch (_operator)
+	{
+	case Token::Add:
+		// [b,a,inf]
+		m_context << Instruction::DUP2 << Instruction::DUP2 << u256(-1);
+		// [b,inf-a]
+		m_context << Instruction::SUB;
+		// [b>inf-a] overflow if result is true
+		m_context << Instruction::GT;
+		m_context.appendConditionalInvalid();
+		break;
+	case Token::Sub:
+		// [b,a]
+		m_context << Instruction::DUP2 << Instruction::DUP2;
+		// [a<b] overflow if result is true
+		m_context << Instruction::LT;
+		m_context.appendConditionalInvalid();
+		break;
+	case Token::Mul:
+		// [b,a,inf]
+		m_context << Instruction::DUP2 << Instruction::DUP2 << u256(-1);
+		// [b,floor(inf/a)]
+		m_context << Instruction::DIV;
+		// [b>floor(inf/a)] overflow if result is true
+		m_context << Instruction::GT;
+		m_context.appendConditionalInvalid();
+		break;
+	case Token::Div:
+	case Token::Mod:
+		// nothing to do for DIV and Mod
+		break;
+	case Token::Exp:
+		solUnimplemented("Not yet implemented - Safe check for exp.");
 		break;
 	default:
 		solAssert(false, "Unknown arithmetic operator.");
