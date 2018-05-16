@@ -90,6 +90,7 @@ private:
 	void appendOrdinaryBinaryOperatorCode(Token::Value _operator, Type const& _type);
 
 	void appendArithmeticOperatorCode(Token::Value _operator, Type const& _type);
+	void appendSafeArithmeticCheckCode(Token::Value _operator, Type const& _type);
 	void appendBitOperatorCode(Token::Value _operator);
 	void appendShiftOperatorCode(Token::Value _operator, Type const& _valueType, Type const& _shiftAmountType);
 	/// @}
