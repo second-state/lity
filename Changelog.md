@@ -27,6 +27,10 @@ Language Features:
  * Code Generator: Use ENIHandler to encode ENI function parameters to memory section.
  * ERC Checker: Use ``--contract-standard`` to check whether contract's interface conforms with given standard and list missing functions for those standard.
 
+### 0.5.0 (unreleased)
+
+
+
 ### 0.4.24 (2018-05-16)
 
 Language Features:
