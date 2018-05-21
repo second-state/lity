@@ -1719,14 +1719,22 @@ void ExpressionCompiler::appendSafeArithmeticCheckCode(Token::Value _operator, T
 		m_context.appendConditionalInvalid();
 		break;
 	case Token::Mul:
+		{
+		// [b,a,a]
+		m_context << Instruction::DUP2 << Instruction::DUP2 << Instruction::DUP1;
+		// [b,a,a==0]
+		m_context << Instruction::ISZERO;
+		eth::AssemblyItem afterTag = m_context.appendConditionalJump();
 		// [b,a,inf]
-		m_context << Instruction::DUP2 << Instruction::DUP2 << u256(-1);
+		m_context << Instruction::POP << u256(-1);
 		// [b,floor(inf/a)]
 		m_context << Instruction::DIV;
 		// [b>floor(inf/a)] overflow if result is true
 		m_context << Instruction::GT;
 		m_context.appendConditionalInvalid();
+		m_context << afterTag;
 		break;
+		}
 	case Token::Div:
 	case Token::Mod:
 		// nothing to do for DIV and Mod
