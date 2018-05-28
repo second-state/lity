@@ -25,7 +25,7 @@
 #include <libdevcore/CommonData.h>
 #include <libdevcore/Common.h>
 #include <libsolidity/interface/Exceptions.h>
-#include <solidity/BuildInfo.h>
+#include <lity/BuildInfo.h>
 
 using namespace dev;
 using namespace dev::solidity;

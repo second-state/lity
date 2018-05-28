@@ -9,9 +9,9 @@ eth_policy()
 
 # project name and version should be set after cmake_policy CMP0048
 set(PROJECT_VERSION "0.4.24")
-project(solidity VERSION ${PROJECT_VERSION})
+project(lity VERSION ${PROJECT_VERSION})
 
-option(SOLC_LINK_STATIC "Link solc executable statically on supported platforms" OFF)
+option(LITYC_LINK_STATIC "Link lityc executable statically on supported platforms" OFF)
 option(LLLC_LINK_STATIC "Link lllc executable statically on supported platforms" OFF)
 option(INSTALL_LLLC "Include lllc executable in installation" OFF)
 
@@ -46,10 +46,10 @@ configure_project(TESTS)
 add_subdirectory(libdevcore)
 add_subdirectory(libevmasm)
 add_subdirectory(libsolidity)
-add_subdirectory(libsolc)
+add_subdirectory(liblityc)
 
 if (NOT EMSCRIPTEN)
-	add_subdirectory(solc)
+	add_subdirectory(lityc)
 	add_subdirectory(liblll)
 	add_subdirectory(lllc)
 endif()
