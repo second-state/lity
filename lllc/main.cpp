@@ -27,7 +27,7 @@
 #include <libdevcore/CommonIO.h>
 #include <libdevcore/CommonData.h>
 #include <libevmasm/Instruction.h>
-#include <solidity/BuildInfo.h>
+#include <lity/BuildInfo.h>
 
 using namespace std;
 using namespace dev;

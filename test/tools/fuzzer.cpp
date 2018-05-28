@@ -21,7 +21,7 @@
 #include <libdevcore/CommonIO.h>
 #include <libevmasm/Assembly.h>
 #include <libevmasm/ConstantOptimiser.h>
-#include <libsolc/libsolc.h>
+#include <liblityc/liblityc.h>
 
 #include <libdevcore/JSON.h>
 

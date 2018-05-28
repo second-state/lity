@@ -20,7 +20,7 @@
  * JSON interface for the solidity compiler to be used from Javascript.
  */
 
-#include <libsolc/libsolc.h>
+#include <liblityc/liblityc.h>
 #include <libdevcore/Common.h>
 #include <libdevcore/JSON.h>
 #include <libsolidity/interface/StandardCompiler.h>
