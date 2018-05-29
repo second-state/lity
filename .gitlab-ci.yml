@@ -23,3 +23,17 @@ test:
     policy: pull
   script:
     - ./build/test/soltest -- --no-smt --no-ipc --testpath ./test
+
+deploy:
+  stage: deploy
+  cache:
+    paths:
+      - build
+    policy: pull
+  script:
+    - rm -rf lityc
+    - cp build/lityc/lityc .
+  artifacts:
+    paths:
+      - lityc
+    expire_in: 1 month
