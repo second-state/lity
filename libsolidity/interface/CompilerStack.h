@@ -131,6 +131,12 @@ public:
 		m_requestedContractNames = _contractNames;
 	}
 
+	/// Sets the standard to be checked by contract standard checker.
+	void setContractStandard(std::string const& _contractStandard)
+	{
+		m_contractStandard = _contractStandard;
+	}
+
 	/// @arg _metadataLiteralSources When true, store sources as literals in the contract metadata.
 	void useMetadataLiteralSources(bool _metadataLiteralSources) { m_metadataLiteralSources = _metadataLiteralSources; }
 
@@ -329,6 +335,7 @@ private:
 	std::map<ASTNode const*, std::shared_ptr<DeclarationContainer>> m_scopes;
 	std::vector<Source const*> m_sourceOrder;
 	std::map<std::string const, Contract> m_contracts;
+	boost::optional<std::string> m_contractStandard;
 	ErrorList m_errorList;
 	ErrorReporter m_errorReporter;
 	bool m_metadataLiteralSources = false;

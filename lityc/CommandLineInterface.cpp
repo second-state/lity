@@ -117,6 +117,12 @@ static string const g_strStrictAssembly = "strict-assembly";
 static string const g_strPrettyJson = "pretty-json";
 static string const g_strVersion = "version";
 static string const g_strIgnoreMissingFiles = "ignore-missing";
+static string const g_strERC20 = "ERC20";
+static string const g_strERC223 = "ERC223";
+static string const g_strERC721 = "ERC721";
+static string const g_strERC827 = "ERC827";
+static string const g_strERC884 = "ERC884";
+static string const g_strContractStandard = "contract-standard";
 
 static string const g_argAbi = g_strAbi;
 static string const g_argPrettyJson = g_strPrettyJson;
@@ -154,6 +160,7 @@ static string const g_argStrictAssembly = g_strStrictAssembly;
 static string const g_argVersion = g_strVersion;
 static string const g_stdinFileName = g_stdinFileNameStr;
 static string const g_argIgnoreMissingFiles = g_strIgnoreMissingFiles;
+static string const g_argContractStandard = g_strContractStandard;
 
 /// Possible arguments to for --combined-json
 static set<string> const g_combinedJsonArgs
@@ -181,6 +188,16 @@ static set<string> const g_machineArgs
 	g_strEVM,
 	g_strEVM15,
 	g_streWasm
+};
+
+/// Possible arguments to for --contract-standard
+static set<string> const g_contractStandardArgs
+{
+	g_strERC20,
+	g_strERC223,
+	g_strERC721,
+	g_strERC827,
+	g_strERC884,
 };
 
 static void version()
@@ -620,7 +637,13 @@ Allowed options)",
 			po::value<string>()->value_name("path(s)"),
 			"Allow a given path for imports. A list of paths can be supplied by separating them with a comma."
 		)
-		(g_argIgnoreMissingFiles.c_str(), "Ignore missing files.");
+		(g_argIgnoreMissingFiles.c_str(), "Ignore missing files.")
+		(
+			g_argContractStandard.c_str(),
+			po::value<string>()->value_name(boost::join(g_contractStandardArgs, ",")),
+			"Check whether contract's interface conforms with given standard. "
+			"'auto' will try to guess what standard is meant to be implemented, then list missing functions for those standard."
+		);
 	po::options_description outputComponents("Output Components");
 	outputComponents.add_options()
 		(g_argAst.c_str(), "AST of all source files.")
@@ -689,6 +712,18 @@ Allowed options)",
 				return false;
 			}
 	}
+
+	if (m_args.count(g_argContractStandard))
+	{
+		vector<string> standards;
+		boost::split(standards, m_args[g_argContractStandard].as<string>(), boost::is_any_of(","));
+		if (standards.size() > 1)
+		{
+			cerr << "More than one standard given to --contract-standard" << endl;
+			return false;
+		}
+	}
+
 	po::notify(m_args);
 
 	return true;
@@ -782,6 +817,17 @@ bool CommandLineInterface::processInput()
 		m_evmVersion = *versionOption;
 	}
 
+	if (m_args.count(g_strContractStandard))
+	{
+		string contractStandardStr = m_args[g_strContractStandard].as<string>();
+		if (!g_contractStandardArgs.count(contractStandardStr))
+		{
+			cerr << "Unknown contract standard given to --contract-standard: " << contractStandardStr << endl;
+			return false;
+		}
+		m_contractStandard = contractStandardStr;
+	}
+
 	if (m_args.count(g_argAssemble) || m_args.count(g_argStrictAssembly) || m_args.count(g_argJulia))
 	{
 		// switch to assembly mode
@@ -829,6 +875,8 @@ bool CommandLineInterface::processInput()
 			m_compiler->addSource(sourceCode.first, sourceCode.second);
 		if (m_args.count(g_argLibraries))
 			m_compiler->setLibraries(m_libraries);
+		if (m_args.count(g_argContractStandard))
+			m_compiler->setContractStandard(m_contractStandard);
 		m_compiler->setEVMVersion(m_evmVersion);
 		// TODO: Perhaps we should not compile unless requested
 		bool optimize = m_args.count(g_argOptimize) > 0;

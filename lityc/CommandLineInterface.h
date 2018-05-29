@@ -101,6 +101,8 @@ private:
 	std::vector<boost::filesystem::path> m_allowedDirectories;
 	/// map of library names to addresses
 	std::map<std::string, h160> m_libraries;
+	/// contract standard to be checked
+	std::string m_contractStandard;
 	/// Solidity compiler stack
 	std::unique_ptr<dev::solidity::CompilerStack> m_compiler;
 	/// EVM version to use
