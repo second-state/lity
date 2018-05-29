@@ -39,6 +39,7 @@
 #include <libsolidity/analysis/PostTypeChecker.h>
 #include <libsolidity/analysis/SyntaxChecker.h>
 #include <libsolidity/analysis/ViewPureChecker.h>
+#include <libsolidity/analysis/ContractStandardChecker.h>
 #include <libsolidity/codegen/Compiler.h>
 #include <libsolidity/formal/SMTChecker.h>
 #include <libsolidity/interface/ABI.h>
@@ -263,6 +264,16 @@ bool CompilerStack::analyze()
 			SMTChecker smtChecker(m_errorReporter, m_smtQuery);
 			for (Source const* source: m_sourceOrder)
 				smtChecker.analyze(*source->ast);
+		}
+
+		if (noErrors)
+		{
+			ContractStandardChecker contractStandardChecker(m_errorReporter, m_contractStandard);
+			for (Source const* source: m_sourceOrder)
+				for (ASTPointer<ASTNode> const& node: source->ast->nodes())
+					if (ContractDefinition* contract = dynamic_cast<ContractDefinition*>(node.get()))
+						if (!contractStandardChecker.checkContractStandard(*contract))
+							noErrors = false;
 		}
 	}
 	catch(FatalError const&)
