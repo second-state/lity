@@ -29,31 +29,7 @@ using namespace dev::solidity;
 Error::Error(Type _type, SourceLocation const& _location, string const& _description):
 	m_type(_type)
 {
-	switch(m_type)
-	{
-	case Type::DeclarationError:
-		m_typeName = "DeclarationError";
-		break;
-	case Type::DocstringParsingError:
-		m_typeName = "DocstringParsingError";
-		break;
-	case Type::ParserError:
-		m_typeName = "ParserError";
-		break;
-	case Type::SyntaxError:
-		m_typeName = "SyntaxError";
-		break;
-	case Type::TypeError:
-		m_typeName = "TypeError";
-		break;
-	case Type::Warning:
-		m_typeName = "Warning";
-		break;
-	default:
-		solAssert(false, "");
-		break;
-	}
-
+	m_typeName = typeToCStr(m_type);
 	if (!_location.isEmpty())
 		*this << errinfo_sourceLocation(_location);
 	if (!_description.empty())
@@ -66,4 +42,28 @@ Error::Error(Error::Type _type, const std::string& _description, const SourceLoc
 	if (!_location.isEmpty())
 		*this << errinfo_sourceLocation(_location);
 	*this << errinfo_comment(_description);
+}
+
+char const* Error::typeToCStr(Type _type)
+{
+	switch (_type)
+	{
+	case Type::DeclarationError:
+		return "DeclarationError";
+	case Type::DocstringParsingError:
+		return "DocstringParsingError";
+	case Type::ParserError:
+		return "ParserError";
+	case Type::SyntaxError:
+		return "SyntaxError";
+	case Type::TypeError:
+		return "TypeError";
+	case Type::Warning:
+		return "Warning";
+	case Type::Info:
+		return "Info";
+	default:
+		solAssert(false, "");
+		break;
+	}
 }

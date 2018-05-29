@@ -60,7 +60,8 @@ public:
 		ParserError,
 		TypeError,
 		SyntaxError,
-		Warning
+		Warning,
+		Info
 	};
 
 	explicit Error(
@@ -73,6 +74,7 @@ public:
 
 	Type type() const { return m_type; }
 	std::string const& typeName() const { return m_typeName; }
+	char const* typeNameCstr() const { return typeToCStr(m_type); }
 
 	/// helper functions
 	static Error const* containsErrorOfType(ErrorList const& _list, Error::Type _type)
@@ -88,11 +90,22 @@ public:
 	{
 		for (auto e: _list)
 		{
-			if (e->type() != Type::Warning)
+			if (e->type() != Type::Warning && e->type() != Type::Info)
 				return false;
 		}
 		return true;
 	}
+	static bool containsOnlyInfos(ErrorList const& _list)
+	{
+		for (auto e: _list)
+		{
+			if (e->type() != Type::Info)
+				return false;
+		}
+		return true;
+	}
+
+	static char const* typeToCStr(Type);
 private:
 	Type m_type;
 	std::string m_typeName;

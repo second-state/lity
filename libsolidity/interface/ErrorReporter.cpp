@@ -37,6 +37,28 @@ ErrorReporter& ErrorReporter::operator=(ErrorReporter const& _errorReporter)
 }
 
 
+void ErrorReporter::info(string const& _description)
+{
+	error(Error::Type::Info, SourceLocation(), _description);
+}
+
+void ErrorReporter::info(
+	SourceLocation const& _location,
+	string const& _description
+)
+{
+	error(Error::Type::Info, _location, _description);
+}
+
+void ErrorReporter::info(
+	SourceLocation const& _location,
+	string const& _description,
+	SecondarySourceLocation const& _secondaryLocation
+)
+{
+	error(Error::Type::Info, _location, _secondaryLocation, _description);
+}
+
 void ErrorReporter::warning(string const& _description)
 {
 	error(Error::Type::Warning, SourceLocation(), _description);
@@ -88,7 +110,18 @@ void ErrorReporter::error(Error::Type _type, SourceLocation const& _location, Se
 
 bool ErrorReporter::checkForExcessiveErrors(Error::Type _type)
 {
-	if (_type == Error::Type::Warning)
+	if (_type == Error::Type::Info)
+	{
+		m_infoCount++;
+
+		if(m_infoCount == c_maxInfosAllowed)
+		{
+			auto err = make_shared<Error>(Error::Type::Warning);
+			*err << errinfo_comment("There are more than 256 infos. Ignoring the rest.");
+			m_errorList.push_back(err);
+		}
+	}
+	else if (_type == Error::Type::Warning)
 	{
 		m_warningCount++;
 

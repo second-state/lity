@@ -69,7 +69,7 @@ ErrorList AnalysisFramework::filterErrors(ErrorList const& _errorList, bool _inc
 	for (auto const& currentError: _errorList)
 	{
 		solAssert(currentError->comment(), "");
-		if (currentError->type() == Error::Type::Warning)
+		if (currentError->type() == Error::Type::Warning || currentError->type() == Error::Type::Info)
 		{
 			if (!_includeWarnings)
 				continue;

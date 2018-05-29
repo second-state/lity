@@ -35,6 +35,7 @@ namespace formatting
 static constexpr char const* RESET = "\033[0m";
 static constexpr char const* RED  = "\033[1;31m";
 static constexpr char const* GREEN = "\033[1;32m";
+static constexpr char const* BROWN = "\033[0;33m";
 static constexpr char const* YELLOW = "\033[1;33m";
 static constexpr char const* CYAN = "\033[1;36m";
 static constexpr char const* BOLD = "\033[1m";

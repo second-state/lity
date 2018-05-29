@@ -120,6 +120,18 @@ CHECK_ERROR_OR_WARNING(text, Warning, std::vector<std::string>{(substring)}, tru
 #define CHECK_WARNING_ALLOW_MULTI(text, substrings) \
 CHECK_ERROR_OR_WARNING(text, Warning, substrings, true, true)
 
+// [checkInfo(text, substring)] asserts that the compilation down to typechecking
+// emits an info and with a message containing [substring].
+#define CHECK_INFO(text, substring) \
+CHECK_ERROR_OR_WARNING(text, Info, std::vector<std::string>{(substring)}, true, false)
+
+// [checkInfoAllowMulti(text, substring)] aserts that the compilation down to typechecking
+// emits a info and with a message containing [substring].
+// Because of the limitations of the preprocessor, you cannot use {"abc", "def"} as arguments,
+// but have to replace them by (std::vector<std::string>{"abc", "def"}) (note the parentheses)
+#define CHECK_INFO_ALLOW_MULTI(text, substrings) \
+CHECK_ERROR_OR_WARNING(text, Info, substrings, true, true)
+
 // [checkSuccess(text)] asserts that the compilation down to typechecking succeeds.
 #define CHECK_SUCCESS(text) do { BOOST_CHECK(success((text))); } while(0)
 
