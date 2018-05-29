@@ -10558,6 +10558,45 @@ BOOST_AUTO_TEST_CASE(cleanup_in_compound_assign)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(u256(0xff), u256(0xff)));
 }
 
+BOOST_AUTO_TEST_CASE(token_overflow)
+{
+	char const* sourceCode = R"(
+		contract C {
+			function plus(token_t a, token_t b) returns (token_t) {
+				token_t c = a + b;
+				return (c);
+			}
+			function sub(token_t a, token_t b) returns (token_t) {
+				token_t c = a - b;
+				return (c);
+			}
+			function mul(token_t a, token_t b) returns (token_t) {
+				token_t c = a * b;
+				return (c);
+			}
+		}
+	)";
+	compileAndRun(sourceCode, 0, "C");
+	ABI_CHECK(callContractFunction("plus(token_t,token_t)", u256(1234), u256(5678)), encodeArgs(u256(6912)));
+	ABI_CHECK(callContractFunction("plus(token_t,token_t)", u256(-1), u256(0)), encodeArgs(u256(-1)));
+	ABI_CHECK(callContractFunction("plus(token_t,token_t)", u256(0), u256(-1)), encodeArgs(u256(-1)));
+	ABI_CHECK(callContractFunction("plus(token_t,token_t)", u256(1), u256(-1)), encodeArgs());
+	ABI_CHECK(callContractFunction("plus(token_t,token_t)", u256(-1), u256(1)), encodeArgs());
+	ABI_CHECK(callContractFunction("plus(token_t,token_t)", u256(-1), u256(-1)), encodeArgs());
+	ABI_CHECK(callContractFunction("sub(token_t,token_t)", u256(1), u256(1)), encodeArgs(u256(0)));
+	ABI_CHECK(callContractFunction("sub(token_t,token_t)", u256(-1), u256(1)), encodeArgs(u256(-2)));
+	ABI_CHECK(callContractFunction("sub(token_t,token_t)", u256(-1), u256(-1)), encodeArgs(u256(0)));
+	ABI_CHECK(callContractFunction("sub(token_t,token_t)", u256(2), u256(1)), encodeArgs(u256(1)));
+	ABI_CHECK(callContractFunction("sub(token_t,token_t)", u256(1), u256(2)), encodeArgs());
+	ABI_CHECK(callContractFunction("mul(token_t,token_t)", u256(5), u256(0)), encodeArgs(u256(0)));
+	ABI_CHECK(callContractFunction("mul(token_t,token_t)", u256(0), u256(5)), encodeArgs(u256(0)));
+	ABI_CHECK(callContractFunction("mul(token_t,token_t)", u256(8), u256(9)), encodeArgs(u256(72)));
+	ABI_CHECK(callContractFunction("mul(token_t,token_t)", u256(-1), u256(1)), encodeArgs(u256(-1)));
+	ABI_CHECK(callContractFunction("mul(token_t,token_t)", u256(1), u256(-1)), encodeArgs(u256(-1)));
+	ABI_CHECK(callContractFunction("mul(token_t,token_t)", u256(2), u256(-1)), encodeArgs());
+	ABI_CHECK(callContractFunction("mul(token_t,token_t)", u256(-1), u256(2)), encodeArgs());
+}
+
 BOOST_AUTO_TEST_CASE(inline_assembly_in_modifiers)
 {
 	char const* sourceCode = R"(

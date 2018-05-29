@@ -7188,6 +7188,127 @@ BOOST_AUTO_TEST_CASE(blockhash)
 	CHECK_ERROR(code, TypeError, "\"block.blockhash()\" has been deprecated in favor of \"blockhash()\"");
 }
 
+BOOST_AUTO_TEST_CASE(token_implicitly_convert)
+{
+	char const* text = R"(
+		contract C {
+			function f() public {
+				token_t x = 1;
+			}
+		}
+	)";
+	CHECK_SUCCESS(text);
+
+	text = R"(
+		contract C {
+			function f() public {
+				token_t x = -1;
+			}
+		}
+	)";
+	CHECK_ERROR(text, TypeError, "Type int_const -1 is not implicitly convertible to expected type token_t.");
+
+	text = R"(
+		contract C {
+			function f(token_t x) public {
+				y = x;
+			}
+			int256 y;
+		}
+	)";
+	CHECK_ERROR(text, TypeError, "Type token_t is not implicitly convertible to expected type int256.");
+
+	text = R"(
+		contract C {
+			function f(token_t x) public {
+				y = x;
+			}
+			uint256 y;
+		}
+	)";
+	CHECK_ERROR(text, TypeError, "Type token_t is not implicitly convertible to expected type uint256.");
+
+	text = R"(
+		contract C {
+			function f(token_t x) public {
+				y = uint256(x);
+			}
+			uint256 y;
+		}
+	)";
+	CHECK_SUCCESS(text);
+
+	text = R"(
+		contract C {
+			function f(token_t x) public {
+				y = x;
+			}
+			uint8 y;
+		}
+	)";
+	CHECK_ERROR(text, TypeError, "Type token_t is not implicitly convertible to expected type uint8.");
+
+	text = R"(
+		contract C {
+			function f(token_t x, uint256 z) public {
+				y = x * z;
+			}
+			token_t y;
+		}
+	)";
+	CHECK_SUCCESS(text);
+
+	text = R"(
+		contract C {
+			function f(token_t x, uint256 z) public {
+				y = x * z;
+			}
+			uint256 y;
+		}
+	)";
+	CHECK_ERROR(text, TypeError, "Type token_t is not implicitly convertible to expected type uint256.");
+
+	text = R"(
+		contract C {
+			function f(token_t x) public {
+				y = x;
+			}
+			token_t y;
+		}
+	)";
+	CHECK_SUCCESS(text);
+
+	text = R"(
+		contract C {
+			function f(uint256 x) public {
+				y = x;
+			}
+			token_t y;
+		}
+	)";
+	CHECK_SUCCESS(text);
+
+	text = R"(
+		contract C {
+			function f(uint8 x) public {
+				y = x;
+			}
+			token_t y;
+		}
+	)";
+	CHECK_SUCCESS(text);
+
+	text = R"(
+		contract C {
+			function f(int256 x) public {
+				y = x;
+			}
+			token_t y;
+		}
+	)";
+	CHECK_ERROR(text, TypeError, "Type int256 is not implicitly convertible to expected type token_t.");
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 }
