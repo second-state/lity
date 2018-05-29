@@ -133,7 +133,14 @@ void SyntaxTest::printErrorList(
 		for (auto const& error: _errorList)
 		{
 			{
-				FormattedScope scope(_stream, _formatted, {BOLD, (error.type == "Warning") ? YELLOW : RED});
+				const char* color;
+				if (error.type == "Warning")
+					color = YELLOW;
+				else if (error.type == "Info")
+					color = BROWN;
+				else
+					color = RED;
+				FormattedScope scope(_stream, _formatted, {BOLD, color});
 				_stream << _linePrefix;
 				_stream << error.type << ": ";
 			}

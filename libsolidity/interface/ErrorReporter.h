@@ -44,6 +44,16 @@ public:
 
 	ErrorReporter& operator=(ErrorReporter const& _errorReporter);
 
+	void info(std::string const& _description);
+
+	void info(SourceLocation const& _location, std::string const& _description);
+
+	void info(
+		SourceLocation const& _location,
+		std::string const& _description,
+		SecondarySourceLocation const& _secondaryLocation
+	);
+
 	void warning(std::string const& _description);
 
 	void warning(SourceLocation const& _location, std::string const& _description);
@@ -109,7 +119,9 @@ private:
 
 	unsigned m_errorCount = 0;
 	unsigned m_warningCount = 0;
+	unsigned m_infoCount = 0;
 
+	const unsigned c_maxInfosAllowed = 256;
 	const unsigned c_maxWarningsAllowed = 256;
 	const unsigned c_maxErrorsAllowed = 256;
 };

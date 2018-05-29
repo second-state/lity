@@ -78,7 +78,7 @@ public:
 			for (auto const& error: m_compiler.errors())
 				formatter.printExceptionInformation(
 					*error,
-					(error->type() == Error::Type::Warning) ? "Warning" : "Error"
+					error->typeNameCstr()
 				);
 			BOOST_ERROR("Compiling contract failed");
 		}

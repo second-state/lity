@@ -47,7 +47,7 @@ void dev::julia::test::printErrors(ErrorList const& _errors, Scanner const& _sca
 	for (auto const& error: _errors)
 		formatter.printExceptionInformation(
 			*error,
-			(error->type() == Error::Type::Warning) ? "Warning" : "Error"
+			error->typeNameCstr()
 		);
 }
 
