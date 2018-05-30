@@ -1,5 +1,11 @@
 image: registry-cybermiles.skymizer.com/cybermiles/environment:ci
 
+stages:
+  - build
+  - test
+  - deploy
+  - regression
+
 before_script:
   - git submodule update --init --recursive
 
@@ -37,3 +43,8 @@ deploy:
     paths:
       - lityc
     expire_in: 1 month
+
+regression:
+  stage: regression
+  script:
+    - curl -s -X POST -F "token=$REGRESSION_TRIGGER_TOKEN" -F ref=master https://git-cybermiles.skymizer.com/api/v4/projects/14/trigger/pipeline | jq .
