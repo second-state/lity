@@ -1703,16 +1703,16 @@ void ExpressionCompiler::appendSafeArithmeticCheckCode(Token::Value _operator, T
 	switch (_operator)
 	{
 	case Token::Add:
-		// [b,a,inf]
+		// [inf,a,b]
 		m_context << Instruction::DUP2 << Instruction::DUP2 << u256(-1);
-		// [b,inf-a]
+		// [inf-a,b]
 		m_context << Instruction::SUB;
-		// [b>inf-a] overflow if result is true
-		m_context << Instruction::GT;
+		// [inf-a<b] overflow if result is true
+		m_context << Instruction::LT;
 		m_context.appendConditionalInvalid();
 		break;
 	case Token::Sub:
-		// [b,a]
+		// [a,b]
 		m_context << Instruction::DUP2 << Instruction::DUP2;
 		// [a<b] overflow if result is true
 		m_context << Instruction::LT;
@@ -1720,17 +1720,17 @@ void ExpressionCompiler::appendSafeArithmeticCheckCode(Token::Value _operator, T
 		break;
 	case Token::Mul:
 		{
-		// [b,a,a]
-		m_context << Instruction::DUP2 << Instruction::DUP2 << Instruction::DUP1;
-		// [b,a,a==0]
+		// [a]
+		m_context << Instruction::DUP1;
+		// [a==0]
 		m_context << Instruction::ISZERO;
 		eth::AssemblyItem afterTag = m_context.appendConditionalJump();
-		// [b,a,inf]
-		m_context << Instruction::POP << u256(-1);
-		// [b,floor(inf/a)]
+		// [inf,a,b]
+		m_context << Instruction::DUP2 << Instruction::DUP2 << u256(-1);
+		// [floor(inf/a),b]
 		m_context << Instruction::DIV;
-		// [b>floor(inf/a)] overflow if result is true
-		m_context << Instruction::GT;
+		// [floor(inf/a)<b] overflow if result is true
+		m_context << Instruction::LT;
 		m_context.appendConditionalInvalid();
 		m_context << afterTag;
 		break;
