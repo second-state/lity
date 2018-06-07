@@ -281,19 +281,19 @@ bool ExpressionCompiler::visit(TupleExpression const& _tuple)
 	if (_tuple.isInlineArray())
 	{
 		ArrayType const& arrayType = dynamic_cast<ArrayType const&>(*_tuple.annotation().type);
-		
+
 		solAssert(!arrayType.isDynamicallySized(), "Cannot create dynamically sized inline array.");
 		m_context << max(u256(32u), arrayType.memorySize());
 		utils().allocateMemory();
 		m_context << Instruction::DUP1;
-	
+
 		for (auto const& component: _tuple.components())
 		{
 			component->accept(*this);
 			utils().convertType(*component->annotation().type, *arrayType.baseType(), true);
-			utils().storeInMemoryDynamic(*arrayType.baseType(), true);				
+			utils().storeInMemoryDynamic(*arrayType.baseType(), true);
 		}
-		
+
 		m_context << Instruction::POP;
 	}
 	else
@@ -1532,7 +1532,7 @@ void ExpressionCompiler::endVisit(Literal const& _literal)
 {
 	CompilerContext::LocationSetter locationSetter(m_context, _literal);
 	TypePointer type = _literal.annotation().type;
-	
+
 	switch (type->category())
 	{
 	case Type::Category::RationalNumber:
@@ -1633,13 +1633,13 @@ void ExpressionCompiler::appendArithmeticOperatorCode(Token::Value _operator, Ty
 	switch (_operator)
 	{
 	case Token::Add:
-		m_context << Instruction::ADD;
+		m_context << (c_isSigned ? Instruction::SADD : Instruction::ADD);
 		break;
 	case Token::Sub:
-		m_context << Instruction::SUB;
+		m_context << (c_isSigned ? Instruction::SSUB : Instruction::SUB);
 		break;
 	case Token::Mul:
-		m_context << Instruction::MUL;
+		m_context << (c_isSigned ? Instruction::SMUL : Instruction::MUL);
 		break;
 	case Token::Div:
 	case Token::Mod:

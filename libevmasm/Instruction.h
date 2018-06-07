@@ -38,9 +38,9 @@ DEV_SIMPLE_EXCEPTION(InvalidOpcode);
 enum class Instruction: uint8_t
 {
 	STOP = 0x00,		///< halts execution
-	ADD,				///< addition operation
-	MUL,				///< multiplication operation
-	SUB,				///< subtraction operation
+	ADD,				///< unsigned addition operation
+	MUL,				///< unsigned multiplication operation
+	SUB,				///< unsigned subtraction operation
 	DIV,				///< integer division operation
 	SDIV,				///< signed integer division operation
 	MOD,				///< modulo remainder operation
@@ -187,11 +187,16 @@ enum class Instruction: uint8_t
 	PUTLOCAL,           ///< pop top of stack to local variable -- not part of Instructions.cpp
 	GETLOCAL,           ///< push local variable to top of stack -- not part of Instructions.cpp
 
+	SADD = 0xc0,        ///< signed addition operation with overflow checking
+	SSUB,               ///< signed subtraction operation with overflow checking
+	SMUL,               ///< signed multiplication operation with overflow checking
+
 	CREATE = 0xf0,		///< create a new account with associated code
 	CALL,				///< message-call into an account
 	CALLCODE,			///< message-call with another account's code only
 	RETURN,				///< halt execution returning output data
 	DELEGATECALL,		///< like CALLCODE but keeps caller's value and sender
+	ENI,
 	STATICCALL = 0xfa,	///< like CALL but disallow state modifications
 	CREATE2 = 0xfb,		///< create new account with associated code at address `sha3(sender + salt + sha3(init code)) % 2**160`
 
