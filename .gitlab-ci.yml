@@ -49,5 +49,7 @@ deploy:
 
 regression:
   stage: regression
+  only:
+    - lity
   script:
     - curl -s -X POST -F "token=$REGRESSION_TRIGGER_TOKEN" -F ref=master https://git-cybermiles.skymizer.com/api/v4/projects/14/trigger/pipeline | jq .
