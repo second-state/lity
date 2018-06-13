@@ -28,10 +28,7 @@ test:
       - build
     policy: pull
   script:
-    - eth --test -d /tmp/soltest >/tmp/soltest.log 2>&1 &
-    - while [ ! -S /tmp/soltest/geth.ipc ] ; do sleep 1; done && sleep 2
-    - time ./build/test/soltest -- --testpath ./test --ipcpath /tmp/soltest/geth.ipc
-    - cat /tmp/soltest.log
+    - time ./build/test/soltest -- --testpath ./test --no-ipc
 
 deploy:
   stage: deploy
