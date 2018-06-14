@@ -33,6 +33,7 @@ Features:
 
 
 Bugfixes:
+ * Tests: Fix chain parameters to make ipc tests work with newer versions of cpp-ethereum.
 
 ### 0.4.24 (2018-05-16)
 
