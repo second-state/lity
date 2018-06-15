@@ -1,19 +1,43 @@
-# The Solidity Contract-Oriented Programming Language
-[![Join the chat at https://gitter.im/ethereum/solidity](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ethereum/solidity?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Build Status](https://travis-ci.org/ethereum/solidity.svg?branch=develop)](https://travis-ci.org/ethereum/solidity)
+# Lity
 
-## Useful links
-To get started you can find an introduction to the language in the [Solidity documentation](https://solidity.readthedocs.org). In the documentation, you can find [code examples](https://solidity.readthedocs.io/en/latest/solidity-by-example.html) as well as [a reference](https://solidity.readthedocs.io/en/latest/solidity-in-depth.html) of the syntax and details on how to write smart contracts.
+[![Latest Release](https://img.shields.io/github/release-date/CyberMiles/lity.svg)](https://github.com/CyberMiles/lity/releases)
+[![Build Status](https://img.shields.io/travis/CyberMiles/lity.svg)](https://travis-ci.org/CyberMiles/lity)
+[![Docs](https://img.shields.io/readthedocs/lity.svg)](http://lity.readthedocs.io/)
 
-You can start using [Solidity in your browser](http://remix.ethereum.org) with no need to download or compile anything.
+[Lity] is an open-source language enhanced from [Solidity]. With new grammar extension, it is highly optimized for enterprise and easy to use for financial industry developers. The flexible interface and unlimited built-in functions can reduce gas cost and accelerate executing time. You can now encrypt large-sized data in the blink of an eye without running out of gas anymore.
 
-The changelog for this project can be found [here](https://github.com/ethereum/solidity/blob/develop/Changelog.md).
+## Getting Started
 
-Solidity is still under development. So please do not hesitate and open an [issue in GitHub](https://github.com/ethereum/solidity/issues) if you encounter anything strange.
+To get started you can find an introduction to the language in the
+[Lity documentation](http://lity.readthedocs.io/).
 
-## Building
-See the [Solidity documentation](https://solidity.readthedocs.io/en/latest/installing-solidity.html#building-from-source) for build instructions.
+The changelog for this project can be found [here](Changelog.md).
 
 ## How to Contribute
-Please see our [contribution guidelines](https://solidity.readthedocs.io/en/latest/contributing.html) in the Solidity documentation.
 
-Any contributions are welcome!
+[![Contributors](https://img.shields.io/github/contributors/CyberMiles/lity.svg)](https://github.com/CyberMiles/lity/graphs/contributors)
+[![Pull Requests](https://img.shields.io/github/issues-pr/CyberMiles/lity.svg)](https://github.com/CyberMiles/lity/pulls)
+
+Please see our [contribution guidelines][contrib-guide] in the Lity documentation.
+
+[contrib-guide]: https://lity.readthedocs.io/en/latest/contributing.html
+
+## Contact
+
+[![Issues](https://img.shields.io/github/issues/CyberMiles/lity.svg)](https://github.com/CyberMiles/lity/issues)
+
+Feel free to report bugs, issues, or send a feature request using
+[Github issues](https://github.com/CyberMiles/lity/issues).
+
+## License
+
+[![License](https://img.shields.io/github/license/CyberMiles/lity.svg)](https://www.gnu.org/licenses/lgpl-3.0.en.html)
+
+See the [LICENSE](LICENSE) file.
+
+### Note
+
+This repository is a fork from [Solidity][Solidity].
+
+[Lity]: https://github.com/CyberMiles/lity
+[Solidity]: https://github.com/ethereum/solidity
