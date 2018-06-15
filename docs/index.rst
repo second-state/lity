@@ -20,6 +20,9 @@ How Lity Improves Performance
 
 With `Ethereum Native Interface (ENI) <features#ethereum-native-interface>`_.
 
+See `libENI on Github <https://github.com/CyberMiles/libeni>`_ and the
+`libENI documentation <https://lity.readthedocs.io/projects/libeni/>`_.
+
 Lity by Example
 ---------------
 
