@@ -14,6 +14,6 @@ Contents
    download
    features
    documentation
-   github
+   contributing
    news
    events
