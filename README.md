@@ -33,7 +33,7 @@ Feel free to report bugs, issues, or send a feature request using
 
 [![License](https://img.shields.io/github/license/CyberMiles/lity.svg)](https://www.gnu.org/licenses/lgpl-3.0.en.html)
 
-See the [LICENSE](LICENSE) file.
+See the [LICENSE](LICENSE.txt) file.
 
 ### Note
 
