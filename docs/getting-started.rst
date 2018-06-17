@@ -1,7 +1,7 @@
 Getting Started with Lity
 =========================
 
-See `the documentation <download>`_ for how to download and install Lity.
+See `the documentation <download.html>`_ for how to download and install Lity.
 
 Use Lityc to Secure Your Contract
 ---------------------------------
