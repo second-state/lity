@@ -31,6 +31,7 @@
 #include <libsolidity/codegen/CompilerContext.h>
 #include <libsolidity/codegen/CompilerUtils.h>
 #include <libsolidity/codegen/LValue.h>
+#include <libsolidity/codegen/ENIHandler.h>
 #include <libevmasm/GasMeter.h>
 
 #include <libdevcore/Whiskers.h>
@@ -1050,17 +1051,23 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 			break;
 		case FunctionType::Kind::ENI:
 		{
-			TypePointers argumentTypes;
+			m_context.eniHandler().clearENIObjects();
+			m_context.eniHandler().setContext(&m_context);
 			for (auto const& arg: arguments)
 			{
-				arg->accept(*this);
-				argumentTypes.push_back(arg->annotation().type);
+				if (!arg->saveToENISection(m_context.eniHandler(), m_context)) {
+					/// Current ENI function supports the following types:
+					///		1. StringLiteral, e.g. "Hello, world!".
+					///		2. Signed or Unsigned Number(int or uint), e.g. 100.
+					///		3. Number Variable. e.g. int i = 10. eni(i).
+					///		4. String memory Variable. e.g. string memory s = "RX230". eni(s).
+					///		5. FunctionCall whose return value is listed on below.
+					solAssert(false, "Unsupported type for ENI function\n");
+				}
+				//arg->accept(*this);
 			}
-			utils().fetchFreeMemoryPointer();
-			solAssert(!function.padArguments(), "");
-			utils().packedEncode(argumentTypes, TypePointers());
-			utils().toSizeAfterFreeMemoryPointer();
-			m_context << Instruction::ENI;
+			m_context.eniHandler().packedToMemory();
+			m_context.eniHandler().clearENIObjects();
 			break;
 		}
 		default:
@@ -1518,8 +1525,9 @@ void ExpressionCompiler::endVisit(Identifier const& _identifier)
 		// constructor context, since this would force the compiler to include unreferenced
 		// internal functions in the runtime contex.
 		utils().pushCombinedFunctionEntryLabel(m_context.resolveVirtualFunction(*functionDef));
-	else if (auto variable = dynamic_cast<VariableDeclaration const*>(declaration))
+	else if (auto variable = dynamic_cast<VariableDeclaration const*>(declaration)) {
 		appendVariable(*variable, static_cast<Expression const&>(_identifier));
+	}
 	else if (auto contract = dynamic_cast<ContractDefinition const*>(declaration))
 	{
 		if (contract->isLibrary())
@@ -2047,6 +2055,7 @@ void ExpressionCompiler::appendExternalFunctionCall(
 void ExpressionCompiler::appendExpressionCopyToMemory(Type const& _expectedType, Expression const& _expression)
 {
 	solUnimplementedAssert(_expectedType.isValueType(), "Not implemented for non-value types.");
+	/// TODO:: Expression -> Memory
 	_expression.accept(*this);
 	utils().convertType(*_expression.annotation().type, _expectedType, true);
 	utils().storeInMemoryDynamic(_expectedType);
@@ -2054,8 +2063,9 @@ void ExpressionCompiler::appendExpressionCopyToMemory(Type const& _expectedType,
 
 void ExpressionCompiler::appendVariable(VariableDeclaration const& _variable, Expression const& _expression)
 {
-	if (!_variable.isConstant())
+	if (!_variable.isConstant()) {
 		setLValueFromDeclaration(_variable, _expression);
+	}
 	else
 	{
 		_variable.value()->accept(*this);
@@ -2065,11 +2075,11 @@ void ExpressionCompiler::appendVariable(VariableDeclaration const& _variable, Ex
 
 void ExpressionCompiler::setLValueFromDeclaration(Declaration const& _declaration, Expression const& _expression)
 {
-	if (m_context.isLocalVariable(&_declaration))
+	if (m_context.isLocalVariable(&_declaration)) {
 		setLValue<StackVariable>(_expression, dynamic_cast<VariableDeclaration const&>(_declaration));
-	else if (m_context.isStateVariable(&_declaration))
+	} else if (m_context.isStateVariable(&_declaration)) {
 		setLValue<StorageItem>(_expression, dynamic_cast<VariableDeclaration const&>(_declaration));
-	else
+	} else
 		BOOST_THROW_EXCEPTION(InternalCompilerError()
 			<< errinfo_sourceLocation(_expression.location())
 			<< errinfo_comment("Identifier type not supported or identifier not found."));

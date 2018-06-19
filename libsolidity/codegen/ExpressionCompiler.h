@@ -135,10 +135,12 @@ void ExpressionCompiler::setLValue(Expression const& _expression, _Arguments con
 {
 	solAssert(!m_currentLValue, "Current LValue not reset before trying to set new one.");
 	std::unique_ptr<_LValueType> lvalue(new _LValueType(m_context, _arguments...));
-	if (_expression.annotation().lValueRequested)
+	if (_expression.annotation().lValueRequested) {
 		m_currentLValue = move(lvalue);
-	else
+	}
+	else {
 		lvalue->retrieveValue(_expression.location(), true);
+	}
 }
 
 }

@@ -24,6 +24,7 @@
 #include <libsolidity/codegen/CompilerUtils.h>
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/codegen/Compiler.h>
+#include <libsolidity/codegen/ENIHandler.h>
 #include <libsolidity/interface/Version.h>
 #include <libsolidity/interface/ErrorReporter.h>
 #include <libsolidity/interface/SourceReferenceFormatter.h>

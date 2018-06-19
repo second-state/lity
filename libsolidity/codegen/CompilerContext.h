@@ -23,6 +23,7 @@
 #pragma once
 
 #include <libsolidity/codegen/ABIFunctions.h>
+#include <libsolidity/codegen/ENIHandler.h>
 
 #include <libsolidity/interface/EVMVersion.h>
 
@@ -199,6 +200,8 @@ public:
 	CompilerContext& operator<<(u256 const& _value) { m_asm->append(_value); return *this; }
 	CompilerContext& operator<<(bytes const& _data) { m_asm->append(_data); return *this; }
 
+	ENIHandler& eniHandler() { return m_ENIHandler; }
+
 	/// Appends inline assembly (strict mode).
 	/// @a _replacements are string-matching replacements that are performed prior to parsing the inline assembly.
 	/// @param _localVariables assigns stack positions to variables with the last one being the stack top
@@ -323,6 +326,8 @@ private:
 	ABIFunctions m_abiFunctions;
 	/// The queue of low-level functions to generate.
 	std::queue<std::tuple<std::string, unsigned, unsigned, std::function<void(CompilerContext&)>>> m_lowLevelFunctionGenerationQueue;
+	/// ENI handler for managing ENI function parameters.
+	ENIHandler m_ENIHandler;
 };
 
 }

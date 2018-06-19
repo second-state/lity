@@ -82,6 +82,10 @@ public:
 		bool _padToWords = true,
 		bool _keepUpdatedMemoryOffset = true
 	);
+	/// Stores the given string in memory.
+	/// Stack pre: mempos
+	/// Stack post:
+	void storeStringData(bytesConstRef _data);
 	/// Stores a 256 bit integer from stack in memory.
 	/// @param _offset offset in memory
 	/// @param _type type of the data on the stack
@@ -123,6 +127,13 @@ public:
 		bool _padToWords,
 		bool _copyDynamicDataInPlace,
 		bool _encodeAsLibraryTypes = false
+	);
+
+	void encodeToENIMemory(
+		TypePointers const& _givenTypes,
+		TypePointers const& _targetTypes,
+		bool _padToWords,
+		bool _copyDynamicDataInPlace
 	);
 
 	/// Special case of @a encodeToMemory which assumes tight packing, e.g. no zero padding
@@ -273,11 +284,6 @@ public:
 private:
 	/// Address of the precompiled identity contract.
 	static const unsigned identityContractAddress;
-
-	/// Stores the given string in memory.
-	/// Stack pre: mempos
-	/// Stack post:
-	void storeStringData(bytesConstRef _data);
 
 	/// Appends code that cleans higher-order bits for integer types.
 	void cleanHigherOrderBits(IntegerType const& _typeOnStack);
