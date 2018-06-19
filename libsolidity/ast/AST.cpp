@@ -23,6 +23,7 @@
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/ast/ASTVisitor.h>
 #include <libsolidity/ast/AST_accept.h>
+#include <libsolidity/codegen/CompilerContext.h>
 
 #include <libdevcore/SHA3.h>
 
@@ -406,7 +407,7 @@ SourceUnit const& Scopable::sourceUnit() const
 {
 	ASTNode const* s = scope();
 	solAssert(s, "");
-	// will not always be a declaratoion
+	// will not always be a declaration
 	while (dynamic_cast<Scopable const*>(s) && dynamic_cast<Scopable const*>(s)->scope())
 		s = dynamic_cast<Scopable const*>(s)->scope();
 	return dynamic_cast<SourceUnit const&>(*s);
@@ -570,6 +571,29 @@ FunctionCallAnnotation& FunctionCall::annotation() const
 	return dynamic_cast<FunctionCallAnnotation&>(*m_annotation);
 }
 
+bool Identifier::saveToENISection(ENIHandler& _handler, CompilerContext& _context) const
+{
+	CompilerContext::LocationSetter locationSetter(_context, *this);
+	Declaration const* declaration = this->annotation().referencedDeclaration;
+	auto variable = dynamic_cast<VariableDeclaration const*>(declaration);
+	_handler.appendIdentifier(variable->annotation().type, *variable, static_cast<Expression const&>(*this));
+
+	if (!variable->isConstant()) {
+		/// variable is not a constant.
+		if (_context.isLocalVariable(declaration)) {
+			/// local variable
+		} else if (_context.isStateVariable(declaration)) {
+			/// state variable
+		} else {
+			solUnimplementedAssert(false, "Unsupported identifier type\n");
+		}
+	} else {
+		solUnimplementedAssert(false, "Should handler constant identifier\n");
+	}
+	_handler.setContext(&_context);
+	return true;
+}
+
 IdentifierAnnotation& Identifier::annotation() const
 {
 	if (!m_annotation)
@@ -610,4 +634,11 @@ std::string Literal::getChecksummedAddress() const
 		return string();
 	address.insert(address.begin(), 40 - address.size(), '0');
 	return dev::getChecksummedAddress(address);
+}
+
+bool Literal::saveToENISection(ENIHandler& _handler, CompilerContext& _context) const
+{
+	_handler.appendLiteral(m_token, *m_value);
+	_handler.setContext(&_context);
+	return true;
 }

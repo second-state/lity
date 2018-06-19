@@ -414,14 +414,17 @@ void CompilerUtils::encodeToMemory(
 				_givenTypes[i]->dataStoredIn(DataLocation::CallData) ||
 				_givenTypes[i]->category() == Type::Category::StringLiteral ||
 				_givenTypes[i]->category() == Type::Category::Function
-			)
+			) {
 				type = _givenTypes[i]; // delay conversion
-			else
+			} else {
 				convertType(*_givenTypes[i], *targetType, true);
-			if (auto arrayType = dynamic_cast<ArrayType const*>(type.get()))
+			}
+			if (auto arrayType = dynamic_cast<ArrayType const*>(type.get())) {
 				ArrayUtils(m_context).copyArrayToMemory(*arrayType, _padToWordBoundaries);
-			else
+			}
+			else {
 				storeInMemoryDynamic(*type, _padToWordBoundaries);
+			}
 		}
 		stackPos += _givenTypes[i]->sizeOnStack();
 	}
@@ -446,6 +449,7 @@ void CompilerUtils::encodeToMemory(
 			{
 				auto const& strType = dynamic_cast<StringLiteralType const&>(*_givenTypes[i]);
 				m_context << u256(strType.value().size());
+				/* TODO:: ENI*/
 				storeInMemoryDynamic(IntegerType(256), true);
 				// stack: ... <end_of_mem'>
 				storeInMemoryDynamic(strType, _padToWordBoundaries);
@@ -453,6 +457,7 @@ void CompilerUtils::encodeToMemory(
 			else
 			{
 				solAssert(_givenTypes[i]->category() == Type::Category::Array, "Unknown dynamic type.");
+				/// TODO:: ENI
 				auto const& arrayType = dynamic_cast<ArrayType const&>(*_givenTypes[i]);
 				// now copy the array
 				copyToStackTop(argSize - stackPos + dynPointers + 2, arrayType.sizeOnStack());

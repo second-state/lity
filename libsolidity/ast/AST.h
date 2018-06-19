@@ -28,6 +28,7 @@
 #include <libsolidity/ast/Types.h>
 #include <libsolidity/ast/ASTAnnotations.h>
 #include <libsolidity/ast/ASTEnums.h>
+#include <libsolidity/codegen/ENIHandler.h>
 
 #include <libevmasm/SourceLocation.h>
 #include <libevmasm/Instruction.h>
@@ -40,6 +41,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <iostream>
 
 namespace dev
 {
@@ -675,7 +677,8 @@ public:
 		m_isStateVariable(_isStateVar),
 		m_isIndexed(_isIndexed),
 		m_isConstant(_isConstant),
-		m_location(_referenceLocation) {}
+		m_location(_referenceLocation) {
+		}
 
 	virtual void accept(ASTVisitor& _visitor) override;
 	virtual void accept(ASTConstVisitor& _visitor) const override;
@@ -999,7 +1002,8 @@ public:
 	explicit Statement(
 		SourceLocation const& _location,
 		ASTPointer<ASTString> const& _docString
-	): ASTNode(_location), Documented(_docString) {}
+	): ASTNode(_location), Documented(_docString) {
+	}
 
 	virtual StatementAnnotation& annotation() const override;
 };
@@ -1267,7 +1271,8 @@ public:
 		std::vector<ASTPointer<VariableDeclaration>> const& _variables,
 		ASTPointer<Expression> const& _initialValue
 	):
-		Statement(_location, _docString), m_variables(_variables), m_initialValue(_initialValue) {}
+		Statement(_location, _docString), m_variables(_variables), m_initialValue(_initialValue) {
+		}
 	virtual void accept(ASTVisitor& _visitor) override;
 	virtual void accept(ASTConstVisitor& _visitor) const override;
 
@@ -1294,7 +1299,8 @@ public:
 		ASTPointer<ASTString> const& _docString,
 		ASTPointer<Expression> _expression
 	):
-		Statement(_location, _docString), m_expression(_expression) {}
+		Statement(_location, _docString), m_expression(_expression) {
+		}
 	virtual void accept(ASTVisitor& _visitor) override;
 	virtual void accept(ASTConstVisitor& _visitor) const override;
 
@@ -1320,6 +1326,8 @@ public:
 	explicit Expression(SourceLocation const& _location): ASTNode(_location) {}
 
 	ExpressionAnnotation& annotation() const override;
+
+	virtual bool saveToENISection(ENIHandler&, CompilerContext&) const { return false; };
 };
 
 class Conditional: public Expression
@@ -1603,13 +1611,16 @@ public:
 		SourceLocation const& _location,
 		ASTPointer<ASTString> const& _name
 	):
-		PrimaryExpression(_location), m_name(_name) {}
+		PrimaryExpression(_location), m_name(_name) {
+		}
 	virtual void accept(ASTVisitor& _visitor) override;
 	virtual void accept(ASTConstVisitor& _visitor) const override;
 
 	ASTString const& name() const { return *m_name; }
 
 	virtual IdentifierAnnotation& annotation() const override;
+
+	bool saveToENISection(ENIHandler&, CompilerContext&) const override;
 
 private:
 	ASTPointer<ASTString> m_name;
@@ -1661,7 +1672,8 @@ public:
 		ASTPointer<ASTString> const& _value,
 		SubDenomination _sub = SubDenomination::None
 	):
-		PrimaryExpression(_location), m_token(_token), m_value(_value), m_subDenomination(_sub) {}
+		PrimaryExpression(_location), m_token(_token), m_value(_value), m_subDenomination(_sub) {
+		}
 	virtual void accept(ASTVisitor& _visitor) override;
 	virtual void accept(ASTConstVisitor& _visitor) const override;
 
@@ -1680,6 +1692,8 @@ public:
 	bool passesAddressChecksum() const;
 	/// @returns the checksummed version of an address (or empty string if not valid)
 	std::string getChecksummedAddress() const;
+
+	bool saveToENISection(ENIHandler&, CompilerContext&) const override;
 
 private:
 	Token::Value m_token;
