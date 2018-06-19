@@ -1,3 +1,9 @@
+### Lity 1.0 (2018-06-20)
+
+Language Features:
+ * Assembly: Add ENI opcode for Ethereum Native Interface.
+ * Code Generator: Use ENIHandler to encode ENI function parameters to memory section.
+
 ### 0.4.24 (2018-05-16)
 
 Language Features:
