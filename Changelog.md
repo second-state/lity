@@ -3,6 +3,7 @@
 Language Features:
  * Assembly: Add ENI opcode for Ethereum Native Interface.
  * Code Generator: Use ENIHandler to encode ENI function parameters to memory section.
+ * ERC Checker: Use ``--contract-standard`` to check whether contract's interface conforms with given standard and list missing functions for those standard.
 
 ### 0.4.24 (2018-05-16)
 
