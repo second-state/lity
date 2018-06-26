@@ -58,15 +58,23 @@ bool ContractStandardChecker::checkContractStandard(ContractDefinition const& _c
 
 bool BasicContractStandard::visit(ContractDefinition const& _contract)
 {
-	for(ContractDefinition const* contract: _contract.annotation().linearizedBaseContracts)
+	for (ContractDefinition const* contract: _contract.annotation().linearizedBaseContracts)
 	{
-		for(FunctionDefinition const* function: contract->definedFunctions())
+		for (FunctionDefinition const* function: contract->definedFunctions())
+		{
 			m_touch(function);
-		for(EventDefinition const* event: contract->events())
+			function->accept(*this); // we need to visit all functions defined/inherited in the contract
+		}
+		for (EventDefinition const* event: contract->events())
 			m_touch(event);
 	}
-	// no need to traverse deeper because we only care about function definitions and event definitions at the moment
 	return false;
+}
+
+bool BasicContractStandard::visit(MemberAccess const& _ma)
+{
+	m_touch(&_ma);
+	return true;
 }
 
 // checks if all _requiredFunctions presents in _contract
@@ -97,7 +105,6 @@ bool BasicContractStandard::checkFunctionExistence
 					found = true;
 			}
 		};
-		// start traverse _contract and call m_touch for all visited functions
 		_contract.accept(*this);
 		if (!found) {
 			switch (_mode)
@@ -136,6 +143,42 @@ bool BasicContractStandard::checkFunctionExistence
 	default:
 		solAssert(false, "Unknown contract standard checker mode.");
 	}
+}
+
+bool BasicContractStandard::checkFunctionCallExistence
+(
+	ContractDefinition const& _contract,
+	FunctionSignatureHashes const& _requiredFunctionCalls,
+	ErrorReporter& _reporter
+)
+{
+	for(pair<string, u256> p: _requiredFunctionCalls)
+	{
+		bool found = false;
+		// m_touch is a callback function that will be called when ast nodes are visited
+		m_touch = [&found, &p](ASTNode const* _astNode) {
+			if (auto ma = dynamic_cast<MemberAccess const*>(_astNode))
+			{
+				// is it accessing member function? (trying to cast a shared_ptr<Type const> to a shared_ptr<FunctionType const>)
+				if (FunctionTypePointer ftp = dynamic_pointer_cast<FunctionType const>(ma->annotation().type))
+				{
+					// the member name should equals to the function name, and the hash of function signature should match
+					if (ma->memberName() == p.first && ftp->externalIdentifier() == p.second)
+						found = true;
+				}
+			}
+		};
+		_contract.accept(*this);
+		if (!found) {
+			_reporter.info(
+				_contract.location(),
+				"Function call '" + p.first + "' with type signature hash '" + toHex(p.second).substr((256-32)/4) + "' not found in contract " +
+					_contract.name() + ". The function call is suggested by " + this->name() + "."
+			);
+			return false;
+		}
+	}
+	return true;
 }
 
 string ERC20ContractStandard::name() const { return "ERC20"; }
@@ -177,9 +220,19 @@ FunctionSpecifications const& ERC223ContractStandard::requiredFunctions() const
 	return ret;
 }
 
+FunctionSignatureHashes const& ERC223ContractStandard::requiredFunctionCalls() const
+{
+	static FunctionSignatureHashes ret =
+	{
+		{"tokenFallback", 0xC0EE0B8A},
+	};
+	return ret;
+}
+
 bool ERC223ContractStandard::checkCompatibility(ContractDefinition const& _contract, ErrorReporter& _reporter, ContractStandardChecker::Mode _mode)
 {
-	return checkFunctionExistence(_contract, requiredFunctions(), _reporter, _mode);
+	return checkFunctionExistence(_contract, requiredFunctions(), _reporter, _mode) &&
+			checkFunctionCallExistence(_contract, requiredFunctionCalls(), _reporter);
 }
 
 string ERC721ContractStandard::name() const { return "ERC721"; }
