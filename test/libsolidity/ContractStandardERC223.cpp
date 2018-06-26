@@ -66,6 +66,10 @@ contract C { function f(uint a, uint b) public pure returns (uint) { return a + 
 BOOST_AUTO_TEST_CASE(erc223_inheritance)
 {
 	string text = R"(
+contract ContractReceiver {
+    function tokenFallback(address _from, uint _value, bytes _data) public;
+}
+
 contract A { function totalSupply() public view returns (uint); }
 contract B is A {
     function balanceOf(address tokenOwner) public view returns (uint balance);
@@ -75,14 +79,17 @@ contract C {
 }
 contract D is A {
     function transfer(address to, uint tokens) public returns (bool success);
-    function transfer(address to, uint tokens, bytes data) public returns (bool success);
+    function transfer(address to, uint tokens, bytes data) public returns (bool success) {
+		ContractReceiver(to).tokenFallback(msg.sender, tokens, data);
+		success = true;
+	}
 }
-contract X is C, B, D {
-}
+contract X is C, B, D { }
 contract Y is X { }
 contract Z is C, A, D { } // missing balanceOf(address)
 	)";
 	CHECK_INFO_ALLOW_MULTI(text, (std::vector<string>{
+		"ContractReceiver is not compatible",
 		"A is not compatible",
 		"B is not compatible",
 		"C is not compatible",
@@ -95,7 +102,135 @@ contract Z is C, A, D { } // missing balanceOf(address)
 BOOST_AUTO_TEST_CASE(erc223_standard)
 {
 	string text = R"(
+contract ContractReceiver {
+    function tokenFallback(address _from, uint _value, bytes _data) public;
+}
 contract X {
+    function totalSupply() public view returns (uint);
+    function balanceOf(address tokenOwner) public view returns (uint balance);
+    function transfer(address to, uint tokens) public returns (bool success) {
+		ContractReceiver cr = ContractReceiver(to);
+		cr.tokenFallback(msg.sender, tokens, "");
+		success = true;
+	}
+    function transfer(address to, uint tokens, bytes data) public returns (bool success);
+    event Transfer(address indexed from, address indexed to, uint tokens, bytes data);
+}
+	)";
+	CHECK_INFO_ALLOW_MULTI(text, (std::vector<string>{
+		"ContractReceiver is not compatible",
+		"X is compatible",
+	}));
+}
+BOOST_AUTO_TEST_CASE(erc223_standard_missing_tokenFallback_call)
+{
+	string text = R"(
+contract ContractReceiver {
+    function tokenFallback(address _from, uint _value, bytes _data) public;
+}
+contract X {
+	int a;
+    function totalSupply() public view returns (uint);
+    function balanceOf(address tokenOwner) public view returns (uint balance);
+    function transfer(address, uint) public returns (bool success) {
+		// ContractReceiver cr = ContractReceiver(to);
+		// cr.tokenFallback(msg.sender, tokens, "");
+		a = 0; // to suppress mutability warning
+		success = true;
+	}
+    function transfer(address to, uint tokens, bytes data) public returns (bool success);
+    event Transfer(address indexed from, address indexed to, uint tokens, bytes data);
+}
+	)";
+	CHECK_INFO_ALLOW_MULTI(text, (std::vector<string>{
+		"ContractReceiver is not compatible",
+		"Function call 'tokenFallback' with type signature hash 'c0ee0b8a' not found in contract X",
+	}));
+}
+BOOST_AUTO_TEST_CASE(erc223_standard_external_tokenFallback_call)
+{
+	string text = R"(
+contract ContractReceiver {
+    function tokenFallback(address _from, uint _value, bytes _data) external;
+}
+contract X {
+    function totalSupply() public view returns (uint);
+    function balanceOf(address tokenOwner) public view returns (uint balance);
+    function transfer(address to, uint tokens) public returns (bool success) {
+		ContractReceiver cr = ContractReceiver(to);
+		cr.tokenFallback(msg.sender, tokens, "");
+		success = true;
+	}
+    function transfer(address to, uint tokens, bytes data) public returns (bool success);
+    event Transfer(address indexed from, address indexed to, uint tokens, bytes data);
+}
+	)";
+	CHECK_INFO_ALLOW_MULTI(text, (std::vector<string>{
+		"ContractReceiver is not compatible",
+		"X is compatible",
+	}));
+}
+BOOST_AUTO_TEST_CASE(erc223_standard_wrong_receiver_function_name)
+{
+	string text = R"(
+contract ContractReceiver {
+    function tikenFallback(address _from, uint _value, bytes _data) public;
+	//       ^ should be tokenFallback
+}
+contract X {
+    function totalSupply() public view returns (uint);
+    function balanceOf(address tokenOwner) public view returns (uint balance);
+    function transfer(address to, uint tokens) public returns (bool success) {
+		ContractReceiver cr = ContractReceiver(to);
+		cr.tikenFallback(msg.sender, tokens, "");
+		success = true;
+	}
+    function transfer(address to, uint tokens, bytes data) public returns (bool success);
+    event Transfer(address indexed from, address indexed to, uint tokens, bytes data);
+}
+	)";
+	CHECK_INFO_ALLOW_MULTI(text, (std::vector<string>{
+		"ContractReceiver is not compatible",
+		"Function call 'tokenFallback' with type signature hash 'c0ee0b8a' not found in contract X",
+	}));
+}
+BOOST_AUTO_TEST_CASE(erc223_standard_wrong_receiver_function_parameter)
+{
+	string text = R"(
+contract ContractReceiver {
+    function tokenFallback(address _from, uint32 _value, bytes _data) public;
+	//                                    ^ should be uint
+}
+contract X {
+    function totalSupply() public view returns (uint);
+    function balanceOf(address tokenOwner) public view returns (uint balance);
+    function transfer(address to, uint tokens) public returns (bool success) {
+		ContractReceiver cr = ContractReceiver(to);
+		cr.tokenFallback(msg.sender, uint32(tokens), "");
+		success = true;
+	}
+    function transfer(address to, uint tokens, bytes data) public returns (bool success);
+    event Transfer(address indexed from, address indexed to, uint tokens, bytes data);
+}
+	)";
+	CHECK_INFO_ALLOW_MULTI(text, (std::vector<string>{
+		"ContractReceiver is not compatible",
+		"Function call 'tokenFallback' with type signature hash 'c0ee0b8a' not found in contract X",
+	}));
+}
+BOOST_AUTO_TEST_CASE(erc223_standard_inherited_receiver_function_call)
+{
+	string text = R"(
+contract ContractReceiver {
+    function tokenFallback(address _from, uint _value, bytes _data) public;
+}
+contract C {
+	function f(address a) public {
+		ContractReceiver cr = ContractReceiver(a);
+		cr.tokenFallback(msg.sender, 42, "");
+	}
+}
+contract X is C {
     function totalSupply() public view returns (uint);
     function balanceOf(address tokenOwner) public view returns (uint balance);
     function transfer(address to, uint tokens) public returns (bool success);
@@ -103,7 +238,11 @@ contract X {
     event Transfer(address indexed from, address indexed to, uint tokens, bytes data);
 }
 	)";
-	CHECK_INFO(text, "X is compatible");
+	CHECK_INFO_ALLOW_MULTI(text, (std::vector<string>{
+		"ContractReceiver is not compatible",
+		"C is not compatible",
+		"X is compatible",
+	}));
 }
 BOOST_AUTO_TEST_CASE(erc223_standard_missing_transfer_event_data_field)
 {

@@ -30,6 +30,8 @@ namespace solidity
 
 using FunctionSpecification = std::pair<std::string, std::shared_ptr<FunctionType const>>;
 using FunctionSpecifications = std::vector<FunctionSpecification>;
+using FunctionSignatureHash = std::pair<std::string, u256>;
+using FunctionSignatureHashes = std::vector<FunctionSignatureHash>;
 
 class ErrorReporter;
 
@@ -75,8 +77,15 @@ protected:
 		ErrorReporter& _reporter,
 		ContractStandardChecker::Mode const _mode
 	);
+	bool checkFunctionCallExistence
+	(
+		ContractDefinition const& _contract,
+		FunctionSignatureHashes const& _requiredFunctionCalls,
+		ErrorReporter& _reporter
+	);
 private:
 	virtual bool visit(ContractDefinition const& _contract) override;
+	virtual bool visit(MemberAccess const& _ma) override;
 	/// Mark an ASTNode as found while traversing AST
 	std::function<void(ASTNode const*)> m_touch;
 };
@@ -100,6 +109,9 @@ public:
 protected:
 	/// @returns the functions which must be defined in ERC223 standard.
 	FunctionSpecifications const& requiredFunctions() const;
+
+	/// @returns the function (signatures) which must be called somewhere in the contract
+	FunctionSignatureHashes const& requiredFunctionCalls() const;
 };
 
 class ERC721ContractStandard: public BasicContractStandard
