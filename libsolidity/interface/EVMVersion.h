@@ -45,11 +45,11 @@ public:
 	static EVMVersion tangerineWhistle() { return {Version::TangerineWhistle}; }
 	static EVMVersion spuriousDragon() { return {Version::SpuriousDragon}; }
 	static EVMVersion byzantium() { return {Version::Byzantium}; }
+	static EVMVersion lity(){ return {Version::Lity}; }
 	static EVMVersion constantinople() { return {Version::Constantinople}; }
-
 	static boost::optional<EVMVersion> fromString(std::string const& _version)
 	{
-		for (auto const& v: {homestead(), tangerineWhistle(), spuriousDragon(), byzantium(), constantinople()})
+		for (auto const& v: {homestead(), tangerineWhistle(), spuriousDragon(), byzantium(), lity(), constantinople()})
 			if (_version == v.name())
 				return v;
 		return {};
@@ -66,6 +66,7 @@ public:
 		case Version::TangerineWhistle: return "tangerineWhistle";
 		case Version::SpuriousDragon: return "spuriousDragon";
 		case Version::Byzantium: return "byzantium";
+		case Version::Lity: return "lity";
 		case Version::Constantinople: return "constantinople";
 		}
 		return "INVALID";
@@ -73,7 +74,10 @@ public:
 
 	/// Has the RETURNDATACOPY and RETURNDATASIZE opcodes.
 	bool supportsReturndata() const { return *this >= byzantium(); }
+	bool supportsRuntimeOverflowDetection() const {return *this == lity(); }
+
 	bool hasStaticCall() const { return *this >= byzantium(); }
+	bool hasENI() const {return *this == lity(); }
 	bool hasBitwiseShifting() const { return *this >= constantinople(); }
 
 	/// Whether we have to retain the costs for the call opcode itself (false),
@@ -81,11 +85,11 @@ public:
 	bool canOverchargeGasForCall() const { return *this >= tangerineWhistle(); }
 
 private:
-	enum class Version { Homestead, TangerineWhistle, SpuriousDragon, Byzantium, Constantinople };
+	enum class Version { Homestead, TangerineWhistle, SpuriousDragon, Byzantium, Lity, Constantinople };
 
 	EVMVersion(Version _version): m_version(_version) {}
 
-	Version m_version = Version::Byzantium;
+	Version m_version = Version::Lity;
 };
 
 
