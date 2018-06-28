@@ -29,6 +29,7 @@ test:
     policy: pull
   script:
     - time ./build/test/soltest -- --testpath ./test --no-ipc
+    - time ./test/cmdlineTests.sh
 
 deploy:
   stage: deploy
