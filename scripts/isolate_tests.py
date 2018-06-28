@@ -56,7 +56,7 @@ def extract_docs_cases(path):
         else:
           tests[-1] += l + '\n'
       else:
-        m = re.search(r'^    // This will not compile', l)
+        m = re.search(r'^[ ]+// This will not compile', l)
         if m:
           ignore = True
 
@@ -66,7 +66,7 @@ def extract_docs_cases(path):
           if m:
             ignore = False
         else:
-          m = re.search(r'^    pragma solidity .*[0-9]+\.[0-9]+\.[0-9]+;$', l)
+          m = re.search(r'^[ ]+pragma solidity .*[0-9]+\.[0-9]+\.[0-9]+;$', l)
           if m:
             inside = True
             tests += [l]
