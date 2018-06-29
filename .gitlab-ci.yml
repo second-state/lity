@@ -30,9 +30,9 @@ test:
   variables:
     TERM: "linux"
   script:
-    - time ./build/test/soltest -- --testpath ./test --no-ipc
-    - time ./build/test/tools/isoltest
-    - time ./test/cmdlineTests.sh
+    - ./build/test/soltest -- --testpath ./test --no-ipc
+    - ./build/test/tools/isoltest
+    - ./test/cmdlineTests.sh
 
 deploy:
   stage: deploy
