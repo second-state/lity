@@ -27,6 +27,8 @@ test:
     paths:
       - build
     policy: pull
+  variables:
+    TERM: "linux"
   script:
     - time ./build/test/soltest -- --testpath ./test --no-ipc
     - time ./build/test/tools/isoltest
