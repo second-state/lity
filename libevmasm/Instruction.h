@@ -49,6 +49,10 @@ enum class Instruction: uint8_t
 	MULMOD,				///< unsigned modular multiplication
 	EXP,				///< exponential operation
 	SIGNEXTEND,			///< extend length of signed integer
+	SADD,				///< signed addition operation with overflow checking
+	SSUB,				///< signed subtraction operation with overflow checking
+	SMUL,				///< signed multiplication operation with overflow checking
+
 
 	LT = 0x10,			///< less-than comparison
 	GT,					///< greater-than comparison
@@ -186,10 +190,6 @@ enum class Instruction: uint8_t
 	RETURNSUB,          ///< return to subroutine jumped from -- not part of Instructions.cpp
 	PUTLOCAL,           ///< pop top of stack to local variable -- not part of Instructions.cpp
 	GETLOCAL,           ///< push local variable to top of stack -- not part of Instructions.cpp
-
-	SADD = 0xc0,        ///< signed addition operation with overflow checking
-	SSUB,               ///< signed subtraction operation with overflow checking
-	SMUL,               ///< signed multiplication operation with overflow checking
 
 	CREATE = 0xf0,		///< create a new account with associated code
 	CALL,				///< message-call into an account
