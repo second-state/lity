@@ -1,4 +1,9 @@
-### Lity 1.0 (2018-06-20)
+### Lity 1.0.2 (2018-07-02)
+
+Features:
+ * Opcode: Move signed arithmetic opcode with overflow protection from 0xc section to 0x0 section.
+
+### Lity 1.0.1 (2018-06-20)
 
 Language Features:
  * Assembly: Add ENI opcode for Ethereum Native Interface.
