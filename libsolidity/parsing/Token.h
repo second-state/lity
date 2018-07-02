@@ -179,6 +179,8 @@ namespace solidity
 	K(Var, "var", 0)                                                   \
 	K(View, "view", 0)                                                 \
 	K(While, "while", 0)                                               \
+	K(Rule, "rule", 0)                                               \
+	K(When, "when", 0)                                               \
 	\
 	/* Ether subdenominations */                                       \
 	K(SubWei, "wei", 0)                                                \

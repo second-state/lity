@@ -176,6 +176,10 @@ private:
 	/// Creates an empty ParameterList at the current location (used if parameters can be omitted).
 	ASTPointer<ParameterList> createEmptyParameterList();
 
+	ASTPointer<Rule> parseRule();
+	ASTPointer<FactExpression> parseFactExpression();
+	ASTPointer<FieldExpression> parseFieldExpression();
+
 	/// Flag that signifies whether '_' is parsed as a PlaceholderStatement or a regular identifier.
 	bool m_insideModifier = false;
 };

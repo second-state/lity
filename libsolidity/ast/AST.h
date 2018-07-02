@@ -1701,6 +1701,38 @@ private:
 	SubDenomination m_subDenomination;
 };
 
+class FactExpression;
+class FieldExpression;
+
+/**
+ * Rule: TODO
+ */
+class Rule: public Declaration
+{
+	Rule(SourceLocation const& _location, ASTPointer<ASTString> const& _unitAlias): Declaration(_location, _unitAlias){}
+
+	std::vector<ASTPointer<FactExpression>> m_factExpressions;
+	std::vector<ASTPointer<Statement>> m_statements;
+};
+
+/**
+ * FactExpression: TODO
+ */
+class FactExpression: public Expression
+{
+	FactExpression(SourceLocation const& _location): Expression(_location){}
+	std::vector<ASTPointer<FieldExpression>> m_fieldExpressions;
+};
+
+/**
+ * FieldExpression: TODO
+ */
+class FieldExpression: public Expression
+{
+	FieldExpression(SourceLocation const& _location): Expression(_location){}
+};
+
+
 /// @}
 
 
