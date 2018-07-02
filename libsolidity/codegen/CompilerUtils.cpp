@@ -585,7 +585,7 @@ void CompilerUtils::memoryCopy()
 				{ mstore(dst, mload(src)) }
 
 			// copy the remainder (0 < len < 32)
-			let mask := sub(exp(256, sub(32, len)), 1)
+			let mask := ssub(exp(256, sub(32, len)), 1)
 			let srcpart := and(mload(src), not(mask))
 			let dstpart := and(mload(dst), mask)
 			mstore(dst, or(srcpart, dstpart))
