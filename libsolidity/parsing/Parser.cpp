@@ -1726,5 +1726,26 @@ ASTPointer<ASTString> Parser::getLiteralAndAdvance()
 	return identifier;
 }
 
+
+ASTPointer<Rule> Parser::parseRule()
+{
+	// TODO
+	return ASTPointer<Rule>();
+}
+
+ASTPointer<FactExpression> Parser::parseFactExpression()
+{
+	// TODO
+	return ASTPointer<FactExpression>();
+}
+
+
+ASTPointer<FieldExpression> Parser::parseFieldExpression()
+{
+	// TODO
+	return ASTPointer<FieldExpression>();
+}
+
+
 }
 }
