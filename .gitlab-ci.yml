@@ -31,7 +31,6 @@ test:
     TERM: "linux"
   script:
     - ./build/test/soltest -- --testpath ./test --no-ipc
-    - ./build/test/tools/isoltest
     - ./test/cmdlineTests.sh
 
 deploy:
