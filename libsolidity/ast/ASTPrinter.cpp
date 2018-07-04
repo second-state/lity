@@ -374,10 +374,29 @@ bool ASTPrinter::visit(Literal const& _node)
 	if (!tokenString)
 		tokenString = "[no token]";
 	writeLine(string("Literal, token: ") + tokenString + " value: " + _node.value());
-	printType(_node);
 	printSourcePart(_node);
 	return goDeeper();
 }
+
+bool ASTPrinter::visit(Rule const& _node)
+{
+	writeLine("RuleDefinition \"" + _node.name() + "\"");
+	printSourcePart(_node);
+	return goDeeper();
+}
+
+bool ASTPrinter::visit(FactExpression const& _node)
+{
+	printType(_node);
+	return false;
+}
+
+bool ASTPrinter::visit(FieldExpression const& _node)
+{
+	printType(_node);
+	return false;
+}
+
 
 void ASTPrinter::endVisit(PragmaDirective const&)
 {
@@ -415,6 +434,7 @@ void ASTPrinter::endVisit(EnumDefinition const&)
 }
 
 void ASTPrinter::endVisit(EnumValue const&)
+
 {
 	m_indentation--;
 }
@@ -595,6 +615,11 @@ void ASTPrinter::endVisit(ElementaryTypeNameExpression const&)
 }
 
 void ASTPrinter::endVisit(Literal const&)
+{
+	m_indentation--;
+}
+
+void ASTPrinter::endVisit(Rule const&)
 {
 	m_indentation--;
 }

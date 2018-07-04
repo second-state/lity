@@ -1701,18 +1701,27 @@ private:
 	SubDenomination m_subDenomination;
 };
 
-class FactExpression;
-class FieldExpression;
 
 /**
  * Rule: TODO
  */
 class Rule: public Declaration
 {
-	Rule(SourceLocation const& _location, ASTPointer<ASTString> const& _unitAlias): Declaration(_location, _unitAlias){}
+public:
+	Rule(SourceLocation const& _location, 
+	ASTPointer<ASTString> const&_name,
+	std::vector<ASTPointer<FactExpression>> const&_factExpressions,
+	ASTPointer<Statement> const&_whenBody
+	): Declaration(_location, _name), m_factExpressions(_factExpressions), m_whenBody(_whenBody){}
 
+	virtual void accept(ASTVisitor& _visitor) override;
+	virtual void accept(ASTConstVisitor& _visitor) const override;
+
+	virtual TypePointer type() const override;
+
+private:
 	std::vector<ASTPointer<FactExpression>> m_factExpressions;
-	std::vector<ASTPointer<Statement>> m_statements;
+	ASTPointer<Statement> m_whenBody;
 };
 
 /**
@@ -1720,7 +1729,13 @@ class Rule: public Declaration
  */
 class FactExpression: public Expression
 {
-	FactExpression(SourceLocation const& _location): Expression(_location){}
+public:
+	FactExpression(SourceLocation const& _location, const std::vector<ASTPointer<FieldExpression>> &_fieldExpressions):
+		Expression(_location), m_fieldExpressions(_fieldExpressions){}
+	virtual void accept(ASTVisitor& _visitor) override;
+	virtual void accept(ASTConstVisitor& _visitor) const override;
+
+private:
 	std::vector<ASTPointer<FieldExpression>> m_fieldExpressions;
 };
 
@@ -1729,7 +1744,14 @@ class FactExpression: public Expression
  */
 class FieldExpression: public Expression
 {
-	FieldExpression(SourceLocation const& _location): Expression(_location){}
+public:
+	FieldExpression(SourceLocation const& _location, ASTPointer<Expression> const& _expression):
+		Expression(_location), m_expression(_expression){}
+	virtual void accept(ASTVisitor& _visitor) override;
+	virtual void accept(ASTConstVisitor& _visitor) const override;
+
+private:
+	ASTPointer<Expression> m_expression;
 };
 
 

@@ -86,6 +86,9 @@ class PrimaryExpression;
 class Identifier;
 class ElementaryTypeNameExpression;
 class Literal;
+class Rule;
+class FactExpression;
+class FieldExpression;
 
 class VariableScope;
 

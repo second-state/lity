@@ -801,5 +801,47 @@ void Literal::accept(ASTConstVisitor& _visitor) const
 	_visitor.endVisit(*this);
 }
 
+void Rule::accept(ASTVisitor& _visitor)
+{
+	_visitor.visit(*this);
+	if (m_whenBody)
+		m_whenBody->accept(_visitor);
+	_visitor.endVisit(*this);
+}
+
+void Rule::accept(ASTConstVisitor& _visitor) const
+{
+	_visitor.visit(*this);
+	if (m_whenBody)
+		m_whenBody->accept(_visitor);
+	_visitor.endVisit(*this);
+}
+
+void FactExpression::accept(ASTVisitor& _visitor)
+{
+	_visitor.visit(*this);
+	_visitor.endVisit(*this);
+}
+
+void FactExpression::accept(ASTConstVisitor& _visitor) const
+{
+	_visitor.visit(*this);
+	_visitor.endVisit(*this);
+}
+
+
+void FieldExpression::accept(ASTVisitor& _visitor)
+{
+	_visitor.visit(*this);
+	_visitor.endVisit(*this);
+}
+
+void FieldExpression::accept(ASTConstVisitor& _visitor) const
+{
+	_visitor.visit(*this);
+	_visitor.endVisit(*this);
+}
+
+
 }
 }
