@@ -144,7 +144,7 @@ public:
 		Integer, RationalNumber, StringLiteral, Bool, FixedPoint, Array,
 		FixedBytes, Contract, Struct, Function, Enum, Tuple,
 		Mapping, TypeType, Modifier, Magic, Module,
-		InaccessibleDynamic
+		InaccessibleDynamic, Rule
 	};
 
 	/// @{
@@ -1280,6 +1280,19 @@ public:
 	virtual bool hasSimpleZeroValueInMemory() const override { solAssert(false, ""); }
 	virtual std::string toString(bool) const override { return "inaccessible dynamic type"; }
 	virtual TypePointer decodingType() const override { return std::make_shared<IntegerType>(256); }
+};
+
+class RuleType: public Type
+{
+public:
+	explicit RuleType(Rule const& _rule): m_rule(_rule) {}
+	virtual Category category() const override { return Category::Rule; }
+
+	virtual std::string toString(bool _short) const override { return "Rule"+std::to_string(int(_short)); }
+	virtual std::string richIdentifier() const override { return "Identifier: TODO"; }
+	Rule const& rule() const { return m_rule; }
+private:
+	Rule const& m_rule;
 };
 
 }

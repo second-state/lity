@@ -268,6 +268,8 @@ ASTPointer<ContractDefinition> Parser::parseContractDefinition(Token::Value _exp
 			subNodes.push_back(parseEventDefinition());
 		else if (currentTokenValue == Token::Using)
 			subNodes.push_back(parseUsingDirective());
+		else if (currentTokenValue == Token::Rule)
+			subNodes.push_back(parseRule());
 		else
 			fatalParserError(string("Function, variable, struct or modifier declaration expected."));
 	}
@@ -1729,14 +1731,32 @@ ASTPointer<ASTString> Parser::getLiteralAndAdvance()
 
 ASTPointer<Rule> Parser::parseRule()
 {
-	// TODO
-	return ASTPointer<Rule>();
+	ASTNodeFactory nodeFactory(*this);
+	expectToken(Token::Rule);
+	auto ruleName = getLiteralAndAdvance();
+	std::vector<ASTPointer<FactExpression>> factExpressions;
+
+	expectToken(Token::When);
+	expectToken(Token::LBrace);
+	// TODO: parse faceExp
+	expectToken(Token::RBrace);
+
+	expectToken(Token::Then);
+	ASTPointer<Statement> whenBody = parseStatement();
+	return nodeFactory.createNode<Rule>(ruleName, factExpressions, whenBody);
 }
 
 ASTPointer<FactExpression> Parser::parseFactExpression()
 {
-	// TODO
+	std::vector<ASTPointer<FieldExpression>> fieldExpressions;
+	do
+	{
+		m_scanner->next();
+		fieldExpressions.push_back(parseFieldExpression());
+	}
+	while (m_scanner->currentToken() == Token::Comma);
 	return ASTPointer<FactExpression>();
+	// return nodeFactory.createNode<FactExpression>(fieldExpressions);
 }
 
 

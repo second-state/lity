@@ -181,6 +181,7 @@ namespace solidity
 	K(While, "while", 0)                                               \
 	K(Rule, "rule", 0)                                               \
 	K(When, "when", 0)                                               \
+	K(Then, "then", 0)                                               \
 	\
 	/* Ether subdenominations */                                       \
 	K(SubWei, "wei", 0)                                                \

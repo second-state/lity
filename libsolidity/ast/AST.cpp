@@ -642,3 +642,9 @@ bool Literal::saveToENISection(ENIHandler& _handler, CompilerContext& _context) 
 	_handler.setContext(&_context);
 	return true;
 }
+
+TypePointer Rule::type() const
+{
+	return make_shared<TypeType>(make_shared<RuleType>(*this));
+}
+
