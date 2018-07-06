@@ -648,3 +648,8 @@ TypePointer Rule::type() const
 	return make_shared<TypeType>(make_shared<RuleType>(*this));
 }
 
+TypePointer FactDeclaration::type() const
+{
+	return m_typeName->annotation().type;
+}
+

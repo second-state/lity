@@ -804,6 +804,8 @@ void Literal::accept(ASTConstVisitor& _visitor) const
 void Rule::accept(ASTVisitor& _visitor)
 {
 	_visitor.visit(*this);
+	for(auto fact : m_factDeclarations)
+		fact->accept(_visitor);
 	if (m_whenBody)
 		m_whenBody->accept(_visitor);
 	_visitor.endVisit(*this);
@@ -812,20 +814,28 @@ void Rule::accept(ASTVisitor& _visitor)
 void Rule::accept(ASTConstVisitor& _visitor) const
 {
 	_visitor.visit(*this);
+	for(auto fact : m_factDeclarations)
+		fact->accept(_visitor);
 	if (m_whenBody)
 		m_whenBody->accept(_visitor);
 	_visitor.endVisit(*this);
 }
 
-void FactExpression::accept(ASTVisitor& _visitor)
+void FactDeclaration::accept(ASTVisitor& _visitor)
 {
 	_visitor.visit(*this);
+	if (m_typeName)
+		m_typeName->accept(_visitor);
 	_visitor.endVisit(*this);
 }
 
-void FactExpression::accept(ASTConstVisitor& _visitor) const
+void FactDeclaration::accept(ASTConstVisitor& _visitor) const
 {
 	_visitor.visit(*this);
+	if (m_typeName)
+		m_typeName->accept(_visitor);
+	for(auto fieldExp: m_fieldExpressions)
+		fieldExp->accept(_visitor);
 	_visitor.endVisit(*this);
 }
 
@@ -833,12 +843,16 @@ void FactExpression::accept(ASTConstVisitor& _visitor) const
 void FieldExpression::accept(ASTVisitor& _visitor)
 {
 	_visitor.visit(*this);
+	if (m_expression)
+		m_expression->accept(_visitor);
 	_visitor.endVisit(*this);
 }
 
 void FieldExpression::accept(ASTConstVisitor& _visitor) const
 {
 	_visitor.visit(*this);
+	if (m_expression)
+		m_expression->accept(_visitor);
 	_visitor.endVisit(*this);
 }
 

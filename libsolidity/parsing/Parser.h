@@ -177,7 +177,7 @@ private:
 	ASTPointer<ParameterList> createEmptyParameterList();
 
 	ASTPointer<Rule> parseRule();
-	ASTPointer<FactExpression> parseFactExpression();
+	ASTPointer<FactDeclaration> parseFactDeclaration();
 	ASTPointer<FieldExpression> parseFieldExpression();
 
 	/// Flag that signifies whether '_' is parsed as a PlaceholderStatement or a regular identifier.
