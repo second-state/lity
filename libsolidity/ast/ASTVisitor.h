@@ -90,7 +90,7 @@ public:
 	virtual bool visit(ElementaryTypeNameExpression& _node) { return visitNode(_node); }
 	virtual bool visit(Literal& _node) { return visitNode(_node); }
 	virtual bool visit(Rule & _node) { return visitNode(_node); }
-	virtual bool visit(FactExpression & _node) { return visitNode(_node); }
+	virtual bool visit(FactDeclaration & _node) { return visitNode(_node); }
 	virtual bool visit(FieldExpression & _node) { return visitNode(_node); }
 
 	virtual void endVisit(SourceUnit& _node) { endVisitNode(_node); }
@@ -139,7 +139,7 @@ public:
 	virtual void endVisit(ElementaryTypeNameExpression& _node) { endVisitNode(_node); }
 	virtual void endVisit(Literal& _node) { endVisitNode(_node); }
 	virtual void endVisit(Rule & _node) { visitNode(_node); }
-	virtual void endVisit(FactExpression & _node) { visitNode(_node); }
+	virtual void endVisit(FactDeclaration & _node) { visitNode(_node); }
 	virtual void endVisit(FieldExpression & _node) { visitNode(_node); }
 protected:
 	/// Generic function called by default for each node, to be overridden by derived classes
@@ -200,7 +200,7 @@ public:
 	virtual bool visit(ElementaryTypeNameExpression const& _node) { return visitNode(_node); }
 	virtual bool visit(Literal const& _node) { return visitNode(_node); }
 	virtual bool visit(Rule const& _node) { return visitNode(_node); }
-	virtual bool visit(FactExpression const& _node) { return visitNode(_node); }
+	virtual bool visit(FactDeclaration const& _node) { return visitNode(_node); }
 	virtual bool visit(FieldExpression const& _node) { return visitNode(_node); }
 
 	virtual void endVisit(SourceUnit const& _node) { endVisitNode(_node); }
@@ -249,7 +249,7 @@ public:
 	virtual void endVisit(ElementaryTypeNameExpression const& _node) { endVisitNode(_node); }
 	virtual void endVisit(Literal const& _node) { endVisitNode(_node); }
 	virtual void endVisit(Rule const& _node) { visitNode(_node); }
-	virtual void endVisit(FactExpression const& _node) { visitNode(_node); }
+	virtual void endVisit(FactDeclaration const& _node) { visitNode(_node); }
 	virtual void endVisit(FieldExpression const& _node) { visitNode(_node); }
 
 protected:

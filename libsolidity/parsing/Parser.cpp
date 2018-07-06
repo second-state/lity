@@ -1734,36 +1734,51 @@ ASTPointer<Rule> Parser::parseRule()
 	ASTNodeFactory nodeFactory(*this);
 	expectToken(Token::Rule);
 	auto ruleName = getLiteralAndAdvance();
-	std::vector<ASTPointer<FactExpression>> factExpressions;
+	std::vector<ASTPointer<FactDeclaration>> factDeclarations;
 
 	expectToken(Token::When);
 	expectToken(Token::LBrace);
 	// TODO: parse faceExp
+	while (m_scanner->currentToken() != Token::RBrace)
+	{
+		factDeclarations.push_back(parseFactDeclaration());
+		expectToken(Token::Semicolon);
+	}
 	expectToken(Token::RBrace);
 
 	expectToken(Token::Then);
 	ASTPointer<Statement> whenBody = parseStatement();
-	return nodeFactory.createNode<Rule>(ruleName, factExpressions, whenBody);
+	return nodeFactory.createNode<Rule>(ruleName, factDeclarations, whenBody);
 }
 
-ASTPointer<FactExpression> Parser::parseFactExpression()
+ASTPointer<FactDeclaration> Parser::parseFactDeclaration()
 {
+	// p : Person (fieldExp...);
+	ASTNodeFactory nodeFactory(*this);
 	std::vector<ASTPointer<FieldExpression>> fieldExpressions;
+
+	auto name = expectIdentifierToken();
+	expectToken(Token::Colon);
+	auto type = parseTypeName(false);
+	if (m_scanner->currentToken() != Token::LParen)
+		parserError(string("Expected ("));
 	do
 	{
 		m_scanner->next();
 		fieldExpressions.push_back(parseFieldExpression());
 	}
 	while (m_scanner->currentToken() == Token::Comma);
-	return ASTPointer<FactExpression>();
-	// return nodeFactory.createNode<FactExpression>(fieldExpressions);
+	expectToken(Token::RParen);
+	return nodeFactory.createNode<FactDeclaration>(name, type, fieldExpressions);
 }
 
 
 ASTPointer<FieldExpression> Parser::parseFieldExpression()
 {
-	// TODO
-	return ASTPointer<FieldExpression>();
+	// TODO:
+	//   a: Exp
+	ASTNodeFactory nodeFactory(*this);
+	return nodeFactory.createNode<FieldExpression>(parseExpression());
 }
 
 

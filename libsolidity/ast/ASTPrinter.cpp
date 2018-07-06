@@ -385,9 +385,10 @@ bool ASTPrinter::visit(Rule const& _node)
 	return goDeeper();
 }
 
-bool ASTPrinter::visit(FactExpression const& _node)
+bool ASTPrinter::visit(FactDeclaration const& _node)
 {
-	printType(_node);
+	writeLine("FactDeclaration " + _node.name());
+	printSourcePart(_node);
 	return false;
 }
 

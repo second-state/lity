@@ -1710,9 +1710,9 @@ class Rule: public Declaration
 public:
 	Rule(SourceLocation const& _location, 
 	ASTPointer<ASTString> const&_name,
-	std::vector<ASTPointer<FactExpression>> const&_factExpressions,
+	std::vector<ASTPointer<FactDeclaration>> const&_factDeclarations,
 	ASTPointer<Statement> const&_whenBody
-	): Declaration(_location, _name), m_factExpressions(_factExpressions), m_whenBody(_whenBody){}
+	): Declaration(_location, _name), m_factDeclarations(_factDeclarations), m_whenBody(_whenBody){}
 
 	virtual void accept(ASTVisitor& _visitor) override;
 	virtual void accept(ASTConstVisitor& _visitor) const override;
@@ -1720,22 +1720,29 @@ public:
 	virtual TypePointer type() const override;
 
 private:
-	std::vector<ASTPointer<FactExpression>> m_factExpressions;
+	std::vector<ASTPointer<FactDeclaration>> m_factDeclarations;
 	ASTPointer<Statement> m_whenBody;
 };
 
 /**
- * FactExpression: TODO
+ * FactDeclaration: TODO
  */
-class FactExpression: public Expression
+class FactDeclaration: public Declaration
 {
 public:
-	FactExpression(SourceLocation const& _location, const std::vector<ASTPointer<FieldExpression>> &_fieldExpressions):
-		Expression(_location), m_fieldExpressions(_fieldExpressions){}
+	FactDeclaration(SourceLocation const& _location, 
+		ASTPointer<ASTString> const&_name, 
+		ASTPointer<TypeName> _typeName,
+		const std::vector<ASTPointer<FieldExpression>> &_fieldExpressions):
+		Declaration(_location, _name), m_typeName(_typeName), m_fieldExpressions(_fieldExpressions){}
+
 	virtual void accept(ASTVisitor& _visitor) override;
 	virtual void accept(ASTConstVisitor& _visitor) const override;
 
+	virtual TypePointer type() const override;
+
 private:
+	ASTPointer<TypeName> m_typeName;
 	std::vector<ASTPointer<FieldExpression>> m_fieldExpressions;
 };
 

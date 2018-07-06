@@ -92,7 +92,7 @@ public:
 	bool visit(ElementaryTypeNameExpression const& _node) override;
 	bool visit(Literal const& _node) override;
 	bool visit(Rule const& node) override;
-	bool visit(FactExpression const& node) override;
+	bool visit(FactDeclaration const& node) override;
 	bool visit(FieldExpression const& node) override;
 
 	void endVisit(PragmaDirective const&) override;
