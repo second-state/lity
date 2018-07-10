@@ -206,6 +206,16 @@ bool StaticAnalyzer::visit(MemberAccess const& _memberAccess)
 					);
 			}
 
+	if(_memberAccess.memberName() == "call")
+		if (auto const* type = dynamic_cast<FunctionType const*>(_memberAccess.annotation().type.get()))
+			if (type->kind() == FunctionType::Kind::BareCall)
+			{
+				m_errorReporter.warning(
+					_memberAccess.location(),
+					"The use of low level \"call\" should be avoided. Use direct call to abstract contract instead."
+				);
+			}
+
 	if (m_constructor)
 	{
 		auto const* expr = &_memberAccess.expression();

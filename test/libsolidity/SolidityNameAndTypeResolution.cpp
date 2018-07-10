@@ -4634,7 +4634,10 @@ BOOST_AUTO_TEST_CASE(unused_return_value_call)
 			}
 		}
 	)";
-	CHECK_WARNING(text, "Return value of low-level calls not used");
+	CHECK_WARNING_ALLOW_MULTI(text, (std::vector<std::string>{
+		"Return value of low-level calls not used",
+		"\"call\" should be avoided"
+	}));
 }
 
 BOOST_AUTO_TEST_CASE(unused_return_value_call_value)
@@ -4646,7 +4649,10 @@ BOOST_AUTO_TEST_CASE(unused_return_value_call_value)
 			}
 		}
 	)";
-	CHECK_WARNING(text, "Return value of low-level calls not used");
+	CHECK_WARNING_ALLOW_MULTI(text, (std::vector<std::string>{
+		"Return value of low-level calls not used",
+		"\"call\" should be avoided"
+	}));
 }
 
 BOOST_AUTO_TEST_CASE(unused_return_value_callcode)
@@ -6895,7 +6901,10 @@ BOOST_AUTO_TEST_CASE(warn_about_address_members_on_contract)
 			}
 		}
 	)";
-	CHECK_WARNING(text, "Using contract member \"call\" inherited from the address type is deprecated.");
+	CHECK_ALLOW_MULTI(text, (vector<pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "Using contract member \"call\" inherited from the address type is deprecated"},
+		{Error::Type::Warning, "\"call\" should be avoided"}
+	}));
 	text = R"(
 		contract C {
 			function f() view public {
@@ -6960,7 +6969,10 @@ BOOST_AUTO_TEST_CASE(warn_about_address_members_on_non_this_contract)
 			}
 		}
 	)";
-	CHECK_WARNING(text, "Using contract member \"call\" inherited from the address type is deprecated");
+	CHECK_ALLOW_MULTI(text, (vector<pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "Using contract member \"call\" inherited from the address type is deprecated"},
+		{Error::Type::Warning, "\"call\" should be avoided"}
+	}));
 	text = R"(
 		contract C {
 			function f() pure public {

@@ -312,7 +312,7 @@ BOOST_AUTO_TEST_CASE(builtin_functions)
 			function() payable public {}
 		}
 	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
+	CHECK_WARNING(text, "\"call\" should be avoided");
 }
 
 BOOST_AUTO_TEST_CASE(function_types)
