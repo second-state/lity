@@ -1691,7 +1691,6 @@ void ExpressionCompiler::appendArithmeticOperatorCode(Token::Value _operator, Ty
 
 void ExpressionCompiler::appendSafeArithmeticCheckCode(Token::Value _operator, Type const& _type)
 {
-	//TODO: Check Type
 	solAssert(dynamic_cast<IntegerType const*>(&_type), "Only integer supported for safe math.");
 
 	IntegerType const& type = dynamic_cast<IntegerType const&>(_type);
