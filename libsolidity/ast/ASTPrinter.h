@@ -140,6 +140,8 @@ public:
 	void endVisit(ElementaryTypeNameExpression const&) override;
 	void endVisit(Literal const&) override;
 	void endVisit(Rule const&) override;
+	void endVisit(FactDeclaration const& node) override;
+	void endVisit(FieldExpression const& node) override;
 
 private:
 	void printSourcePart(ASTNode const& _node);
