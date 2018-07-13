@@ -1,6 +1,8 @@
 Run Travis Node
 ```````````````
 
+.. _eni-tutorial:
+
 What is travis? See `here <https://github.com/CyberMiles/travis>`_ for
 instructions to start a Travis node.
 
