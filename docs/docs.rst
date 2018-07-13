@@ -16,3 +16,8 @@ ERC Contract Standard Checker
 - :ref:`ERC721 Checker <erc721-contract-standard-checker>`
 - :ref:`ERC827 Checker <erc827-contract-standard-checker>`
 - :ref:`ERC884 Checker <erc884-contract-standard-checker>`
+
+ENI Examples
+------------
+
+- :ref:`Verify Dogecoin Block on Travis <verify-dogecoin-block-on-travis>`
