@@ -89,9 +89,9 @@ public:
 	virtual bool visit(Identifier& _node) { return visitNode(_node); }
 	virtual bool visit(ElementaryTypeNameExpression& _node) { return visitNode(_node); }
 	virtual bool visit(Literal& _node) { return visitNode(_node); }
-	virtual bool visit(Rule & _node) { return visitNode(_node); }
-	virtual bool visit(FactDeclaration & _node) { return visitNode(_node); }
-	virtual bool visit(FieldExpression & _node) { return visitNode(_node); }
+	virtual bool visit(Rule& _node) { return visitNode(_node); }
+	virtual bool visit(FactDeclaration& _node) { return visitNode(_node); }
+	virtual bool visit(FieldExpression& _node) { return visitNode(_node); }
 
 	virtual void endVisit(SourceUnit& _node) { endVisitNode(_node); }
 	virtual void endVisit(PragmaDirective& _node) { endVisitNode(_node); }
@@ -138,9 +138,9 @@ public:
 	virtual void endVisit(Identifier& _node) { endVisitNode(_node); }
 	virtual void endVisit(ElementaryTypeNameExpression& _node) { endVisitNode(_node); }
 	virtual void endVisit(Literal& _node) { endVisitNode(_node); }
-	virtual void endVisit(Rule & _node) { visitNode(_node); }
-	virtual void endVisit(FactDeclaration & _node) { visitNode(_node); }
-	virtual void endVisit(FieldExpression & _node) { visitNode(_node); }
+	virtual void endVisit(Rule& _node) { visitNode(_node); }
+	virtual void endVisit(FactDeclaration& _node) { visitNode(_node); }
+	virtual void endVisit(FieldExpression& _node) { visitNode(_node); }
 protected:
 	/// Generic function called by default for each node, to be overridden by derived classes
 	/// if behaviour unspecific to a node type is desired.
