@@ -435,7 +435,6 @@ void ASTPrinter::endVisit(EnumDefinition const&)
 }
 
 void ASTPrinter::endVisit(EnumValue const&)
-
 {
 	m_indentation--;
 }
