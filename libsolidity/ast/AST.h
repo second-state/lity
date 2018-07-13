@@ -1703,7 +1703,7 @@ private:
 
 
 /**
- * Rule: TODO
+ * Rule: TODO: comments
  */
 class Rule: public Declaration
 {
@@ -1725,7 +1725,7 @@ private:
 };
 
 /**
- * FactDeclaration: TODO
+ * FactDeclaration: TODO: comments
  */
 class FactDeclaration: public Declaration
 {
@@ -1747,7 +1747,7 @@ private:
 };
 
 /**
- * FieldExpression: TODO
+ * FieldExpression: TODO: comments
  */
 class FieldExpression: public Expression
 {
