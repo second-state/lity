@@ -1,3 +1,5 @@
+.. _erc20-contract-standard-checker:
+
 ERC20 Contract Standard Checker
 ===============================
 
@@ -14,7 +16,7 @@ Examples
 
 - ERC20 Interface (erc20_interface.sol)
 
-.. code:: solidity
+.. code:: ts
 
   pragma solidity ^0.4.23;
 
@@ -45,9 +47,10 @@ Examples
 
 - ERC20 Interface with wrong mutability (wrong_mutability.sol)
 
-.. code:: solidity
+.. code:: ts
 
   pragma solidity ^0.4.23;
+
   contract ERC20Interface {
     function totalSupply() public pure returns (uint); // mutability should be view, not pure
     function balanceOf(address tokenOwner) public view returns (uint balance);

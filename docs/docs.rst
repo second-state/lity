@@ -11,8 +11,8 @@ Rule Engine
 ERC Contract Standard Checker
 -----------------------------
 
-- `ERC20 Checker <erc-contract-standard-checker/erc20-checker>`
-- `ERC223 Checker <erc-contract-standard-checker/erc223-checker>`
-- `ERC721 Checker <erc-contract-standard-checker/erc721-checker>`
-- `ERC827 Checker <erc-contract-standard-checker/erc827-checker>`
-- `ERC884 Checker <erc-contract-standard-checker/erc884-checker>`
+- :ref:`ERC20 Checker <erc20-contract-standard-checker>`
+- :ref:`ERC223 Checker <erc223-contract-standard-checker>`
+- :ref:`ERC721 Checker <erc721-contract-standard-checker>`
+- :ref:`ERC827 Checker <erc827-contract-standard-checker>`
+- :ref:`ERC884 Checker <erc884-contract-standard-checker>`

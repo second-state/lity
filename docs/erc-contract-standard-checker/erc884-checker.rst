@@ -1,5 +1,7 @@
+.. _erc884-contract-standard-checker:
+
 ERC884 Contract Standard Checker
-===============================
+================================
 
 Enable contract standard checker with specific ERC
 --------------------------------------------------
@@ -14,7 +16,7 @@ Examples
 
 - ERC884 Interface (erc884_interface.sol)
 
-.. code:: solidity
+.. code:: ts
 
   pragma solidity ^0.4.23;
 
@@ -66,7 +68,7 @@ Examples
 
 - ERC884 Interface with missing function (missing_function.sol)
 
-.. code:: solidity
+.. code:: ts
 
   pragma solidity ^0.4.23;
 
