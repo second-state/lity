@@ -681,6 +681,25 @@ void DeclarationRegistrationHelper::endVisit(EventDefinition&)
 	closeCurrentScope();
 }
 
+bool DeclarationRegistrationHelper::visit(Rule & _declaration){
+	registerDeclaration(_declaration, false);
+	enterNewSubScope(_declaration);
+	return true;
+}
+void DeclarationRegistrationHelper::endVisit(Rule & ){
+	closeCurrentScope();
+}
+
+bool DeclarationRegistrationHelper::visit(FactDeclaration & _declaration) {
+	registerDeclaration(_declaration, false);
+	enterNewSubScope(_declaration);
+	return true;
+}
+
+void DeclarationRegistrationHelper::endVisit(FactDeclaration &){
+	closeCurrentScope();
+}
+
 void DeclarationRegistrationHelper::enterNewSubScope(ASTNode& _subScope)
 {
 	map<ASTNode const*, shared_ptr<DeclarationContainer>>::iterator iter;
