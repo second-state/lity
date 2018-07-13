@@ -624,6 +624,17 @@ void ASTPrinter::endVisit(Rule const&)
 	m_indentation--;
 }
 
+void ASTPrinter::endVisit(FactDeclaration const&)
+{
+	m_indentation--;
+}
+
+void ASTPrinter::endVisit(FieldExpression const&)
+{
+	m_indentation--;
+}
+
+
 void ASTPrinter::printSourcePart(ASTNode const& _node)
 {
 	if (m_gasCosts.count(&_node))
