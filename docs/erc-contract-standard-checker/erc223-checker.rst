@@ -1,5 +1,7 @@
+.. _erc223-contract-standard-checker:
+
 ERC223 Contract Standard Checker
-===============================
+================================
 
 Enable contract standard checker with specific ERC
 --------------------------------------------------
@@ -14,7 +16,7 @@ Examples
 
 - ERC223 Interface (erc223_interface.sol)
 
-.. code:: solidity
+.. code:: ts
 
   pragma solidity ^0.4.23;
 
@@ -41,7 +43,7 @@ Examples
 
 - ERC223 Token example (erc223_token.sol)
 
-.. code:: solidity
+.. code:: ts
 
   pragma solidity ^0.4.11;
 

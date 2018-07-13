@@ -1,5 +1,7 @@
+.. _erc721-contract-standard-checker:
+
 ERC721 Contract Standard Checker
-===============================
+================================
 
 Enable contract standard checker with specific ERC
 --------------------------------------------------
@@ -14,7 +16,7 @@ Examples
 
 - ERC721 Interface (erc721_interface.sol)
 
-.. code:: solidity
+.. code:: ts
 
   pragma solidity ^0.4.23;
 
@@ -46,7 +48,7 @@ Examples
 
 - ERC721 Interface with wrong modification level (wrong_modification_level.sol)
 
-.. code:: solidity
+.. code:: ts
 
   pragma solidity ^0.4.23;
 

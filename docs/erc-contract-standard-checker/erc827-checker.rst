@@ -1,5 +1,7 @@
+.. _erc827-contract-standard-checker:
+
 ERC827 Contract Standard Checker
-===============================
+================================
 
 Enable contract standard checker with specific ERC
 --------------------------------------------------
@@ -14,7 +16,7 @@ Examples
 
 - ERC827 Interface (erc827_standard_no_inheritance.sol)
 
-.. code:: solidity
+.. code:: ts
 
   pragma solidity ^0.4.23;
 
@@ -46,7 +48,7 @@ Examples
 
 - ERC827 Interface inheritance (erc827_inheritance.sol)
 
-.. code:: solidity
+.. code:: ts
 
   pragma solidity ^0.4.23;
 
