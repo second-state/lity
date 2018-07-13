@@ -90,7 +90,7 @@ Run with `ABCDE` as input to your contract.
   
   0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000054142434445000000000000000000000000000000000000000000000000000000
 
-Accroding to the ABI of Ethereum contracts, the output could be decode as string `EDCBA`.
+According to the ABI of Ethereum contracts, the output could be decode as string `EDCBA`.
 
 .. code:: bash
 
