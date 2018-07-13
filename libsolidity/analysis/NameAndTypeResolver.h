@@ -181,6 +181,11 @@ private:
 	bool visit(EventDefinition& _event) override;
 	void endVisit(EventDefinition& _event) override;
 
+	bool visit(Rule & _declaration) override;
+	void endVisit(Rule & _declaration) override;
+	bool visit(FactDeclaration & _declaration) override;
+	void endVisit(FactDeclaration & _declaration) override;
+
 	void enterNewSubScope(ASTNode& _subScope);
 	void closeCurrentScope();
 	void registerDeclaration(Declaration& _declaration, bool _opensScope);

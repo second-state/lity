@@ -389,13 +389,13 @@ bool ASTPrinter::visit(FactDeclaration const& _node)
 {
 	writeLine("FactDeclaration " + _node.name());
 	printSourcePart(_node);
-	return false;
+	return goDeeper();
 }
 
 bool ASTPrinter::visit(FieldExpression const& _node)
 {
 	printType(_node);
-	return false;
+	return goDeeper();
 }
 
 
