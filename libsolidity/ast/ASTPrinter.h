@@ -91,9 +91,9 @@ public:
 	bool visit(Identifier const& _node) override;
 	bool visit(ElementaryTypeNameExpression const& _node) override;
 	bool visit(Literal const& _node) override;
-	bool visit(Rule const& node) override;
-	bool visit(FactDeclaration const& node) override;
-	bool visit(FieldExpression const& node) override;
+	bool visit(Rule const& _node) override;
+	bool visit(FactDeclaration const& _node) override;
+	bool visit(FieldExpression const& _node) override;
 
 	void endVisit(PragmaDirective const&) override;
 	void endVisit(ImportDirective const&) override;
@@ -140,8 +140,8 @@ public:
 	void endVisit(ElementaryTypeNameExpression const&) override;
 	void endVisit(Literal const&) override;
 	void endVisit(Rule const&) override;
-	void endVisit(FactDeclaration const& node) override;
-	void endVisit(FieldExpression const& node) override;
+	void endVisit(FactDeclaration const&) override;
+	void endVisit(FieldExpression const&) override;
 
 private:
 	void printSourcePart(ASTNode const& _node);

@@ -681,26 +681,26 @@ void DeclarationRegistrationHelper::endVisit(EventDefinition&)
 	closeCurrentScope();
 }
 
-bool DeclarationRegistrationHelper::visit(Rule & _declaration)
+bool DeclarationRegistrationHelper::visit(Rule& _declaration)
 {
 	registerDeclaration(_declaration, false);
 	enterNewSubScope(_declaration);
 	return true;
 }
 
-void DeclarationRegistrationHelper::endVisit(Rule & )
+void DeclarationRegistrationHelper::endVisit(Rule&)
 {
 	closeCurrentScope();
 }
 
-bool DeclarationRegistrationHelper::visit(FactDeclaration & _declaration) 
+bool DeclarationRegistrationHelper::visit(FactDeclaration& _declaration) 
 {
 	registerDeclaration(_declaration, false);
 	enterNewSubScope(_declaration);
 	return true;
 }
 
-void DeclarationRegistrationHelper::endVisit(FactDeclaration &)
+void DeclarationRegistrationHelper::endVisit(FactDeclaration&)
 {
 	closeCurrentScope();
 }
