@@ -58,7 +58,7 @@ Now we have :code:`lityc`:
 .. code:: bash
 
   $ ls -l ./lityc/lityc
-  -rwxrwxr-x 1 dm4 dm4 26649648 Jul  3 02:19 lityc/lityc*
+  -rwxrwxr-x 1 skymizer skymizer 26649648 Jul  3 02:19 lityc/lityc*
 
 Compiler DogecoinVerifier Contract
 ----------------------------------
