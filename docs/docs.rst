@@ -20,4 +20,5 @@ ERC Contract Standard Checker
 ENI Examples
 ------------
 
+- :ref:`Reverse String <reverse-string>`
 - :ref:`Verify Dogecoin Block on Travis <verify-dogecoin-block-on-travis>`
