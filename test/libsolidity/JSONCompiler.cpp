@@ -75,7 +75,8 @@ BOOST_AUTO_TEST_SUITE(JSONCompiler)
 BOOST_AUTO_TEST_CASE(read_version)
 {
 	string output(version());
-	BOOST_CHECK(output.find(VersionString) == 0);
+	BOOST_CHECK(output.find(SolcVersionString) == 0);
+	BOOST_CHECK(output.find(LityVersionString) == 0);
 }
 
 BOOST_AUTO_TEST_CASE(read_license)

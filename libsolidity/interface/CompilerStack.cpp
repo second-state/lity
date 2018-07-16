@@ -125,7 +125,9 @@ bool CompilerStack::parse()
 	m_errorReporter.clear();
 	ASTNode::resetID();
 
-	if (SemVerVersion{string(VersionString)}.isPrerelease())
+	if (
+			SemVerVersion{string(LityVersionString)}.isPrerelease()
+			|| SemVerVersion{string(SolcVersionString)}.isPrerelease())
 		m_errorReporter.warning("This is a pre-release compiler version, please do not use it in production.");
 
 	vector<string> sourcesToParse;
@@ -854,8 +856,8 @@ string CompilerStack::createMetadata(Contract const& _contract) const
 {
 	Json::Value meta;
 	meta["version"] = 1;
-	meta["language"] = "Solidity";
-	meta["compiler"]["version"] = VersionStringStrict;
+	meta["language"] = "Lity";
+	meta["compiler"]["version"] = LityVersionStringStrict;
 
 	/// All the source files (including self), which should be included in the metadata.
 	set<string> referencedSources;

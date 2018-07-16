@@ -30,14 +30,19 @@ namespace dev
 namespace solidity
 {
 
-extern char const* VersionNumber;
-extern std::string const VersionString;
-extern std::string const VersionStringStrict;
+extern char const* SolcVersionNumber;
+extern std::string const SolcVersionString;
+extern std::string const SolcVersionStringStrict;
+extern char const* LityVersionNumber;
+extern std::string const LityVersionString;
+extern std::string const LityVersionStringStrict;
 
 /// @returns a binary form of the version string, where A.B.C-HASH is encoded such that
 /// the first byte is zero, the following three bytes encode A B and C (interpreted as decimals)
 /// and HASH is interpreted as 8 hex digits and encoded into the last four bytes.
-bytes binaryVersion();
+bytes binaryVersion(const std::string& versionString);
+bytes solcBinaryVersion();
+bytes lityBinaryVersion();
 
 }
 }
