@@ -46,15 +46,25 @@ void SyntaxChecker::endVisit(SourceUnit const& _sourceUnit)
 	if (!m_versionPragmaFound)
 	{
 		string errorString("Source file does not specify required compiler version!");
-		SemVerVersion recommendedVersion{string(VersionString)};
-		if (!recommendedVersion.isPrerelease())
+		SemVerVersion recommendedLityVersion{string(LityVersionString)};
+		SemVerVersion recommendedSolcVersion{string(SolcVersionString)};
+		if (
+				!recommendedLityVersion.isPrerelease()
+				|| !recommendedSolcVersion.isPrerelease())
 			errorString +=
-				"Consider adding \"pragma solidity ^" +
-				to_string(recommendedVersion.major()) +
+				"Consider adding \"pragma lity ^" +
+				to_string(recommendedLityVersion.major()) +
 				string(".") +
-				to_string(recommendedVersion.minor()) +
+				to_string(recommendedLityVersion.minor()) +
 				string(".") +
-				to_string(recommendedVersion.patch()) +
+				to_string(recommendedLityVersion.patch()) +
+				string(";\"") +
+				" or \"pragma solidity ^" +
+				to_string(recommendedSolcVersion.major()) +
+				string(".") +
+				to_string(recommendedSolcVersion.minor()) +
+				string(".") +
+				to_string(recommendedSolcVersion.patch()) +
 				string(";\"");
 
 		m_errorReporter.warning(_sourceUnit.location(), errorString);
@@ -106,12 +116,28 @@ bool SyntaxChecker::visit(PragmaDirective const& _pragma)
 		vector<string> literals(_pragma.literals().begin() + 1, _pragma.literals().end());
 		SemVerMatchExpressionParser parser(tokens, literals);
 		auto matchExpression = parser.parse();
-		SemVerVersion currentVersion{string(VersionString)};
+		SemVerVersion currentVersion{string(SolcVersionString)};
 		if (!matchExpression.matches(currentVersion))
 			m_errorReporter.syntaxError(
 				_pragma.location(),
 				"Source file requires different compiler version (current compiler is " +
-				string(VersionString) + " - note that nightly builds are considered to be "
+				string(SolcVersionString) + " - note that nightly builds are considered to be "
+				"strictly less than the released version"
+			);
+		m_versionPragmaFound = true;
+	}
+	else if (_pragma.literals()[0] == "lity")
+	{
+		vector<Token::Value> tokens(_pragma.tokens().begin() + 1, _pragma.tokens().end());
+		vector<string> literals(_pragma.literals().begin() + 1, _pragma.literals().end());
+		SemVerMatchExpressionParser parser(tokens, literals);
+		auto matchExpression = parser.parse();
+		SemVerVersion currentVersion{string(LityVersionString)};
+		if (!matchExpression.matches(currentVersion))
+			m_errorReporter.syntaxError(
+				_pragma.location(),
+				"Source file requires different compiler version (current compiler is " +
+				string(LityVersionString) + " - note that nightly builds are considered to be "
 				"strictly less than the released version"
 			);
 		m_versionPragmaFound = true;

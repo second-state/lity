@@ -277,7 +277,7 @@ extern char const* license()
 }
 extern char const* version()
 {
-	return VersionString.c_str();
+	return LityVersionString.c_str();
 }
 extern char const* compileJSON(char const* _input, bool _optimize)
 {

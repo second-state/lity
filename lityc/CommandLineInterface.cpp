@@ -210,7 +210,7 @@ static void version()
 		"lityc, the solidity compiler commandline interface" <<
 		endl <<
 		"Version: " <<
-		dev::solidity::VersionString <<
+		dev::solidity::LityVersionString <<
 		endl;
 	exit(0);
 }
@@ -946,7 +946,7 @@ void CommandLineInterface::handleCombinedJSON()
 
 	Json::Value output(Json::objectValue);
 
-	output[g_strVersion] = ::dev::solidity::VersionString;
+	output[g_strVersion] = ::dev::solidity::LityVersionString;
 	set<string> requests;
 	boost::split(requests, m_args[g_argCombinedJson].as<string>(), boost::is_any_of(","));
 	vector<string> contracts = m_compiler->contractNames();
