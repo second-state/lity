@@ -10,13 +10,7 @@ Build from source
   cd lity
   mkdir build
   cd build
-  sudo apt-get install build-essential
-  wget http://www.cmake.org/files/v3.2/cmake-3.2.2.tar.gz
-  tar xf cmake-3.2.2.tar.gz
-  cd cmake-3.2.2
-  ./configure
-  make
-  sudo make install
+  sudo apt-get install cmake libblkid-dev e2fslibs-dev libboost-all-dev libaudit-dev
   cmake ..
   make
   ./lityc/lityc --help
