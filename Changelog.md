@@ -1,3 +1,12 @@
+### Lity 1.1.0 (2018-07-16)
+
+Language Features:
+ * General: Add a new type ``token_t`` presents unsigned int 256bit with overflow protection.
+ * General: Add the specification of Business Rules Management System v1.0.
+ * General: Warn user when low level .call() is used
+ * ERC Checker: Ensure ERC223 contracts call tokenFallback somewhere
+ * Documentation: Provide the examples of ENI, overflow protection and ERC contract standard checkers.
+
 ### Lity 1.0.2 (2018-07-02)
 
 Features:
