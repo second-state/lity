@@ -10,11 +10,13 @@ Build from source
   cd lity
   mkdir build
   cd build
-  sudo apt-get install software-properties-common
-  sudo add-apt-repository ppa:george-edison55/cmake-3.x
-  sudo apt-get update
-  sudo apt-get install cmake
-  sudo apt-get upgrade
+  sudo apt-get install build-essential
+  wget http://www.cmake.org/files/v3.2/cmake-3.2.2.tar.gz
+  tar xf cmake-3.2.2.tar.gz
+  cd cmake-3.2.2
+  ./configure
+  make
+  sudo make install
   cmake ..
   make
   ./lityc/lityc --help
