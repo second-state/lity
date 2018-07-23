@@ -31,7 +31,7 @@ ERC Contract Standard Checker
 Overflow Protection
 ```````````````````
 
-- `Bec token with overflow protection <overflow-protection>`
+- :ref:`Bec token with overflow protection <overflow-protection>`
 
 Ethereum Native Interface (ENI)
 ```````````````````````````````
