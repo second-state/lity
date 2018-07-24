@@ -3,12 +3,16 @@
 ERC721 Contract Standard Checker
 ================================
 
+Make sure you are in the folder where lityc is installed. 
+
+For example your location should be "~/lity/build" if you followed `this tutorial <http://lity.readthedocs.io/en/latest/download.html>`_.
+
 Enable contract standard checker with specific ERC
 --------------------------------------------------
 
 .. code:: bash
 
-  lityc --contract-standard ERC721 <contract file>
+  $ ./lityc/lityc --contract-standard ERC721 <contract file>
 
 
 Examples
@@ -41,7 +45,7 @@ Examples
 
 .. code:: bash
 
-  $ lityc --contract-standard ERC721 erc721_interface.sol
+  $ ./lityc/lityc --contract-standard ERC721 erc721_interface.sol
 
 
 
@@ -73,7 +77,7 @@ Examples
 
 .. code:: bash
 
-  $ lityc --contract-standard ERC721 wrong_modification_level.sol
+  $ ./lityc/lityc --contract-standard ERC721 wrong_modification_level.sol
 
   wrong_modification_level.sol:3:1: Info: Missing 'transferFrom' with type signature 'function (address,address,uint256) payable external'. ERC721Interface is not compatible to ERC721.
   contract ERC721Interface {
