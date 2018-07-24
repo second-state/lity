@@ -3,12 +3,16 @@
 ERC827 Contract Standard Checker
 ================================
 
+Make sure you are in the folder where lityc is installed. 
+
+For example your location should be "~/lity/build" if you followed `this tutorial <http://lity.readthedocs.io/en/latest/download.html>`_.
+
 Enable contract standard checker with specific ERC
 --------------------------------------------------
 
 .. code:: bash
 
-  lityc --contract-standard ERC827 <contract file>
+  ./lityc/lityc --contract-standard ERC827 <contract file>
 
 
 Examples
@@ -39,7 +43,7 @@ Examples
 
 .. code:: bash
 
-  $ lityc --contract-standard ERC827 erc827_standard_no_inheritance.sol
+  $ ./lityc/lityc --contract-standard ERC827 erc827_standard_no_inheritance.sol
 
   erc827_standard_no_inheritance.sol:3:1: Info: ERC827Interface is compatible to ERC827.
   contract ERC827Interface {
@@ -72,7 +76,7 @@ Examples
 
 .. code:: bash
 
-  $ lityc --contract-standard ERC827 erc827_standard.sol
+  $ ./lityc/lityc --contract-standard ERC827 erc827_standard.sol
 
   erc827_standard.sol:3:1: Info: Missing 'transferAndCall' with type signature 'function (address,uint256,bytes memory) payable external returns (bool)'. ERC827Base is not compatible to ERC827.
   contract ERC827Base {
