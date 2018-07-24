@@ -3,12 +3,16 @@
 ERC223 Contract Standard Checker
 ================================
 
+Make sure you are in the folder where lityc is installed. 
+
+For example your location should be "~/lity/build" if you followed `this tutorial <http://lity.readthedocs.io/en/latest/download.html>`_.
+
 Enable contract standard checker with specific ERC
 --------------------------------------------------
 
 .. code:: bash
 
-  lityc --contract-standard ERC223 <contract file>
+  $ ./lityc/lityc --contract-standard ERC223 <contract file>
 
 
 Examples
@@ -33,7 +37,7 @@ Examples
 
 .. code:: bash
 
-  $ lityc --contract-standard ERC223 erc223_interface.sol
+  $ ./lityc/lityc --contract-standard ERC223 erc223_interface.sol
 
   erc223_standard.sol:3:1: Info: ERC223Interface is compatible to ERC223.
   contract ERC223Interface {
@@ -167,7 +171,7 @@ Examples
 
 .. code:: bash
 
-  $ lityc --contract-standard ERC223 erc223_token.sol
+  $ ./lityc/lityc --contract-standard ERC223 erc223_token.sol
 
   erc223_token.sol:6:1: Info: Missing 'totalSupply' with type signature 'function () view external returns (uint256)'. SafeMath is not compatible to ERC223.
   library SafeMath {
