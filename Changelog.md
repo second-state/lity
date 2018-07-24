@@ -1,3 +1,11 @@
+### Lity 1.1.1 (2018-07-24)
+
+Language Features:
+ * Documentation: Provide the examples of RSA encryption and decryption.
+
+Bugfixes:
+ * Code Generator: String identifier should be 32 bytes alignment.
+
 ### Lity 1.1.0 (2018-07-16)
 
 Language Features:
