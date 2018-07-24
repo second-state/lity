@@ -46,6 +46,9 @@ Examples
 .. code:: bash
 
   $ ./lityc/lityc --contract-standard ERC721 erc721_interface.sol
+  erc721_interface.sol:3:1: Info: ERC721Interface is compatible to ERC721.
+  contract ERC721Interface {
+  ^ (Relevant source part starts here and spans across multiple lines).
 
 
 
