@@ -559,6 +559,38 @@ void EmitStatement::accept(ASTConstVisitor& _visitor) const
 	_visitor.endVisit(*this);
 }
 
+void ScheduleStatement::accept(ASTVisitor& _visitor)
+{
+	if (_visitor.visit(*this)) {
+		m_scheduledOperation->accept(_visitor);
+		m_scheduleTime->accept(_visitor);
+	}
+	_visitor.endVisit(*this);
+}
+
+void ScheduleStatement::accept(ASTConstVisitor& _visitor) const
+{
+	if (_visitor.visit(*this)) {
+		m_scheduledOperation->accept(_visitor);
+		m_scheduleTime->accept(_visitor);
+	}
+	_visitor.endVisit(*this);
+}
+
+void ScheduledOperationStatement::accept(ASTVisitor& _visitor)
+{
+	if (_visitor.visit(*this))
+		m_scheduledOperation->accept(_visitor);
+	_visitor.endVisit(*this);
+}
+
+void ScheduledOperationStatement::accept(ASTConstVisitor& _visitor) const
+{
+	if (_visitor.visit(*this))
+		m_scheduledOperation->accept(_visitor);
+	_visitor.endVisit(*this);
+}
+
 void ExpressionStatement::accept(ASTVisitor& _visitor)
 {
 	if (_visitor.visit(*this))

@@ -77,6 +77,8 @@ public:
 	bool visit(Return const& _node) override;
 	bool visit(Throw const& _node) override;
 	bool visit(EmitStatement const& _node) override;
+	bool visit(ScheduleStatement const& _node) override;
+	bool visit(ScheduledOperationStatement const& _node) override;
 	bool visit(VariableDeclarationStatement const& _node) override;
 	bool visit(ExpressionStatement const& _node) override;
 	bool visit(Conditional const& _node) override;
@@ -125,6 +127,8 @@ public:
 	void endVisit(Return const&) override;
 	void endVisit(Throw const&) override;
 	void endVisit(EmitStatement const&) override;
+	void endVisit(ScheduleStatement const&) override;
+	void endVisit(ScheduledOperationStatement const&) override;
 	void endVisit(VariableDeclarationStatement const&) override;
 	void endVisit(ExpressionStatement const&) override;
 	void endVisit(Conditional const&) override;

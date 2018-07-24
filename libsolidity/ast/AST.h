@@ -1254,6 +1254,54 @@ private:
 };
 
 /**
+ * The schedule statement is used to schedule a statement to be run in the future.
+ */
+class ScheduleStatement: public Statement
+{
+public:
+	explicit ScheduleStatement(
+		SourceLocation const& _location,
+		ASTPointer<ASTString> const& _docString,
+		ASTPointer<Statement> const& _scheduledOperation,
+		ASTPointer<Expression> const& _scheduleTime
+	):
+		Statement(_location, _docString), m_scheduledOperation(_scheduledOperation), m_scheduleTime(_scheduleTime) {}
+	virtual void accept(ASTVisitor& _visitor) override;
+	virtual void accept(ASTConstVisitor& _visitor) const override;
+
+	Statement const& scheduledOperation() const { return *m_scheduledOperation; }
+	Expression const& scheduleTime() const { return *m_scheduleTime; }
+
+private:
+	ASTPointer<Statement> m_scheduledOperation;
+	ASTPointer<Expression> m_scheduleTime;
+};
+
+
+/**
+ * The scheduled operation statement is used to represent a statement which can be executed in the future,
+ * currently it can only be an external function call.
+ */
+// TODO: determine the best way to design this AST Node
+class ScheduledOperationStatement: public Statement
+{
+public:
+	explicit ScheduledOperationStatement(
+		SourceLocation const& _location,
+		ASTPointer<ASTString> const& _docString,
+		ASTPointer<Expression> const& _scheduledOperation
+	):
+		Statement(_location, _docString), m_scheduledOperation(_scheduledOperation) {}
+	virtual void accept(ASTVisitor& _visitor) override;
+	virtual void accept(ASTConstVisitor& _visitor) const override;
+
+	Expression const& scheduledOperation() const { return *m_scheduledOperation; }
+
+private:
+	ASTPointer<Expression> m_scheduledOperation;
+};
+
+/**
  * Definition of a variable as a statement inside a function. It requires a type name (which can
  * also be "var") but the actual assignment can be missing.
  * Examples: var a = 2; uint256 a;
@@ -1708,7 +1756,7 @@ private:
 class Rule: public Declaration
 {
 public:
-	Rule(SourceLocation const& _location, 
+	Rule(SourceLocation const& _location,
 	ASTPointer<ASTString> const&_name,
 	std::vector<ASTPointer<FactDeclaration>> const&_factDeclarations,
 	ASTPointer<Statement> const&_whenBody
@@ -1730,8 +1778,8 @@ private:
 class FactDeclaration: public Declaration
 {
 public:
-	FactDeclaration(SourceLocation const& _location, 
-		ASTPointer<ASTString> const&_name, 
+	FactDeclaration(SourceLocation const& _location,
+		ASTPointer<ASTString> const&_name,
 		ASTPointer<TypeName> _typeName,
 		const std::vector<ASTPointer<FieldExpression>> &_fieldExpressions):
 		Declaration(_location, _name), m_typeName(_typeName), m_fieldExpressions(_fieldExpressions){}

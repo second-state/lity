@@ -351,7 +351,7 @@ void TypeChecker::annotateBaseConstructorArguments(
 
 		SourceLocation const* mainLocation = nullptr;
 		SecondarySourceLocation ssl;
-	
+
 		if (
 			_currentContract.location().contains(previousNode->location()) ||
 			_currentContract.location().contains(_argumentNode->location())
@@ -1072,6 +1072,27 @@ void TypeChecker::endVisit(EmitStatement const& _emit)
 	)
 		m_errorReporter.typeError(_emit.eventCall().expression().location(), "Expression has to be an event invocation.");
 	m_insideEmitStatement = false;
+}
+
+void TypeChecker::endVisit(ScheduleStatement const&)
+{
+	// TODO: check that scheduledTime is uint256
+}
+
+void TypeChecker::endVisit(ScheduledOperationStatement const& _statement)
+{
+	auto func = dynamic_cast<FunctionCall const*>(&(_statement.scheduledOperation()));
+	if (
+		!func ||
+		func->annotation().kind != FunctionCallKind::FunctionCall ||
+		type(func->expression())->category() != Type::Category::Function ||
+		dynamic_cast<FunctionType const&>(*type(func->expression())).kind() != FunctionType::Kind::External
+	)
+		m_errorReporter.typeError(
+			func->expression().location(),
+			"Scheduled expression has to be an external function call."
+		);
+	m_insideScheduledOperationStatement = false;
 }
 
 bool TypeChecker::visit(VariableDeclarationStatement const& _statement)

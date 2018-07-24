@@ -265,6 +265,20 @@ bool ASTPrinter::visit(EmitStatement const& _node)
 	return goDeeper();
 }
 
+bool ASTPrinter::visit(ScheduleStatement const& _node)
+{
+	writeLine("ScheduleStatement");
+	printSourcePart(_node);
+	return goDeeper();
+}
+
+bool ASTPrinter::visit(ScheduledOperationStatement const& _node)
+{
+	writeLine("ScheduledOperationStatement");
+	printSourcePart(_node);
+	return goDeeper();
+}
+
 bool ASTPrinter::visit(VariableDeclarationStatement const& _node)
 {
 	writeLine("VariableDeclarationStatement");
@@ -545,6 +559,16 @@ void ASTPrinter::endVisit(Throw const&)
 }
 
 void ASTPrinter::endVisit(EmitStatement const&)
+{
+	m_indentation--;
+}
+
+void ASTPrinter::endVisit(ScheduleStatement const&)
+{
+	m_indentation--;
+}
+
+void ASTPrinter::endVisit(ScheduledOperationStatement const&)
 {
 	m_indentation--;
 }

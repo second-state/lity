@@ -941,6 +941,9 @@ ASTPointer<Statement> Parser::parseStatement()
 		else
 			statement = parseSimpleStatement(docString);
 		break;
+	case Token::Schedule:
+		statement = parseScheduleStatement(docString);
+		break;
 	default:
 		statement = parseSimpleStatement(docString);
 		break;
@@ -1048,6 +1051,31 @@ ASTPointer<ForStatement> Parser::parseForStatement(ASTPointer<ASTString> const& 
 		conditionExpression,
 		loopExpression,
 		body
+	);
+}
+
+ASTPointer<ScheduleStatement> Parser::parseScheduleStatement(ASTPointer<ASTString> const& _docString)
+{
+	RecursionGuard recursionGuard(*this);
+	ASTNodeFactory scheduleNodeFactory(*this);
+
+	expectToken(Token::Schedule);
+	expectToken(Token::LParen);
+
+	ASTNodeFactory operationNodeFactory(*this);
+	ASTPointer<Expression> scheduledOperation = parseExpression();
+	operationNodeFactory.markEndPosition();
+	expectToken(Token::Comma);
+
+	ASTPointer<Expression> scheduledTime = parseExpression();
+	expectToken(Token::RParen);
+
+	scheduleNodeFactory.markEndPosition();
+
+	return scheduleNodeFactory.createNode<ScheduleStatement>(
+		_docString,
+		operationNodeFactory.createNode<ScheduledOperationStatement>(ASTPointer<ASTString>(), scheduledOperation),
+		scheduledTime
 	);
 }
 
