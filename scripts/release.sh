@@ -39,7 +39,6 @@ mkdir -p $ZIP_TEMP_DIR
 
 # Copy all the solidity executables into a temporary directory prior to ZIP creation
 
-cp $REPO_ROOT/build/lllc/lllc        $ZIP_TEMP_DIR
 cp $REPO_ROOT/build/lityc/lityc        $ZIP_TEMP_DIR
 
 # For macOS, we run a fix-up script which alters all of the symbolic links within
@@ -54,4 +53,4 @@ fi
 
 # And ZIP it all up, with a filename suffix passed in on the command-line.
 mkdir -p $REPO_ROOT/upload
-zip -j $REPO_ROOT/upload/lity-$ZIP_SUFFIX.zip $ZIP_TEMP_DIR/*
+zip -j $REPO_ROOT/upload/lity-$ZIP_SUFFIX-linux.zip $ZIP_TEMP_DIR/*
