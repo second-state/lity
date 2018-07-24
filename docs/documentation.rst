@@ -46,7 +46,7 @@ ENI Examples
 
 - :ref:`Reverse String <reverse-string>`
 - :ref:`Verify Dogecoin Block on Travis <verify-dogecoin-block-on-travis>`
-- :ref:`RSA encryption and decryption (under construction)`
+- :ref:`RSA encryption and decryption <rsa-crypto>`
 
 FAQ
 ---
