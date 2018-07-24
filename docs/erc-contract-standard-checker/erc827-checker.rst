@@ -12,7 +12,7 @@ Enable contract standard checker with specific ERC
 
 .. code:: bash
 
-  ./lityc/lityc --contract-standard ERC827 <contract file>
+  $ ./lityc/lityc --contract-standard ERC827 <contract file>
 
 
 Examples
