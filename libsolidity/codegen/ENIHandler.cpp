@@ -196,23 +196,13 @@ void ENIHandler::handleIdentifier(IdentifierInfo& pIdentifierInfo) {
 			/// stack: <stringOffset> <stringSize+32>
 			*m_Context << Instruction::SWAP1 << Instruction::DUP2;
 			/// stack: <stringSize+32> <stringOffset> <stringSize+32>
+			*m_Context << u256(0x1f) << Instruction::ADD << u256(0x20) << Instruction::SWAP1 << Instruction::DIV << u256(0x20) << Instruction::MUL;
+			/// stack: <stringSize+32> <stringOffset> (<stringSize+32>+31)/32*32
 			utils().allocateMemory();
 			/// stack: <stringSize+32> <stringOffset> <eniStringOffset>
 			*m_Context << Instruction::SWAP1;
 			/// stack: <stringSize+32> <eniStringOffset> <stringOffset>
 			utils().memoryCopy();
-			/*
-			ArrayUtils arrayUtils(*m_Context);
-			arrayUtils.convertLengthToSize(*arrayType, true);
-			/// stack: <stringOffset> <stringSize>
-			*m_Context << u256(0x20) << Instruction::ADD;
-			/// stack: <stringOffset> <stringSize+32>
-			utils().allocateMemory();
-			/// stack: <stringOffset> <eniStringOffset>
-			*m_Context << Instruction::SWAP1;
-			/// stack: <eniStringOffset> <stringOffset>
-			arrayUtils.copyArrayToMemory(*arrayType);
-			*/
 		} else if (arrayType->isByteArray())
 			solUnimplementedAssert(false, "Unsupported type of bytes array identifier");
 		else
@@ -266,17 +256,20 @@ void ENIHandler::handleLiteral(LiteralInfo& pLiteralInfo) {
 					// stack: typeSectionOffset dataSectionOffset mem_next
 				}
 				*m_Context << Instruction::POP;
+				// stack: typeSectionOffset dataSectionOffset
 			}
 			break;
 		case Token::Number:
 			/// Store Literal Number
 			/// Allocate memory
-			/// stack pre: typeSectionOffset dataSectionOffset 32bytes
+			/// stack pre: typeSectionOffset dataSectionOffset
 			*m_Context << u256(0x20);
+			/// stack pre: typeSectionOffset dataSectionOffset 32bytes
 			utils().allocateMemory();
 			/// stack post: typeSectionOffset dataSectionOffset <mem_start>
+			*m_Context << u256(pLiteralInfo.m_Value);
 			/// stack pre: typeSectionOffset dataSectionOffset <mem_start> literal_number
-			*m_Context << u256(pLiteralInfo.m_Value) << Instruction::SWAP1 << Instruction::MSTORE;
+			*m_Context << Instruction::SWAP1 << Instruction::MSTORE;
 			/// stack post: typeSectionOffset dataSectionOffset
 			break;
 		default:
@@ -359,8 +352,8 @@ void ENIHandler::packedToMemory() {
 
 	/// Store length of data section
 	/// stack pre: typeSectionOffset
-	/// stack post: typeSectionOffset dataSectionOffset
 	initSizeOfDataSection();
+	/// stack post: typeSectionOffset dataSectionOffset
 
 	for (size_t idx = 0; idx < m_Parameters.size(); idx++) {
 		auto& param = m_Parameters.at(idx);
