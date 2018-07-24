@@ -3,12 +3,16 @@
 ERC884 Contract Standard Checker
 ================================
 
+Make sure you are in the folder where lityc is installed. 
+
+For example your location should be "~/lity/build" if you followed `this tutorial <http://lity.readthedocs.io/en/latest/download.html>`_.
+
 Enable contract standard checker with specific ERC
 --------------------------------------------------
 
 .. code:: bash
 
-  lityc --contract-standard ERC884 <contract file>
+  $ ./lityc/lityc --contract-standard ERC884 <contract file>
 
 
 Examples
@@ -55,7 +59,7 @@ Examples
 
 .. code:: bash
 
-  $ lityc --contract-standard ERC884 erc884_standard.sol
+  $ ./lityc/lityc --contract-standard ERC884 erc884_standard.sol
 
   erc884_standard.sol:3:1: Info: Missing 'VerifiedAddressAdded' with type signature 'function (address,bytes32,address)'. C20 is not compatible to ERC884.
   contract C20 {
@@ -93,7 +97,7 @@ Examples
 
 .. code:: bash
 
-  $ lityc --contract-standard ERC884 missing_function.sol
+  $ ./lityc/lityc --contract-standard ERC884 missing_function.sol
 
   missing_function.sol:3:1: Info: Missing 'VerifiedAddressAdded' with type signature 'function (address,bytes32,address)'. ERC884Interface is not compatible to ERC884.
   contract ERC884Interface {
