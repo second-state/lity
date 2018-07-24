@@ -27,6 +27,7 @@
 #include <boost/noncopyable.hpp>
 #include <libsolidity/analysis/DeclarationContainer.h>
 #include <libsolidity/analysis/ReferencesResolver.h>
+#include <libsolidity/analysis/FactMemberReferencesResolver.h>
 #include <libsolidity/ast/ASTVisitor.h>
 #include <libsolidity/ast/ASTAnnotations.h>
 
@@ -65,6 +66,8 @@ public:
 	/// @param _resolveInsideCode if false, does not descend into nodes that contain code.
 	/// @returns false in case of error.
 	bool resolveNamesAndTypes(ASTNode& _node, bool _resolveInsideCode = true);
+	/// Resolve references to member in fact expression
+	bool resolveFactMemberReferences(ASTNode& _node);
 	/// Updates the given global declaration (used for "this"). Not to be used with declarations
 	/// that create their own scope.
 	/// @returns false in case of error.

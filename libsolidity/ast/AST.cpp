@@ -653,3 +653,60 @@ TypePointer FactDeclaration::type() const
 	return m_typeName->annotation().type;
 }
 
+void FieldExpression::replaceChild(Expression *oldExp, ASTPointer<Expression> newExp)
+{
+	if(m_expression.get()==oldExp)
+		m_expression = newExp;
+}
+
+void Conditional::replaceChild(Expression *oldExp, ASTPointer<Expression> newExp)
+{
+	if(m_condition.get()==oldExp) m_condition = newExp;
+	if(m_trueExpression.get()==oldExp) m_trueExpression = newExp;
+	if(m_falseExpression.get()==oldExp) m_falseExpression = newExp;
+}
+
+void Assignment::replaceChild(Expression *oldExp, ASTPointer<Expression> newExp)
+{
+	if(m_leftHandSide.get()==oldExp) m_leftHandSide = newExp;
+	if(m_rightHandSide.get()==oldExp) m_rightHandSide = newExp;
+}
+
+void TupleExpression::replaceChild(Expression *oldExp, ASTPointer<Expression> newExp)
+{
+	for(auto& exp: m_components){
+		if(exp.get()==oldExp) exp = newExp;
+	}
+}
+
+void UnaryOperation::replaceChild(Expression *oldExp, ASTPointer<Expression> newExp)
+{
+	if(m_subExpression.get()==oldExp) m_subExpression = newExp;
+}
+
+void BinaryOperation::replaceChild(Expression *oldExp, ASTPointer<Expression> newExp)
+{
+	if(m_left.get()==oldExp) m_left = newExp;
+	if(m_right.get()==oldExp) m_right = newExp;
+}
+
+void FunctionCall::replaceChild(Expression *oldExp, ASTPointer<Expression> newExp)
+{
+	if(m_expression.get()==oldExp) m_expression = newExp;
+}
+
+void NewExpression::replaceChild(Expression*, ASTPointer<Expression>)
+{
+
+}
+
+void MemberAccess::replaceChild(Expression *oldExp, ASTPointer<Expression> newExp)
+{
+	if(m_expression.get()==oldExp) m_expression = newExp;
+}
+
+void IndexAccess::replaceChild(Expression *oldExp, ASTPointer<Expression> newExp)
+{
+	if(m_base.get()==oldExp) m_base = newExp;
+	if(m_index.get()==oldExp) m_index = newExp;
+}

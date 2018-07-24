@@ -199,6 +199,7 @@ bool CompilerStack::analyze()
 					m_globalContext->setCurrentContract(*contract);
 					if (!resolver.updateDeclaration(*m_globalContext->currentThis())) return false;
 					if (!resolver.updateDeclaration(*m_globalContext->currentSuper())) return false;
+					if (!resolver.resolveFactMemberReferences(*contract)) return false;
 					if (!resolver.resolveNamesAndTypes(*contract)) return false;
 
 					// Note that we now reference contracts by their fully qualified names, and

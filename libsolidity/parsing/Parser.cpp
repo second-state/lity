@@ -1775,8 +1775,8 @@ ASTPointer<FactDeclaration> Parser::parseFactDeclaration()
 
 ASTPointer<FieldExpression> Parser::parseFieldExpression()
 {
-	// TODO:
-	//   a: Exp
+	// TODO: Binding variables 
+	//   EX: $firstAge: age
 	ASTNodeFactory nodeFactory(*this);
 	return nodeFactory.createNode<FieldExpression>(parseExpression());
 }

@@ -826,6 +826,8 @@ void FactDeclaration::accept(ASTVisitor& _visitor)
 	_visitor.visit(*this);
 	if (m_typeName)
 		m_typeName->accept(_visitor);
+	for(auto fieldExp: m_fieldExpressions)
+		fieldExp->accept(_visitor);
 	_visitor.endVisit(*this);
 }
 
