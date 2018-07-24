@@ -18,6 +18,7 @@ First we need to use lity branch of travis:
   git checkout lity
 
   # Install libeni
+  sudo rm -rf $HOME/.travis
   wget -O $HOME/libeni.tgz https://github.com/CyberMiles/libeni/releases/download/v1.2.0/libeni-1.2.0_ubuntu-16.04.tgz
   tar zxvf $HOME/libeni.tgz -C $HOME
   mkdir -p $HOME/.travis/eni
