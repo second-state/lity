@@ -124,6 +124,19 @@ bool NameAndTypeResolver::performImports(SourceUnit& _sourceUnit, map<string, So
 	return !error;
 }
 
+bool NameAndTypeResolver::resolveFactMemberReferences(ASTNode& _node)
+{
+	try{
+		return FactMemberReferencesResolver(*this).resolve(_node);
+	}
+	catch (FatalError const&)
+	{
+		if (m_errorReporter.errors().empty())
+			throw; // Something is weird here, rather throw again.
+		return false;
+	}
+}
+
 bool NameAndTypeResolver::resolveNamesAndTypes(ASTNode& _node, bool _resolveInsideCode)
 {
 	try

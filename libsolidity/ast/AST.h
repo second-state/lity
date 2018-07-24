@@ -1328,6 +1328,8 @@ public:
 	ExpressionAnnotation& annotation() const override;
 
 	virtual bool saveToENISection(ENIHandler&, CompilerContext&) const { return false; };
+
+	virtual void replaceChild(Expression*, ASTPointer<Expression>){}
 };
 
 class Conditional: public Expression
@@ -1350,6 +1352,11 @@ public:
 	Expression const& condition() const { return *m_condition; }
 	Expression const& trueExpression() const { return *m_trueExpression; }
 	Expression const& falseExpression() const { return *m_falseExpression; }
+
+	void setCondition(ASTPointer<Expression> _condition) { m_condition = _condition; }
+	void setTrueExpression(ASTPointer<Expression> _trueExpression) { m_trueExpression = _trueExpression; }
+	void setFalseExpression(ASTPointer<Expression> _falseExpression) { m_falseExpression = _falseExpression; }
+	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
 
 private:
 	ASTPointer<Expression> m_condition;
@@ -1381,6 +1388,7 @@ public:
 	Expression const& leftHandSide() const { return *m_leftHandSide; }
 	Token::Value assignmentOperator() const { return m_assigmentOperator; }
 	Expression const& rightHandSide() const { return *m_rightHandSide; }
+	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
 
 private:
 	ASTPointer<Expression> m_leftHandSide;
@@ -1412,6 +1420,8 @@ public:
 
 	std::vector<ASTPointer<Expression>> const& components() const { return m_components; }
 	bool isInlineArray() const { return m_isArray; }
+
+	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
 
 private:
 	std::vector<ASTPointer<Expression>> m_components;
@@ -1445,6 +1455,9 @@ public:
 	bool isPrefixOperation() const { return m_isPrefix; }
 	Expression const& subExpression() const { return *m_subExpression; }
 
+	void setSubExpression(ASTPointer<Expression> _subExpression) { m_subExpression = _subExpression; }
+	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
+
 private:
 	Token::Value m_operator;
 	ASTPointer<Expression> m_subExpression;
@@ -1477,6 +1490,10 @@ public:
 
 	BinaryOperationAnnotation& annotation() const override;
 
+	void setLeftExpression(ASTPointer<Expression> _left) { m_left = _left; }
+	void setRightExpression(ASTPointer<Expression> _right) { m_right = _right; }
+	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
+
 private:
 	ASTPointer<Expression> m_left;
 	Token::Value m_operator;
@@ -1502,6 +1519,8 @@ public:
 	Expression const& expression() const { return *m_expression; }
 	std::vector<ASTPointer<Expression const>> arguments() const { return {m_arguments.begin(), m_arguments.end()}; }
 	std::vector<ASTPointer<ASTString>> const& names() const { return m_names; }
+
+	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
 
 	virtual FunctionCallAnnotation& annotation() const override;
 
@@ -1540,6 +1559,8 @@ public:
 
 	TypeName const& typeName() const { return *m_typeName; }
 
+	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
+
 private:
 	ASTPointer<TypeName> m_typeName;
 };
@@ -1558,8 +1579,12 @@ public:
 		Expression(_location), m_expression(_expression), m_memberName(_memberName) {}
 	virtual void accept(ASTVisitor& _visitor) override;
 	virtual void accept(ASTConstVisitor& _visitor) const override;
+	
 	Expression const& expression() const { return *m_expression; }
 	ASTString const& memberName() const { return *m_memberName; }
+
+	void setExpression(ASTPointer<Expression> _expression) { m_expression = _expression; }
+	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
 
 	virtual MemberAccessAnnotation& annotation() const override;
 
@@ -1586,6 +1611,10 @@ public:
 	Expression const& baseExpression() const { return *m_base; }
 	Expression const* indexExpression() const { return m_index.get(); }
 
+	void setBase(ASTPointer<Expression> _base) { m_base = _base; }
+	void setIndex(ASTPointer<Expression> _index) { m_index = _index; }
+	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
+
 private:
 	ASTPointer<Expression> m_base;
 	ASTPointer<Expression> m_index;
@@ -1599,6 +1628,11 @@ class PrimaryExpression: public Expression
 {
 public:
 	PrimaryExpression(SourceLocation const& _location): Expression(_location) {}
+	virtual void replaceChild(Expression*, ASTPointer<Expression>) override
+	{
+		solAssert(false, "PrimaryExpr has no child.");
+	}
+
 };
 
 /**
@@ -1741,6 +1775,8 @@ public:
 
 	virtual TypePointer type() const override;
 
+	std::vector<ASTPointer<FieldExpression>>& fieldExpressions() { return m_fieldExpressions; }
+
 private:
 	ASTPointer<TypeName> m_typeName;
 	std::vector<ASTPointer<FieldExpression>> m_fieldExpressions;
@@ -1756,6 +1792,11 @@ public:
 		Expression(_location), m_expression(_expression){}
 	virtual void accept(ASTVisitor& _visitor) override;
 	virtual void accept(ASTConstVisitor& _visitor) const override;
+
+	Expression const& expression() const { return *m_expression; }
+
+	void setExpression(ASTPointer<Expression> _expression) {m_expression = _expression; }
+	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
 
 private:
 	ASTPointer<Expression> m_expression;
