@@ -60,8 +60,8 @@ Now we have :code:`lityc`:
   $ ls -l ./lityc/lityc
   -rwxrwxr-x 1 skymizer skymizer 26649648 Jul  3 02:19 lityc/lityc*
 
-Compiler DogecoinVerifier Contract
-----------------------------------
+Compile DogecoinVerifier Contract
+---------------------------------
 
 There is a simple contract that leverage ENI to do heavy scrypt hash algorithm.
 
