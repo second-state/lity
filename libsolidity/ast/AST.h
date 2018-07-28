@@ -1183,6 +1183,25 @@ private:
 	ASTPointer<Statement> m_body;
 };
 
+/*
+ * We need to know what contract this statement belongs to so that we can determine which
+ * set of rules to fire when doing code generation. This info will be saved in annotation.
+ */
+class FireAllRulesStatement: public Statement
+{
+public:
+	explicit FireAllRulesStatement(
+				SourceLocation const& _location,
+				ASTPointer<ASTString> const& _docString
+			 ):
+		Statement(_location, _docString) {};
+
+	virtual void accept(ASTVisitor& _visitor) override;
+	virtual void accept(ASTConstVisitor& _visitor) const override;
+
+	virtual FireAllRulesAnnotation& annotation() const override;
+};
+
 class Continue: public Statement
 {
 public:
@@ -1579,7 +1598,7 @@ public:
 		Expression(_location), m_expression(_expression), m_memberName(_memberName) {}
 	virtual void accept(ASTVisitor& _visitor) override;
 	virtual void accept(ASTConstVisitor& _visitor) const override;
-	
+
 	Expression const& expression() const { return *m_expression; }
 	ASTString const& memberName() const { return *m_memberName; }
 
@@ -1742,7 +1761,7 @@ private:
 class Rule: public Declaration
 {
 public:
-	Rule(SourceLocation const& _location, 
+	Rule(SourceLocation const& _location,
 	ASTPointer<ASTString> const&_name,
 	std::vector<ASTPointer<FactDeclaration>> const&_factDeclarations,
 	ASTPointer<Statement> const&_whenBody
@@ -1764,8 +1783,8 @@ private:
 class FactDeclaration: public Declaration
 {
 public:
-	FactDeclaration(SourceLocation const& _location, 
-		ASTPointer<ASTString> const&_name, 
+	FactDeclaration(SourceLocation const& _location,
+		ASTPointer<ASTString> const&_name,
 		ASTPointer<TypeName> _typeName,
 		const std::vector<ASTPointer<FieldExpression>> &_fieldExpressions):
 		Declaration(_location, _name), m_typeName(_typeName), m_fieldExpressions(_fieldExpressions){}

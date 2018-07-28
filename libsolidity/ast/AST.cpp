@@ -571,6 +571,13 @@ FunctionCallAnnotation& FunctionCall::annotation() const
 	return dynamic_cast<FunctionCallAnnotation&>(*m_annotation);
 }
 
+FireAllRulesAnnotation& FireAllRulesStatement::annotation() const
+{
+	if (!m_annotation)
+		m_annotation = new FireAllRulesAnnotation();
+	return dynamic_cast<FireAllRulesAnnotation&>(*m_annotation);
+}
+
 bool Identifier::saveToENISection(ENIHandler& _handler, CompilerContext& _context) const
 {
 	CompilerContext::LocationSetter locationSetter(_context, *this);

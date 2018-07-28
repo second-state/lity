@@ -136,6 +136,8 @@ namespace solidity
 	T(BitNot, "~", 0)                                                  \
 	T(Inc, "++", 0)                                                    \
 	T(Dec, "--", 0)                                                    \
+	K(FactInsert, "factInsert", 0)                                     \
+	K(FactDelete, "factDelete", 0)                                     \
 	K(Delete, "delete", 0)                                             \
 	\
 	/* Keywords */                                                     \
@@ -182,6 +184,7 @@ namespace solidity
 	K(Rule, "rule", 0)                                               \
 	K(When, "when", 0)                                               \
 	K(Then, "then", 0)                                               \
+	K(FireAllRules, "fireAllRules", 0)                                 \
 	\
 	/* Ether subdenominations */                                       \
 	K(SubWei, "wei", 0)                                                \
@@ -352,7 +355,7 @@ public:
 	unsigned int secondNumber() const { return m_secondNumber; }
 	Token::Value token() const { return m_token; }
 	///if tokValue is set to true, then returns the actual token type name, otherwise, returns full type
-	std::string toString(bool const& tokenValue = false) const 
+	std::string toString(bool const& tokenValue = false) const
 	{
 		std::string name = Token::toString(m_token);
 		if (tokenValue || (firstNumber() == 0 && secondNumber() == 0))
