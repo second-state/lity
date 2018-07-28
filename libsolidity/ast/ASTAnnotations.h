@@ -148,6 +148,11 @@ struct ReturnAnnotation: StatementAnnotation
 	ParameterList const* functionReturnParameters = nullptr;
 };
 
+struct FireAllRulesAnnotation: StatementAnnotation
+{
+	ContractDefinition const* contract = nullptr;
+};
+
 struct TypeNameAnnotation: ASTAnnotation
 {
 	/// Type declared by this type name, i.e. type of a variable where this type name is used.

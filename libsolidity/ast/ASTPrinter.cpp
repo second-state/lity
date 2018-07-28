@@ -230,6 +230,13 @@ bool ASTPrinter::visit(ForStatement const& _node)
 	return goDeeper();
 }
 
+bool ASTPrinter::visit(FireAllRulesStatement const& _node)
+{
+	writeLine("FireAllRulesStatement");
+	printSourcePart(_node);
+	return goDeeper();
+}
+
 bool ASTPrinter::visit(Continue const& _node)
 {
 	writeLine("Continue");
@@ -520,6 +527,11 @@ void ASTPrinter::endVisit(WhileStatement const&)
 }
 
 void ASTPrinter::endVisit(ForStatement const&)
+{
+	m_indentation--;
+}
+
+void ASTPrinter::endVisit(FireAllRulesStatement const&)
 {
 	m_indentation--;
 }

@@ -515,6 +515,8 @@ TypePointer IntegerType::unaryOperatorResult(Token::Value _operator) const
 			_operator == Token::Inc || _operator == Token::Dec ||
 			_operator == Token::BitNot)
 		return shared_from_this();
+	else if (_operator == Token::FactDelete && numBits() == 256 && isSigned() == false)
+		return make_shared<TupleType>();
 	else
 		return TypePointer();
 }
@@ -1428,21 +1430,24 @@ TypePointer ContractType::unaryOperatorResult(Token::Value _operator) const
 
 TypePointer ReferenceType::unaryOperatorResult(Token::Value _operator) const
 {
-	if (_operator != Token::Delete)
-		return TypePointer();
-	// delete can be used on everything except calldata references or storage pointers
-	// (storage references are ok)
-	switch (location())
+	if (_operator == Token::Delete)
 	{
-	case DataLocation::CallData:
-		return TypePointer();
-	case DataLocation::Memory:
-		return make_shared<TupleType>();
-	case DataLocation::Storage:
-		return m_isPointer ? TypePointer() : make_shared<TupleType>();
-	default:
-		solAssert(false, "");
+		// delete can be used on everything except calldata references or storage pointers
+		// (storage references are ok)
+		switch (location())
+		{
+		case DataLocation::CallData:
+			return TypePointer();
+		case DataLocation::Memory:
+			return make_shared<TupleType>();
+		case DataLocation::Storage:
+			return m_isPointer ? TypePointer() : make_shared<TupleType>();
+		default:
+			solAssert(false, "");
+		}
 	}
+	else if (_operator == Token::FactInsert && dynamic_cast<StructType const*>(this))
+		return make_shared<IntegerType>(256);
 	return TypePointer();
 }
 

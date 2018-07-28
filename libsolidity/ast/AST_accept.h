@@ -493,6 +493,18 @@ void ForStatement::accept(ASTConstVisitor& _visitor) const
 	_visitor.endVisit(*this);
 }
 
+void FireAllRulesStatement::accept(ASTVisitor& _visitor)
+{
+	_visitor.visit(*this);
+	_visitor.endVisit(*this);
+}
+
+void FireAllRulesStatement::accept(ASTConstVisitor& _visitor) const
+{
+	_visitor.visit(*this);
+	_visitor.endVisit(*this);
+}
+
 void Continue::accept(ASTVisitor& _visitor)
 {
 	_visitor.visit(*this);

@@ -32,6 +32,7 @@
 #include <libsolidity/codegen/CompilerUtils.h>
 #include <libsolidity/codegen/LValue.h>
 #include <libsolidity/codegen/ENIHandler.h>
+#include <libsolidity/codegen/RuleEngineCompiler.h>
 #include <libevmasm/GasMeter.h>
 
 #include <libdevcore/Whiskers.h>
@@ -379,6 +380,12 @@ bool ExpressionCompiler::visit(UnaryOperation const& _unaryOperation)
 		break;
 	case Token::Sub: // -
 		m_context << u256(0) << Instruction::SUB;
+		break;
+	case Token::FactInsert:
+		RuleEngineCompiler(m_context, m_optimize).appendFactInsert(_unaryOperation.subExpression().annotation().type);
+		break;
+	case Token::FactDelete:
+		RuleEngineCompiler(m_context, m_optimize).appendFactDelete();
 		break;
 	default:
 		solAssert(false, "Invalid unary operator: " + string(Token::toString(_unaryOperation.getOperator())));

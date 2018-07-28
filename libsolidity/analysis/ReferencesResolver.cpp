@@ -43,6 +43,17 @@ bool ReferencesResolver::resolve(ASTNode const& _root)
 	return !m_errorOccurred;
 }
 
+bool ReferencesResolver::visit(ContractDefinition const& _contract)
+{
+	m_contract = &_contract;
+	return true;
+}
+
+void ReferencesResolver::endVisit(ContractDefinition const&)
+{
+	m_contract = nullptr;
+}
+
 bool ReferencesResolver::visit(Block const& _block)
 {
 	if (!m_resolveInsideCode)
@@ -62,6 +73,12 @@ void ReferencesResolver::endVisit(Block const& _block)
 	// C99-scoped variables
 	if (m_experimental050Mode)
 		m_resolver.setScope(_block.scope());
+}
+
+void ReferencesResolver::endVisit(FireAllRulesStatement const& _fars)
+{
+	solAssert(m_contract, "got a statement not in a contract");
+	_fars.annotation().contract = m_contract;
 }
 
 bool ReferencesResolver::visit(ForStatement const& _for)

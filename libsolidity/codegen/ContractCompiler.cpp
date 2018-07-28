@@ -25,6 +25,7 @@
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/interface/ErrorReporter.h>
 #include <libsolidity/codegen/ExpressionCompiler.h>
+#include <libsolidity/codegen/RuleEngineCompiler.h>
 #include <libsolidity/codegen/CompilerUtils.h>
 
 #include <libevmasm/Instruction.h>
@@ -739,6 +740,13 @@ bool ContractCompiler::visit(ForStatement const& _forStatement)
 	m_breakTags.pop_back();
 
 	checker.check();
+	return false;
+}
+
+bool ContractCompiler::visit(FireAllRulesStatement const& _fars)
+{
+	solAssert(_fars.annotation().contract, "Don't know which contract this statement belongs to");
+	RuleEngineCompiler(m_context, m_optimise).appendFireAllRules(*_fars.annotation().contract);
 	return false;
 }
 

@@ -901,7 +901,7 @@ ASTPointer<Statement> Parser::parseStatement()
 		return parseForStatement(docString);
 	case Token::LBrace:
 		return parseBlock(docString);
-		// starting from here, all statements must be terminated by a semicolon
+	// starting from here, all statements must be terminated by a semicolon
 	case Token::Continue:
 		statement = ASTNodeFactory(*this).createNode<Continue>(docString);
 		m_scanner->next();
@@ -940,6 +940,10 @@ ASTPointer<Statement> Parser::parseStatement()
 		}
 		else
 			statement = parseSimpleStatement(docString);
+		break;
+	case Token::FireAllRules:
+		statement = ASTNodeFactory(*this).createNode<FireAllRulesStatement>(docString);
+		m_scanner->next();
 		break;
 	default:
 		statement = parseSimpleStatement(docString);
@@ -1775,7 +1779,7 @@ ASTPointer<FactDeclaration> Parser::parseFactDeclaration()
 
 ASTPointer<FieldExpression> Parser::parseFieldExpression()
 {
-	// TODO: Binding variables 
+	// TODO: Binding variables
 	//   EX: $firstAge: age
 	ASTNodeFactory nodeFactory(*this);
 	return nodeFactory.createNode<FieldExpression>(parseExpression());

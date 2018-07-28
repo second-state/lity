@@ -351,7 +351,7 @@ void TypeChecker::annotateBaseConstructorArguments(
 
 		SourceLocation const* mainLocation = nullptr;
 		SecondarySourceLocation ssl;
-	
+
 		if (
 			_currentContract.location().contains(previousNode->location()) ||
 			_currentContract.location().contains(_argumentNode->location())
@@ -1522,7 +1522,7 @@ bool TypeChecker::visit(TupleExpression const& _tuple)
 
 bool TypeChecker::visit(UnaryOperation const& _operation)
 {
-	// Inc, Dec, Add, Sub, Not, BitNot, Delete
+	// Inc, Dec, Add, Sub, Not, BitNot, Delete, FactInsert, FactDelete
 	Token::Value op = _operation.getOperator();
 	bool const modifying = (op == Token::Value::Inc || op == Token::Value::Dec || op == Token::Value::Delete);
 	if (modifying)
@@ -1543,7 +1543,12 @@ bool TypeChecker::visit(UnaryOperation const& _operation)
 		t = subExprType;
 	}
 	_operation.annotation().type = t;
-	_operation.annotation().isPure = !modifying && _operation.subExpression().annotation().isPure;
+	// FactInsert and FactDelete are special cases that do not modify the operand
+	// but the expression is not pure
+	_operation.annotation().isPure = !modifying &&
+									 _operation.subExpression().annotation().isPure &&
+									 op != Token::Value::FactInsert &&
+									 op != Token::Value::FactDelete;
 	return false;
 }
 
