@@ -36,6 +36,12 @@ public:
 
 	virtual bool visit(FunctionDefinition const& _function) override;
 
+	// the following 3 function are used to resolve the control flow of rule engine's fireAllRules statement
+	// Currently we can't find a more suitable location for these functions
+	virtual bool visit(ContractDefinition const& _contract) override;
+	virtual void endVisit(ContractDefinition const& _contract) override;
+	virtual void endVisit(FireAllRulesStatement const& _contract) override;
+
 private:
 	static std::set<VariableDeclaration const*> variablesAssignedInNode(CFGNode const *node);
 	void checkUnassignedStorageReturnValues(
@@ -46,6 +52,9 @@ private:
 
 	CFG const& m_cfg;
 	ErrorReporter& m_errorReporter;
+
+	/// Current contract
+	ContractDefinition const* m_contract;
 };
 
 }
