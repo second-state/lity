@@ -30,7 +30,7 @@ bool ControlFlowAnalyzer::visit(FunctionDefinition const& _function)
 {
 	auto const& functionFlow = m_cfg.functionFlow(_function);
 	checkUnassignedStorageReturnValues(_function, functionFlow.entry, functionFlow.exit);
-	return false;
+	return true;
 }
 
 set<VariableDeclaration const*> ControlFlowAnalyzer::variablesAssignedInNode(CFGNode const *node)
@@ -154,3 +154,21 @@ void ControlFlowAnalyzer::checkUnassignedStorageReturnValues(
 		}
 	}
 }
+
+bool ControlFlowAnalyzer::visit(ContractDefinition const& _contract)
+{
+	m_contract = &_contract;
+	return true;
+}
+
+void ControlFlowAnalyzer::endVisit(ContractDefinition const&)
+{
+	m_contract = nullptr;
+}
+
+void ControlFlowAnalyzer::endVisit(FireAllRulesStatement const& _fars)
+{
+	solAssert(m_contract, "got a statement not in a contract");
+	_fars.annotation().contract = m_contract;
+}
+

@@ -57,12 +57,9 @@ public:
 	bool resolve(ASTNode const& _root);
 
 private:
-	virtual bool visit(ContractDefinition const& _contract) override;
-	virtual void endVisit(ContractDefinition const& _contract) override;
 	virtual bool visit(Block const& _block) override;
 	virtual void endVisit(Block const& _block) override;
 	virtual bool visit(ForStatement const& _for) override;
-	virtual void endVisit(FireAllRulesStatement const& _fars) override;
 	virtual void endVisit(ForStatement const& _for) override;
 	virtual void endVisit(VariableDeclarationStatement const& _varDeclStatement) override;
 	virtual bool visit(Identifier const& _identifier) override;
@@ -95,8 +92,6 @@ private:
 	NameAndTypeResolver& m_resolver;
 	/// Stack of return parameters.
 	std::vector<ParameterList const*> m_returnParameters;
-	/// Current contract
-	ContractDefinition const* m_contract;
 	bool const m_resolveInsideCode;
 	bool m_errorOccurred = false;
 	bool m_experimental050Mode = false;
