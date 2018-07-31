@@ -5,61 +5,10 @@ Overflow Protection
 
 This example shows how Lity and CyberMiles Virtual Machine helps users to avoid potential security issues of number overflow.
 
-Install lity branch of Travis
+Run a CyberMiles Local Node
 -----------------------------
 
-First we need to use lity branch of travis:
-
-.. code:: bash
-
-  # Get lity branch of Travis
-  go get github.com/CyberMiles/travis
-  cd $GOPATH/src/github.com/CyberMiles/travis
-  git checkout lity
-
-  # Install libeni
-  sudo rm -rf $HOME/.travis
-  wget -O $HOME/libeni.tgz https://github.com/CyberMiles/libeni/releases/download/v1.2.0/libeni-1.2.0_ubuntu-16.04.tgz
-  tar zxvf $HOME/libeni.tgz -C $HOME
-  mkdir -p $HOME/.travis/eni
-  cp -r $HOME/libeni-1.2.0/lib $HOME/.travis/eni/lib
-
-  # Build & Install Travis
-  cd $GOPATH/src/github.com/CyberMiles/travis
-  make all
-
-Run Travis locally
-------------------
-
-Then start a  Travis node locally.
-
-.. code:: bash
-
-  # Initial & start
-  travis node init
-  travis node start
-
-Lity compiler
--------------
-
-Build our Lity compiler from source to get :code:`lityc`.
-
-.. code:: bash
-
-  git clone https://github.com/CyberMiles/lity.git
-  cd lity
-  git submodule update --init --recursive
-  mkdir build
-  cd build
-  cmake ..
-  make
-
-Now we have :code:`lityc`:
-
-.. code:: bash
-
-  $ ls -l ./lityc/lityc
-  -rwxrwxr-x 1 skymizer skymizer 26649648 Jul  3 02:19 lityc/lityc*
+Follow the instructions here to have a `running CyberMiles local node to deploy a contract <https://www.litylang.org/getting_started/>`_. 
 
 Compile BEC Contract
 --------------------
@@ -357,10 +306,12 @@ There is an overflow issue at this statement :code:`uint256 amount = uint256(cnt
 
 and we could compile it using :code:`lityc`:
 
+Make sure you are in the directory where you downloaded lityc
+
 .. code:: bash
 
   $ mkdir output
-  $ ./lityc --abi --bin -o output BEC.sol
+  $ ./lityc/lityc --abi --bin -o output BEC.sol
   $ cat output/BecToken.abi
   [{"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"unpause","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"version","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"paused","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_receivers","type":"address[]"},{"name":"_value","type":"uint256"}],"name":"batchTransfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[],"name":"pause","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"remaining","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"payable":false,"stateMutability":"nonpayable","type":"fallback"},{"anonymous":false,"inputs":[],"name":"Pause","type":"event"},{"anonymous":false,"inputs":[],"name":"Unpause","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"previousOwner","type":"address"},{"indexed":true,"name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"owner","type":"address"},{"indexed":true,"name":"spender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"}]
   $ cat output/BecToken.bin
