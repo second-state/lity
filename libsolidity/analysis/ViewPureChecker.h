@@ -62,6 +62,8 @@ private:
 	virtual void endVisit(ModifierInvocation const& _modifier) override;
 	virtual void endVisit(FunctionCall const& _functionCall) override;
 	virtual void endVisit(InlineAssembly const& _inlineAssembly) override;
+	virtual void endVisit(FireAllRulesStatement const& _fars) override;
+	virtual void endVisit(UnaryOperation const& _op) override;
 
 	/// Called when an element of mutability @a _mutability is encountered.
 	/// Creates appropriate warnings and errors and sets @a m_currentBestMutability.

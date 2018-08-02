@@ -357,3 +357,15 @@ void ViewPureChecker::endVisit(ModifierInvocation const& _modifier)
 		solAssert(dynamic_cast<ContractDefinition const*>(_modifier.name()->annotation().referencedDeclaration), "");
 }
 
+void ViewPureChecker::endVisit(FireAllRulesStatement const& _fars)
+{
+	reportMutability(StateMutability::NonPayable, _fars.location());
+}
+
+void ViewPureChecker::endVisit(UnaryOperation const& _op)
+{
+	Token::Value t = _op.getOperator();
+	if (t == Token::FactInsert || t == Token::FactDelete)
+		reportMutability(StateMutability::NonPayable, _op.location());
+}
+
