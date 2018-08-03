@@ -1,4 +1,4 @@
-
+#pragma once
 #include <functional>
 #include <memory>
 #include <boost/noncopyable.hpp>
@@ -17,23 +17,40 @@ namespace solidity {
 class RuleEngineCompiler: private ASTConstVisitor
 {
 public:
-	explicit RuleEngineCompiler(CompilerContext& _compilerContext, bool _optimize = false):
-		m_optimize(_optimize), m_context(_compilerContext) {}
+	explicit RuleEngineCompiler(CompilerContext& _compilerContext): m_context(_compilerContext) {}
 
-	/// Appends code to fire all rules
+	/// Appends inline code to fire all rules
 	void appendFireAllRules(ContractDefinition const& _contract);
 
 	/// Insert a fact into working memory.
-	/// The fact on the top of stack will be consumed. FactID will be put on top of the stack.
+	/// stack pre: fact
+	/// stack post: factID
 	/// @param factType the type of the fact
 	void appendFactInsert(TypePointer const& factType);
 
 	/// Delete a fact from working memory.
-	/// Consumes a FactID on the top of stack.
+	/// stack pre: factID
+	/// stack post:
 	void appendFactDelete();
 
+	void appendPushItemToStorageArray();
+
+	bool visit(Rule const& _node) override;
+	bool visit(FactDeclaration const& _node) override;
+	bool visit(FieldExpression const& _node) override;
+
+	void endVisit(Rule const&) override;
+	void endVisit(FactDeclaration const&) override;
+	void endVisit(FieldExpression const&) override;
+
+	CompilerUtils utils();
 private:
-	bool m_optimize;
+	const Rule* m_currentRule;
+	const FactDeclaration* m_currentFact;
+	int m_currentFieldNo=0;
+
+	std::vector<dev::h256> m_nodeOutListAddr;
+
 	CompilerContext& m_context;
 };
 

@@ -746,7 +746,7 @@ bool ContractCompiler::visit(ForStatement const& _forStatement)
 bool ContractCompiler::visit(FireAllRulesStatement const& _fars)
 {
 	solAssert(_fars.annotation().contract, "Don't know which contract this statement belongs to");
-	RuleEngineCompiler(m_context, m_optimise).appendFireAllRules(*_fars.annotation().contract);
+	RuleEngineCompiler(m_context).appendFireAllRules(*_fars.annotation().contract);
 	return false;
 }
 
