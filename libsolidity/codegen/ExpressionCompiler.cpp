@@ -382,10 +382,10 @@ bool ExpressionCompiler::visit(UnaryOperation const& _unaryOperation)
 		m_context << u256(0) << Instruction::SUB;
 		break;
 	case Token::FactInsert:
-		RuleEngineCompiler(m_context, m_optimize).appendFactInsert(_unaryOperation.subExpression().annotation().type);
+		RuleEngineCompiler(m_context).appendFactInsert(_unaryOperation.subExpression().annotation().type);
 		break;
 	case Token::FactDelete:
-		RuleEngineCompiler(m_context, m_optimize).appendFactDelete();
+		RuleEngineCompiler(m_context).appendFactDelete();
 		break;
 	default:
 		solAssert(false, "Invalid unary operator: " + string(Token::toString(_unaryOperation.getOperator())));
