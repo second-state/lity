@@ -1751,8 +1751,8 @@ ASTPointer<Rule> Parser::parseRule()
 	expectToken(Token::RBrace);
 
 	expectToken(Token::Then);
-	ASTPointer<Statement> whenBody = parseStatement();
-	return nodeFactory.createNode<Rule>(ruleName, factDeclarations, whenBody);
+	ASTPointer<Statement> thenBody = parseStatement();
+	return nodeFactory.createNode<Rule>(ruleName, factDeclarations, thenBody);
 }
 
 ASTPointer<FactDeclaration> Parser::parseFactDeclaration()
