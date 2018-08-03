@@ -818,8 +818,8 @@ void Rule::accept(ASTVisitor& _visitor)
 	_visitor.visit(*this);
 	for(auto fact : m_factDeclarations)
 		fact->accept(_visitor);
-	if (m_whenBody)
-		m_whenBody->accept(_visitor);
+	if (m_thenBody)
+		m_thenBody->accept(_visitor);
 	_visitor.endVisit(*this);
 }
 
@@ -828,8 +828,8 @@ void Rule::accept(ASTConstVisitor& _visitor) const
 	_visitor.visit(*this);
 	for(auto fact : m_factDeclarations)
 		fact->accept(_visitor);
-	if (m_whenBody)
-		m_whenBody->accept(_visitor);
+	if (m_thenBody)
+		m_thenBody->accept(_visitor);
 	_visitor.endVisit(*this);
 }
 

@@ -1764,17 +1764,18 @@ public:
 	Rule(SourceLocation const& _location,
 	ASTPointer<ASTString> const&_name,
 	std::vector<ASTPointer<FactDeclaration>> const&_factDeclarations,
-	ASTPointer<Statement> const&_whenBody
-	): Declaration(_location, _name), m_factDeclarations(_factDeclarations), m_whenBody(_whenBody){}
+	ASTPointer<Statement> const&_thenBody
+	): Declaration(_location, _name), m_factDeclarations(_factDeclarations), m_thenBody(_thenBody){}
 
 	virtual void accept(ASTVisitor& _visitor) override;
 	virtual void accept(ASTConstVisitor& _visitor) const override;
 
 	virtual TypePointer type() const override;
 
+	int numOfFacts() const { return m_factDeclarations.size(); }
 private:
 	std::vector<ASTPointer<FactDeclaration>> m_factDeclarations;
-	ASTPointer<Statement> m_whenBody;
+	ASTPointer<Statement> m_thenBody;
 };
 
 /**
