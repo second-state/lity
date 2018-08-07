@@ -24,4 +24,15 @@ add_executable(soltest ${sources} ${headers}
 )
 target_link_libraries(soltest PRIVATE liblityc lity lll evmasm devcore ${Boost_UNIT_TEST_FRAMEWORK_LIBRARIES})
 
+add_executable(rttest
+    lity/runtimeTest.cpp
+    ExecutionFramework.cpp
+    Metadata.cpp
+    Options.cpp
+    RPCSession.cpp
+    lity/contracts/Smoke.cpp
+    libsolidity/SolidityExecutionFramework.cpp
+)
+target_link_libraries(rttest PRIVATE liblityc lity lll evmasm devcore ${Boost_UNIT_TEST_FRAMEWORK_LIBRARIES})
+
 add_subdirectory(tools)
