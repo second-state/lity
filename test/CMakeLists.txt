@@ -31,6 +31,7 @@ add_executable(rttest
     Options.cpp
     RPCSession.cpp
     lity/contracts/Smoke.cpp
+    lity/contracts/Rules.cpp
     libsolidity/SolidityExecutionFramework.cpp
 )
 target_link_libraries(rttest PRIVATE liblityc lity lll evmasm devcore ${Boost_UNIT_TEST_FRAMEWORK_LIBRARIES})
