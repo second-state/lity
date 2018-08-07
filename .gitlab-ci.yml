@@ -1,13 +1,14 @@
 image: registry-cybermiles.skymizer.com/cybermiles/environment:ci
 
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
 stages:
   - build
   - test
+  - rttest
   - deploy
   - regression
-
-before_script:
-  - git submodule update --init --recursive
 
 build:
   stage: build
@@ -32,6 +33,22 @@ test:
   script:
     - ./build/test/soltest -- --testpath ./test --no-ipc
     - ./test/cmdlineTests.sh
+
+runtime-test:
+  stage: rttest
+  cache:
+    paths:
+      - build
+    policy: pull
+  variables:
+    TERM: "linux"
+  before_script:
+    - eth --test -d /tmp/rttest >/tmp/rttest.log 2>&1 &
+    - while [ ! -S /tmp/rttest/geth.ipc ] ; do sleep 1; done && sleep 2
+  script:
+    - ./build/test/rttest -- --testpath ./test --ipcpath /tmp/rttest/geth.ipc
+  after_script:
+    - cat /tmp/rttest.log
 
 deploy:
   stage: deploy
