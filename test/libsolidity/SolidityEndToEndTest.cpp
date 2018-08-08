@@ -12252,7 +12252,7 @@ BOOST_AUTO_TEST_CASE(ufixed_retrieval)
 		contract test {
 			ufixed a = 3.14;
 
-			function f() returns (ufixed) {
+			function f() public returns (ufixed) {
 				return a;
 			}
 		}
@@ -12267,7 +12267,7 @@ BOOST_AUTO_TEST_CASE(fixed_retrieval)
 		contract test {
 			fixed a = -3.14;
 
-			function f() returns (fixed) {
+			function f() public returns (fixed) {
 				return a;
 			}
 		}
@@ -12280,7 +12280,7 @@ BOOST_AUTO_TEST_CASE(ufixed_echo)
 {
 	char const* sourceCode = R"(
 		contract test {
-			function f(ufixed a) returns (ufixed) {
+			function f(ufixed a) public returns (ufixed) {
 				return a;
 			}
 		}
@@ -12294,7 +12294,7 @@ BOOST_AUTO_TEST_CASE(fixed_echo)
 {
 	char const* sourceCode = R"(
 		contract test {
-			function f(fixed a) returns (fixed) {
+			function f(fixed a) public returns (fixed) {
 				return a;
 			}
 		}
@@ -12312,7 +12312,7 @@ BOOST_AUTO_TEST_CASE(ufixed_addition)
 			ufixed b = 2.5;
 			ufixed c = 1.25;
 
-			function f() returns (ufixed) {
+			function f() public returns (ufixed) {
 				return a + b + c;
 			}
 		}
@@ -12329,7 +12329,7 @@ BOOST_AUTO_TEST_CASE(fixed_addition)
 			fixed b = -2.5;
 			fixed c = -1.25;
 
-			function f() returns (fixed) {
+			function f() public returns (fixed) {
 				return a + b + c;
 			}
 		}
@@ -12345,7 +12345,7 @@ BOOST_AUTO_TEST_CASE(ufixed_subtraction)
 			ufixed a = 3.5;
 			ufixed b = 1.25;
 
-			function f() returns (ufixed) {
+			function f() public returns (ufixed) {
 				return a - b;
 			}
 		}
@@ -12361,7 +12361,7 @@ BOOST_AUTO_TEST_CASE(fixed_subtraction)
 			fixed a = 3.5;
 			fixed b = 1.25;
 
-			function f() returns (fixed) {
+			function f() public returns (fixed) {
 				return b - a;
 			}
 		}
@@ -12377,7 +12377,7 @@ BOOST_AUTO_TEST_CASE(ufixed_multiplication)
 			ufixed a = 3.5;
 			ufixed b = 1.25;
 
-			function f() returns (ufixed) {
+			function f() public returns (ufixed) {
 				return a * b;
 			}
 		}
@@ -12393,7 +12393,7 @@ BOOST_AUTO_TEST_CASE(fixed_multiplication)
 			fixed a = 3.5;
 			fixed b = -1.25;
 
-			function f() returns (fixed) {
+			function f() public returns (fixed) {
 				return a * b;
 			}
 		}
@@ -12409,7 +12409,7 @@ BOOST_AUTO_TEST_CASE(ufixed_division_large_divisor)
 			ufixed a = 3.5;
 			ufixed b = 1.25;
 
-			function f() returns (ufixed) {
+			function f() public returns (ufixed) {
 				return a / b;
 			}
 		}
@@ -12425,7 +12425,7 @@ BOOST_AUTO_TEST_CASE(fixed_division_large_divisor)
 			fixed a = 3.5;
 			fixed b = -1.25;
 
-			function f() returns (fixed) {
+			function f() public returns (fixed) {
 				return a / b;
 			}
 		}
@@ -12441,7 +12441,7 @@ BOOST_AUTO_TEST_CASE(ufixed_division_small_divisor)
 			ufixed a = 3.5;
 			ufixed b = 0.125;
 
-			function f() returns (ufixed) {
+			function f() public returns (ufixed) {
 				return a / b;
 			}
 		}
@@ -12457,7 +12457,7 @@ BOOST_AUTO_TEST_CASE(fixed_division_small_divisor)
 			fixed a = 3.5;
 			fixed b = -0.125;
 
-			function f() returns (fixed) {
+			function f() public returns (fixed) {
 				return a / b;
 			}
 		}
@@ -12473,7 +12473,7 @@ BOOST_AUTO_TEST_CASE(ufixed_modulo)
 			ufixed a = 5.7;
 			ufixed b = 2.5;
 
-			function f() returns (ufixed) {
+			function f() public returns (ufixed) {
 				return a % b;
 			}
 		}
@@ -12489,7 +12489,7 @@ BOOST_AUTO_TEST_CASE(fixed_modulo)
 			fixed a = 5.7;
 			fixed b = -2.5;
 
-			function f() returns (fixed) {
+			function f() public returns (fixed) {
 				return a % b;
 			}
 		}
@@ -12505,11 +12505,11 @@ BOOST_AUTO_TEST_CASE(ufixed_comparison)
 			ufixed a = 3.5;
 			ufixed b = 1.25;
 
-			function f() returns (bool) {
+			function f() public returns (bool) {
 				return a > b;
 			}
 
-			function g() returns (bool) {
+			function g() public returns (bool) {
 				return a < b;
 			}
 		}
@@ -12526,11 +12526,11 @@ BOOST_AUTO_TEST_CASE(fixed_comparison)
 			fixed a = -3.5;
 			fixed b = -1.25;
 
-			function f() returns (bool) {
+			function f() public returns (bool) {
 				return a > b;
 			}
 
-			function g() returns (bool) {
+			function g() public returns (bool) {
 				return a < b;
 			}
 		}
@@ -12548,16 +12548,16 @@ BOOST_AUTO_TEST_CASE(ufixed_comparison_eq)
 			ufixed b = 1.25;
 			ufixed c = 3.5;
 
-			function f() returns (bool) {
+			function f() public returns (bool) {
 				return a >= b && b >= a;
 			}
-			function g() returns (bool) {
+			function g() public returns (bool) {
 				return !(a>=c) && (c>=a);
 			}
-			function h() returns (bool) {
+			function h() public returns (bool) {
 				return a <= b && b <= a;
 			}
-			function i() returns (bool) {
+			function i() public returns (bool) {
 				return (a<=c) && !(c<=a);
 			}
 		}
@@ -12577,16 +12577,16 @@ BOOST_AUTO_TEST_CASE(fixed_comparison_eq)
 			fixed b = -1.25;
 			fixed c = -3.5;
 
-			function f() returns (bool) {
+			function f() public returns (bool) {
 				return a >= b && b >= a;
 			}
-			function g() returns (bool) {
+			function g() public returns (bool) {
 				return (a>=c) && !(c>=a);
 			}
-			function h() returns (bool) {
+			function h() public returns (bool) {
 				return a <= b && b <= a;
 			}
-			function i() returns (bool) {
+			function i() public returns (bool) {
 				return !(a<=c) && (c<=a);
 			}
 		}
@@ -12602,7 +12602,7 @@ BOOST_AUTO_TEST_CASE(ufixed_lengthening_conversion)
 {
 	char const* sourceCode = R"(
 		contract test {
-			function f(ufixed x) returns (ufixed256x30) {
+			function f(ufixed x) public returns (ufixed256x30) {
 				return x;
 			}
 		}
@@ -12615,7 +12615,7 @@ BOOST_AUTO_TEST_CASE(fixed_lengthening_conversion)
 {
 	char const* sourceCode = R"(
 		contract test {
-			function f(fixed128x18 x) returns (fixed256x30) {
+			function f(fixed128x18 x) public returns (fixed256x30) {
 				return x;
 			}
 		}
@@ -12629,7 +12629,7 @@ BOOST_AUTO_TEST_CASE(ufixed_shortening_conversion)
 {
 	char const* sourceCode = R"(
 		contract test {
-			function f(ufixed128x18 x) returns (ufixed128x16) {
+			function f(ufixed128x18 x) public returns (ufixed128x16) {
 				return ufixed128x16(x);
 			}
 		}
@@ -12644,7 +12644,7 @@ BOOST_AUTO_TEST_CASE(fixed_shortening_conversion)
 {
 	char const* sourceCode = R"(
 		contract test {
-			function f(fixed128x18 x) returns (fixed128x16) {
+			function f(fixed128x18 x) public returns (fixed128x16) {
 				return fixed128x16(x);
 			}
 		}
@@ -12658,7 +12658,7 @@ BOOST_AUTO_TEST_CASE(uint_ufixed_conversion)
 {
 	char const* sourceCode = R"(
 		contract test {
-			function f(uint8 x) returns (ufixed256x18) {
+			function f(uint8 x) public returns (ufixed256x18) {
 				return x;
 			}
 		}
@@ -12671,7 +12671,7 @@ BOOST_AUTO_TEST_CASE(int_fixed_conversion)
 {
 	char const* sourceCode = R"(
 		contract test {
-			function f(int8 x) returns (fixed256x18) {
+			function f(int8 x) public returns (fixed256x18) {
 				return x;
 			}
 		}
@@ -12685,7 +12685,7 @@ BOOST_AUTO_TEST_CASE(ufixed_uint_conversion)
 {
 	char const* sourceCode = R"(
 		contract test {
-			function f(ufixed256x18 x) returns (uint256) {
+			function f(ufixed256x18 x) public returns (uint256) {
 				return uint256(x);
 			}
 		}
@@ -12700,7 +12700,7 @@ BOOST_AUTO_TEST_CASE(fixed_int_conversion)
 {
 	char const* sourceCode = R"(
 		contract test {
-			function f(fixed256x18 x) returns (int256) {
+			function f(fixed256x18 x) public returns (int256) {
 				return int256(x);
 			}
 		}
@@ -12721,7 +12721,7 @@ BOOST_AUTO_TEST_CASE(ufixed_addition_overflow)
 		contract test {
 			ufixed256x18 a = (2**256-1)/(10**18);
 
-			function f() returns (ufixed256x18) {
+			function f() public returns (ufixed256x18) {
 				return a + 1e-18;
 			}
 		}
@@ -12736,7 +12736,7 @@ BOOST_AUTO_TEST_CASE(fixed_addition_overflow)
 		contract test {
 			fixed256x18 a = fixed256x18(ufixed256x18((2**255-1)/(10**18)));
 
-			function f() returns (fixed256x18) {
+			function f() public returns (fixed256x18) {
 				return a + 1e-18;
 			}
 		}
@@ -12751,7 +12751,7 @@ BOOST_AUTO_TEST_CASE(short_ufixed_addition_overflow)
 		contract test {
 			ufixed128x18 a = (2**128-1)/(10**18);
 
-			function f() returns (ufixed128x18) {
+			function f() public returns (ufixed128x18) {
 				return a + 1e-18;
 			}
 		}
@@ -12766,7 +12766,7 @@ BOOST_AUTO_TEST_CASE(short_fixed_addition_overflow)
 		contract test {
 			ufixed128x18 a = (2**127-1)/(10**18);
 
-			function f() returns (ufixed128x18) {
+			function f() public returns (ufixed128x18) {
 				return a + 1e-18;
 			}
 		}
@@ -12799,7 +12799,7 @@ BOOST_AUTO_TEST_CASE(short_ufixed_multiplication_overflow)
 		contract test {
 			ufixed128x18 a = (2**127)/(10**18);
 
-			function f() returns (ufixed128x18) {
+			function f() public returns (ufixed128x18) {
 				return a * 2;
 			}
 		}
@@ -12815,7 +12815,7 @@ BOOST_AUTO_TEST_CASE(ufixed_nonterminating_division)
 		ufixed a = 1;
 		ufixed b = 3;
 
-		function f() returns (ufixed) {
+		function f() public returns (ufixed) {
 			return a / b;
 		}
 	}
@@ -12831,7 +12831,7 @@ BOOST_AUTO_TEST_CASE(fixed_nonterminating_division)
 		fixed a = -1;
 		fixed b = 3;
 
-		function f() returns (fixed) {
+		function f() public returns (fixed) {
 			return a / b;
 		}
 	}
