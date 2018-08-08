@@ -815,41 +815,49 @@ void Literal::accept(ASTConstVisitor& _visitor) const
 
 void Rule::accept(ASTVisitor& _visitor)
 {
-	_visitor.visit(*this);
-	for(auto fact : m_factDeclarations)
-		fact->accept(_visitor);
-	if (m_thenBody)
-		m_thenBody->accept(_visitor);
+	if(_visitor.visit(*this))
+	{
+		for(auto fact : m_factDeclarations)
+			fact->accept(_visitor);
+		if (m_thenBody)
+			m_thenBody->accept(_visitor);
+	}
 	_visitor.endVisit(*this);
 }
 
 void Rule::accept(ASTConstVisitor& _visitor) const
 {
-	_visitor.visit(*this);
-	for(auto fact : m_factDeclarations)
-		fact->accept(_visitor);
-	if (m_thenBody)
-		m_thenBody->accept(_visitor);
+	if(_visitor.visit(*this))
+	{
+		for(auto fact : m_factDeclarations)
+			fact->accept(_visitor);
+		if (m_thenBody)
+			m_thenBody->accept(_visitor);
+	}
 	_visitor.endVisit(*this);
 }
 
 void FactDeclaration::accept(ASTVisitor& _visitor)
 {
-	_visitor.visit(*this);
-	if (m_typeName)
-		m_typeName->accept(_visitor);
-	for(auto fieldExp: m_fieldExpressions)
-		fieldExp->accept(_visitor);
+	if(_visitor.visit(*this))
+	{
+		if (m_typeName)
+			m_typeName->accept(_visitor);
+		for(auto fieldExp: m_fieldExpressions)
+			fieldExp->accept(_visitor);
+	}
 	_visitor.endVisit(*this);
 }
 
 void FactDeclaration::accept(ASTConstVisitor& _visitor) const
 {
-	_visitor.visit(*this);
-	if (m_typeName)
-		m_typeName->accept(_visitor);
-	for(auto fieldExp: m_fieldExpressions)
-		fieldExp->accept(_visitor);
+	if(_visitor.visit(*this))
+	{
+		if (m_typeName)
+			m_typeName->accept(_visitor);
+		for(auto fieldExp: m_fieldExpressions)
+			fieldExp->accept(_visitor);
+	}
 	_visitor.endVisit(*this);
 }
 
