@@ -1,7 +1,5 @@
-#include <string>
-#include <tuple>
 #include <boost/test/unit_test.hpp>
-#include <test/libsolidity/SolidityExecutionFramework.h>
+#include <test/lity/ContractExecutionFramework.h>
 
 using namespace std;
 using namespace dev::test;
@@ -13,30 +11,20 @@ namespace solidity
 namespace test
 {
 
-static char const* contractCode = R"DELIMITER(
-pragma solidity ^0.4.0;
-
-contract Smoke {
-	uint256[] arr;
-	function numberOfElements() public view returns (uint256) {
-		return arr.length;
-	}
-}
-
-)DELIMITER";
-
 static unique_ptr<bytes> s_compiledContract;
 
-class SmokeTestFramework: public SolidityExecutionFramework
+class SmokeTestFramework: public ContractExecutionFramework
 {
 protected:
-	void deployContract(u256 const& _value = 0)
+	void deployContract()
 	{
 		if (!s_compiledContract)
-			s_compiledContract.reset(new bytes(compileContract(contractCode, "Smoke")));
+			s_compiledContract.reset(new bytes(compileContractFile(
+				"test/lity/contracts/smoke.sol",
+				"Smoke")));
 
 		bytes args = encodeArgs();
-		sendMessage(*s_compiledContract + args, true, _value);
+		sendMessage(*s_compiledContract + args, true);
 		BOOST_REQUIRE(!m_output.empty());
 	}
 };
