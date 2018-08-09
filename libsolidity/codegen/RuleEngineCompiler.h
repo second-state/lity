@@ -33,11 +33,12 @@ public:
 	/// stack post:
 	void appendFactDelete();
 
-	void appendPushItemToStorageArray();
 
 	bool visit(Rule const& _node) override;
 	bool visit(FactDeclaration const& _node) override;
 	bool visit(FieldExpression const& _node) override;
+	bool visit(FunctionDefinition const&) override { return false; }
+	bool visit(Block const& _function) override;
 
 	void endVisit(Rule const&) override;
 	void endVisit(FactDeclaration const&) override;
@@ -45,6 +46,12 @@ public:
 
 	CompilerUtils utils();
 private:
+
+	void appendPushItemToStorageArray(h256 itemAddr);
+	void appendPushItemToMemoryArray(h256 itemAddr);
+	void appendAccessIndexMem();
+	void appendAccessIndexStorage();
+
 	const Rule* m_currentRule;
 	const FactDeclaration* m_currentFact;
 	int m_currentFieldNo=0;
