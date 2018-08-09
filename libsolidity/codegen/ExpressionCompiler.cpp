@@ -1552,6 +1552,12 @@ void ExpressionCompiler::endVisit(Identifier const& _identifier)
 	{
 		// no-op
 	}
+	else if (dynamic_cast<FactDeclaration const*>(declaration))
+	{
+		// save load fact from a place
+		// TODO: Fix this temperary(wrong) method
+		m_context << 0x1234 << Instruction::MLOAD;
+	}
 	else
 	{
 		solAssert(false, "Identifier type not expected in expression context.");
