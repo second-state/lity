@@ -46,7 +46,7 @@ runtime-test:
     - eth --test -d /tmp/rttest >/tmp/rttest.log 2>&1 &
     - while [ ! -S /tmp/rttest/geth.ipc ] ; do sleep 1; done && sleep 2
   script:
-    - ./build/test/rttest -- --testpath ./test --ipcpath /tmp/rttest/geth.ipc
+    - ./build/test/rttest -- --testpath ./test --ipcpath /tmp/rttest/geth.ipc --show-messages
   after_script:
     - cat /tmp/rttest.log
 
