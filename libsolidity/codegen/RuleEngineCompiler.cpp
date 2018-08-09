@@ -28,7 +28,7 @@ namespace solidity
 void RuleEngineCompiler::appendFireAllRules(ContractDefinition const& _contract)
 {
 	m_currentFieldNo = 0;
-	m_nodeOutListAddr.push_back(h256(0x170));
+	m_nodeOutListAddr.push_back(u256(m_firstListAddr));
 	m_currentFieldNo++;
 	_contract.accept(*this);
 }
@@ -132,7 +132,7 @@ bool RuleEngineCompiler::visit(FieldExpression const& fieldExpr)
 	eth::AssemblyItem noAddToList = m_context.newTag();
 	string nodeName = m_currentRule->name()+"-"+m_currentFact->name()+"-"+to_string(m_currentFieldNo);
 
-	m_nodeOutListAddr.push_back(h256(0x170+m_currentFieldNo*0x200)); // TODO: dynamic allocation
+	m_nodeOutListAddr.push_back(m_nodeOutListAddr.back()+m_listDistance); // TODO: dynamic allocation
 
 	auto inListAddr = m_nodeOutListAddr[m_nodeOutListAddr.size()-2];
 	auto outListAddr = m_nodeOutListAddr[m_nodeOutListAddr.size()-1];
@@ -162,10 +162,16 @@ bool RuleEngineCompiler::visit(FieldExpression const& fieldExpr)
 	m_context << 1 << Instruction::XOR;
 	m_context.appendConditionalJumpTo(noAddToList);
 	// stack: i fact
+	m_context << Instruction::DUP1;
+	// stack: i fact fact
 	appendPushItemToMemoryArray(outListAddr);                //     add fact to outList
+	// stack: i fact len'
+	m_context << Instruction::POP;
+	// stack: i fact
+	m_context << noAddToList;
+	// stack: i fact
 	m_context << Instruction::POP;
 	// stack: i
-	m_context << noAddToList;
 	m_context << 1 << Instruction::ADD;                      //   i++
 	m_context.appendJumpTo(loopStart);
 	m_context << loopEnd;                                    // loopEnd:

@@ -55,8 +55,10 @@ private:
 	const Rule* m_currentRule;
 	const FactDeclaration* m_currentFact;
 	int m_currentFieldNo=0;
+ 	const u256 m_firstListAddr=0x1400;
+	const u256 m_listDistance=0x200;
 
-	std::vector<dev::h256> m_nodeOutListAddr;
+	std::vector<dev::u256> m_nodeOutListAddr;
 
 	CompilerContext& m_context;
 };
