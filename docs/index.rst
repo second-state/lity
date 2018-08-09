@@ -12,13 +12,13 @@ Lity is an open-source language enhanced from Solidity. With new grammar extensi
 How Lity Enhances Security
 ``````````````````````````
 
-With `ERC Checker <features#erc-checker>`_ and
-`Overflow Protection <features#overflow-protection>`_.
+With `ERC Checker <features.html#erc-checker>`_ and
+`Overflow Protection <features.html#overflow-protection>`_.
 
 How Lity Improves Performance
 `````````````````````````````
 
-With `Ethereum Native Interface (ENI) <features#ethereum-native-interface>`_.
+With `Ethereum Native Interface (ENI) <features.html#ethereum-native-interface>`_.
 
 See `libENI on Github <https://github.com/CyberMiles/libeni>`_ and the
 `libENI documentation <https://lity.readthedocs.io/projects/libeni/>`_.
@@ -31,7 +31,7 @@ Here we will provide a contract example and explain a little bit.
 .. code:: C++
 
   pragma solidity ^0.4.23;
-  
+
   contract ReverseContract {
     function reverse(string input) public returns(string) {
       string memory output = eni("reverse", input);
