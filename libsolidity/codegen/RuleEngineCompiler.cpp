@@ -74,7 +74,7 @@ bool RuleEngineCompiler::visit(FactDeclaration const& _node)
 	// storage
 	auto inListAddr = keccak256(_node.type()->richIdentifier()+"-factlist");
 	// storage
-	auto outListAddr = keccak256(_node.name()+"-factlist");
+	auto outListAddr = keccak256(m_currentRule->name()+_node.name()+"-factlist");
 	m_nodeOutListAddr.push_back(outListAddr);
 
 	eth::AssemblyItem loopStart = m_context.newTag();
