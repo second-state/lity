@@ -27,9 +27,6 @@ namespace solidity
 // TODO: refresh the set of facts in each alpha nodes,
 void RuleEngineCompiler::appendFireAllRules(ContractDefinition const& _contract)
 {
-	m_currentFieldNo = 0;
-	m_nodeOutListAddr.push_back(u256(m_firstListAddr));
-	m_currentFieldNo++;
 	_contract.accept(*this);
 }
 
@@ -73,11 +70,12 @@ bool RuleEngineCompiler::visit(Rule const& _node)
 bool RuleEngineCompiler::visit(FactDeclaration const& _node)
 {
 	m_currentFact = &_node;
-
+	m_currentFieldNo = 0;
 	// storage
 	auto inListAddr = keccak256(_node.type()->richIdentifier()+"-factlist");
-	// memory
-	auto outListAddr = m_nodeOutListAddr.back();
+	// storage
+	auto outListAddr = keccak256(_node.name()+"-factlist");
+	m_nodeOutListAddr.push_back(outListAddr);
 
 	eth::AssemblyItem loopStart = m_context.newTag();
 	eth::AssemblyItem loopEnd = m_context.newTag();
@@ -96,7 +94,7 @@ bool RuleEngineCompiler::visit(FactDeclaration const& _node)
 	// stack: i len inList i
 	appendAccessIndexStorage();
 	// stack: i len fact
-	appendPushItemToMemoryArray(outListAddr);
+	appendPushItemToStorageArray(outListAddr);
 	m_context << Instruction::POP;
 	// stack: i len
 	m_context << Instruction::DUP2 << 1 << Instruction::ADD;  //   i++
@@ -118,8 +116,8 @@ bool RuleEngineCompiler::visit(FieldExpression const& fieldExpr)
 	// stack post:
 
 	// Node function
-	// input  : list of factID (in memory)
-	// output : list of factID (in memory)
+	// input  : list of factID (in storage)
+	// output : list of factID (in storage)
 	// outline:
 	//   get inList address by hash
 	//   get outList address by hash
@@ -132,7 +130,7 @@ bool RuleEngineCompiler::visit(FieldExpression const& fieldExpr)
 	eth::AssemblyItem noAddToList = m_context.newTag();
 	string nodeName = m_currentRule->name()+"-"+m_currentFact->name()+"-"+to_string(m_currentFieldNo);
 
-	m_nodeOutListAddr.push_back(m_nodeOutListAddr.back()+m_listDistance); // TODO: dynamic allocation
+	m_nodeOutListAddr.push_back(keccak256(nodeName+"-factlist")); // TODO: dynamic allocation
 
 	auto inListAddr = m_nodeOutListAddr[m_nodeOutListAddr.size()-2];
 	auto outListAddr = m_nodeOutListAddr[m_nodeOutListAddr.size()-1];
@@ -140,7 +138,7 @@ bool RuleEngineCompiler::visit(FieldExpression const& fieldExpr)
 	m_context << 0;
 	// stack: i                                              // i=0
 	m_context << loopStart;                                  // loop:
-    m_context << inListAddr << Instruction::MLOAD;           // 
+    m_context << inListAddr << Instruction::SLOAD;           // 
 	// stack: i len
 	m_context << Instruction::DUP2 << Instruction::LT;       //   if i>=len
 	m_context << 1 << Instruction::XOR;
@@ -149,7 +147,7 @@ bool RuleEngineCompiler::visit(FieldExpression const& fieldExpr)
 	// stack: i
 	m_context << inListAddr << Instruction::DUP2;
 	// stack: i inList i
-	appendAccessIndexMem();
+	appendAccessIndexStorage();
 	// stack: i fact
 	m_context << Instruction::DUP1;
 
@@ -164,7 +162,7 @@ bool RuleEngineCompiler::visit(FieldExpression const& fieldExpr)
 	// stack: i fact
 	m_context << Instruction::DUP1;
 	// stack: i fact fact
-	appendPushItemToMemoryArray(outListAddr);                //     add fact to outList
+	appendPushItemToStorageArray(outListAddr);                //     add fact to outList
 	// stack: i fact len'
 	m_context << Instruction::POP;
 	// stack: i fact
@@ -188,7 +186,7 @@ bool RuleEngineCompiler::visit(Block const& block)
 	m_context << 0;
 	// stack: i                                              // i=0
 	m_context << loopStart;                                  // loop:
-    m_context << inListAddr << Instruction::MLOAD;           // 
+    m_context << inListAddr << Instruction::SLOAD;           // 
 	// stack: i len
 	m_context << Instruction::DUP2 << Instruction::LT;       //   if i>=len
 	m_context << 1 << Instruction::XOR;
@@ -197,7 +195,7 @@ bool RuleEngineCompiler::visit(Block const& block)
 	// stack: i
 	m_context << inListAddr << Instruction::DUP2;
 	// stack: i inList i
-	appendAccessIndexMem();
+	appendAccessIndexStorage();
 	// stack: i fact
 
 	// save fact to a place
@@ -258,39 +256,6 @@ void RuleEngineCompiler::appendPushItemToStorageArray(h256 listAddr)
 	// stack: listLen' itemADDr listLen'
 	m_context << listAddr << Instruction::ADD << Instruction::SSTORE; // store item
 	// stack: listLen'
-}
-
-// push item to memory array
-// listAddr is a compile-time known address
-// stack: item
-// stack: len'
-void RuleEngineCompiler::appendPushItemToMemoryArray(h256 listAddr)
-{
-	// stack: itemAddr
-	m_context << listAddr << listAddr << Instruction::MLOAD;
-	// stack: itemADDr listAddr listLen
-	m_context << 1 << Instruction::ADD;
-	// stack: itemADDr listAddr listLen'
-	m_context << Instruction::DUP1 << Instruction::SWAP2;
-	// stack: itemADDr listLen' listLen' listAddr
-	m_context << Instruction::MSTORE; // store len
-	// stack: itemADDr listLen'
-	m_context << Instruction::SWAP1 << Instruction::DUP2;
-	// stack: listLen' itemADDr listLen'
-	m_context << 32 << Instruction::MUL;
-	m_context << listAddr << Instruction::ADD << Instruction::MSTORE; // store item
-	// stack: listLen'
-}
-
-// stack pre: array index
-// stack post: item
-void RuleEngineCompiler::appendAccessIndexMem()
-{
-	// stack: array index
-	m_context << 1 << Instruction::ADD;
-	// stack: array index+1
-	m_context << 32 << Instruction::MUL << Instruction::ADD << Instruction::MLOAD;
-	// stack: item
 }
 
 // stack pre: array index
