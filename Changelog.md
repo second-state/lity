@@ -1,3 +1,13 @@
+
+
+### Lity 1.2.0 (2018-08-15)
+
+Language Features:
+ * Rule language 1.0 implementaion:
+  * one-fact rules 
+  * factInsert (only available with storage struct)
+  * fireAllRules
+  
 ### Lity 1.1.1 (2018-07-24)
 
 Language Features:
