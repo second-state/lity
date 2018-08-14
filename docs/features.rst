@@ -47,3 +47,15 @@ Native library are installed with EVM and updated over the air(OTA).
 See here for more details.
 
 Note that new ENI operations are added without recompiling EVM, rather than pre-compiled contracts.
+
+Business Rules
+----------------
+
+Lity Rule Language
+`````````````````````````
+Lity incorporates rule language(like Drools and Jess) into smart contract.
+The rules engine shall match patterns(facts) to rules, and resolve potential conflicts.
+See Lity rule language for reference. Lity's rule grammar is very similar with Drools.
+
+This feature is compatable with official Ethereum Virtual Machine.
+Because, Lity directly compiles rule language into official EVM byte code.
