@@ -36,16 +36,23 @@ void RuleEngineCompiler::appendFactInsert(TypePointer const& factType)
 	// stack pre:  itemAddr
 	// stack post: factID
 
+	// currently we only supports insertion of storage struct type
+	solAssert(
+		dynamic_pointer_cast<StructType const>(factType) &&
+		dynamic_pointer_cast<ReferenceType const>(factType)->location() == DataLocation::Storage
+		, "Invalid factInsert operand type"
+	);
+
 	h256 listOfThisType = keccak256(factType->richIdentifier()+"_ptr-factlist"); // TODO: fix type name issue
 	h256 IDToFact = keccak256("IDTofact");
-	
+
 	m_context << Instruction::DUP1;
 
 	appendPushItemToStorageArray(listOfThisType);
 	m_context << Instruction::POP;
 
 	appendPushItemToStorageArray(IDToFact);
-	
+
 	// stack: listLen'
 }
 
@@ -103,10 +110,10 @@ bool RuleEngineCompiler::visit(FactDeclaration const& _node)
 	// stack: i len i'
 	m_context << Instruction::SWAP2 << Instruction::POP;
 	// stack: i' len
-	
+
 	m_context.appendJumpTo(loopStart);
 	m_context << loopEnd;                                    // loopEnd:
-	
+
 	// stack: i len
 	m_context << Instruction::POP << Instruction::POP;
 	return true;
@@ -141,7 +148,7 @@ bool RuleEngineCompiler::visit(FieldExpression const& fieldExpr)
 	m_context << 0;                                          // i=0
 	// stack: i                                              
 	m_context << loopStart;                                  // loop:
-    m_context << inListAddr << Instruction::SLOAD;           // 
+    m_context << inListAddr << Instruction::SLOAD;           //
 	// stack: i len
 	m_context << Instruction::DUP2 << Instruction::LT;       //   if i>=len
 	m_context << 1 << Instruction::XOR;
@@ -190,7 +197,7 @@ bool RuleEngineCompiler::visit(Block const& block)
 	m_context << 0;
 	// stack: i                                              // i=0
 	m_context << loopStart;                                  // loop:
-    m_context << inListAddr << Instruction::SLOAD;           // 
+    m_context << inListAddr << Instruction::SLOAD;           //
 	// stack: i len
 	m_context << Instruction::DUP2 << Instruction::LT;       //   if i>=len
 	m_context << 1 << Instruction::XOR;
@@ -214,7 +221,7 @@ bool RuleEngineCompiler::visit(Block const& block)
 	m_context << 1 << Instruction::ADD;                      //   i++
 	m_context.appendJumpTo(loopStart);
 	m_context << loopEnd;                                    // loopEnd:
-	
+
 	// stack: i
 	m_context << Instruction::POP;
 	return false;

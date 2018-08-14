@@ -1446,7 +1446,11 @@ TypePointer ReferenceType::unaryOperatorResult(Token::Value _operator) const
 			solAssert(false, "");
 		}
 	}
-	else if (_operator == Token::FactInsert && dynamic_cast<StructType const*>(this))
+	else if (
+		_operator == Token::FactInsert &&
+		dynamic_cast<StructType const*>(this) &&
+		this->location() == DataLocation::Storage
+	)
 		return make_shared<IntegerType>(256);
 	return TypePointer();
 }

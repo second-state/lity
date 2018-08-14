@@ -12,5 +12,5 @@ contract C {
     }
 }
 // ----
-// Warning: (159-200): Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.
-// TypeError: (266-307): Function declared as pure, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.
+// TypeError: (159-200): Unary operator factInsert cannot be applied to type struct C.Person memory
+// TypeError: (266-307): Unary operator factInsert cannot be applied to type struct C.Person memory
