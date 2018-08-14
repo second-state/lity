@@ -28,9 +28,10 @@ contract C {
         ps.push(Person(age, true, msg.sender));
         addr2idx[msg.sender] = factInsert ps[ps.length-1];
     }
-    function deletePerson() public {
-        factDelete addr2idx[msg.sender];
-    }
+    // Not implemented yet.
+    // function deletePerson() public {
+    //     factDelete addr2idx[msg.sender];
+    // }
     function pay() public {
         fireAllRules;
     }
