@@ -61,10 +61,7 @@ void RuleEngineCompiler::appendFactInsert(TypePointer const& factType)
 // 2. remove the fact from working memory.
 void RuleEngineCompiler::appendFactDelete()
 {
-	// TODO: replace this
-	//============================
-	m_context << Instruction::POP; // do nothing
-	//============================
+	solUnimplementedAssert(false, "Sorry, factDelete not implemented yet.QQ\n");
 }
 
 
