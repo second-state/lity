@@ -77,6 +77,8 @@ bool RuleEngineCompiler::visit(FactDeclaration const& _node)
 	auto outListAddr = keccak256(m_currentRule->name()+_node.name()+"-factlist");
 	m_nodeOutListAddr.push_back(outListAddr);
 
+	m_context << 0 << outListAddr << Instruction::SSTORE; // set list as empty
+
 	eth::AssemblyItem loopStart = m_context.newTag();
 	eth::AssemblyItem loopEnd = m_context.newTag();
 
@@ -135,8 +137,9 @@ bool RuleEngineCompiler::visit(FieldExpression const& fieldExpr)
 	auto inListAddr = m_nodeOutListAddr[m_nodeOutListAddr.size()-2];
 	auto outListAddr = m_nodeOutListAddr[m_nodeOutListAddr.size()-1];
 
-	m_context << 0;
-	// stack: i                                              // i=0
+	m_context << 0 << outListAddr << Instruction::SSTORE; // set list as empty
+	m_context << 0;                                          // i=0
+	// stack: i                                              
 	m_context << loopStart;                                  // loop:
     m_context << inListAddr << Instruction::SLOAD;           // 
 	// stack: i len
@@ -183,6 +186,7 @@ bool RuleEngineCompiler::visit(Block const& block)
 	eth::AssemblyItem loopStart = m_context.newTag();
 	eth::AssemblyItem loopEnd = m_context.newTag();
 	auto inListAddr = m_nodeOutListAddr.back();
+
 	m_context << 0;
 	// stack: i                                              // i=0
 	m_context << loopStart;                                  // loop:
