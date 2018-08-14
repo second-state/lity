@@ -32,7 +32,15 @@ protected:
 /// This is a test suite that tests optimised code!
 BOOST_FIXTURE_TEST_SUITE(LitySmoke, SmokeTestFramework)
 
-BOOST_AUTO_TEST_CASE(creation)
+BOOST_AUTO_TEST_CASE(balance)
+{
+	BOOST_CHECK_EQUAL(balanceAt(account(1)), 0);
+	u256 balance = 10 * ether;
+	sendEther(account(1), balance);
+	BOOST_CHECK_EQUAL(balanceAt(account(1)), balance);
+}
+
+BOOST_AUTO_TEST_CASE(contract)
 {
 	deployContract();
 	BOOST_REQUIRE(callContractFunction("numberOfElements()") == encodeArgs(u256(0)));
