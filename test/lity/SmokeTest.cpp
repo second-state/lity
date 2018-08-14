@@ -55,6 +55,20 @@ BOOST_AUTO_TEST_CASE(contract)
 	BOOST_REQUIRE(callContractFunction("getElement(uint256)", u256(3)) == encodeArgs(u256(3)));
 }
 
+BOOST_AUTO_TEST_CASE(gas_cost)
+{
+	deployContract();
+
+	u256 balance = 10 * ether;
+	sendEther(account(1), balance);
+	BOOST_CHECK_EQUAL(balanceAt(account(1)), balance);
+
+	BOOST_REQUIRE(callContractFunctionFrom(1, "addElement(uint256)", u256(1111)) == encodeArgs());
+
+	balance -= gasCost();
+	BOOST_CHECK_EQUAL(balanceAt(account(1)), balance);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 }
