@@ -36,6 +36,15 @@ BOOST_AUTO_TEST_CASE(creation)
 {
 	deployContract();
 	BOOST_REQUIRE(callContractFunction("numberOfElements()") == encodeArgs(u256(0)));
+	BOOST_REQUIRE(callContractFunction("addElement(uint256)", u256(77)) == encodeArgs());
+	BOOST_REQUIRE(callContractFunction("numberOfElements()") == encodeArgs(u256(1)));
+	BOOST_REQUIRE(callContractFunction("getElement(uint256)", u256(0)) == encodeArgs(u256(77)));
+	BOOST_REQUIRE(callContractFunction("addElement(uint256)", u256(1)) == encodeArgs());
+	BOOST_REQUIRE(callContractFunction("addElement(uint256)", u256(2)) == encodeArgs());
+	BOOST_REQUIRE(callContractFunction("addElement(uint256)", u256(3)) == encodeArgs());
+	BOOST_REQUIRE(callContractFunction("addElement(uint256)", u256(4)) == encodeArgs());
+	BOOST_REQUIRE(callContractFunction("numberOfElements()") == encodeArgs(u256(5)));
+	BOOST_REQUIRE(callContractFunction("getElement(uint256)", u256(3)) == encodeArgs(u256(3)));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
