@@ -121,6 +121,16 @@ do
     compileWithoutWarning "$f"
 done
 
+printTask "Compiling lity runtime tests..."
+(
+cd "$REPO_ROOT"/test/lity/contracts/
+for f in *.sol
+do
+    echo "$f"
+    compileFull "$f"
+done
+)
+
 printTask "Compiling all examples from the documentation..."
 TMPDIR=$(mktemp -d)
 (
