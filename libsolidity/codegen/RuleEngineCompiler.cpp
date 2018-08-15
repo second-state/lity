@@ -61,7 +61,7 @@ void RuleEngineCompiler::appendFactInsert(TypePointer const& factType)
 // 2. remove the fact from working memory.
 void RuleEngineCompiler::appendFactDelete()
 {
-	solUnimplementedAssert(false, "Sorry, factDelete not implemented yet.QQ\n");
+	solUnimplemented("Sorry, factDelete not implemented yet.QQ\n");
 }
 
 
@@ -212,8 +212,17 @@ bool RuleEngineCompiler::visit(Block const& block)
 	// stack: i
 	ExpressionCompiler exprCompiler(m_context);
 	block.accept(exprCompiler);
-	for(size_t i=0; i<block.statements().size(); i++) // TODO: Fix this
-		m_context << Instruction::POP;
+	
+	// pop out stack elements in this block
+	// TODO: Fix this
+	for(auto stmt : block.statements())
+	{
+		if(auto exprStmt = dynamic_cast<ExpressionStatement const*>(stmt.get()))
+			CompilerUtils(m_context).popStackElement(*(exprStmt->expression().annotation().type));
+		else
+			solUnimplemented("Sorry, currently only expressionStatements are allowed in then block");
+	}
+
 	// stack: i
 	m_context << 1 << Instruction::ADD;                      //   i++
 	m_context.appendJumpTo(loopStart);
