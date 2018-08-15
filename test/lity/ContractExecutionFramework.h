@@ -26,7 +26,7 @@ class ContractExecutionFramework: public SolidityExecutionFramework
 {
 protected:
 	// 20000000000 is a magic number.
-	u256 gasCost() { return m_gasUsed * u256(20) * u256(1000000000); }
+	u256 gasCost() { return m_gasUsed * u256(20000000000ull); }
 
 	bytes compileContractFile(
 		std::string const& _sourceFile,
