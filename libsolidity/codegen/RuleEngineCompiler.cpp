@@ -194,7 +194,7 @@ bool RuleEngineCompiler::visit(Block const& block)
 	m_context << 0;
 	// stack: i                                              // i=0
 	m_context << loopStart;                                  // loop:
-    m_context << inListAddr << Instruction::SLOAD;           //
+	m_context << inListAddr << Instruction::SLOAD;           //
 	// stack: i len
 	m_context << Instruction::DUP2 << Instruction::LT;       //   if i>=len
 	m_context << 1 << Instruction::XOR;
