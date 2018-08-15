@@ -30,7 +30,7 @@ protected:
 };
 
 /// This is a test suite that tests optimised code!
-BOOST_FIXTURE_TEST_SUITE(LityRules, MultiRulesTestFramework)
+BOOST_FIXTURE_TEST_SUITE(LityMultiRules, MultiRulesTestFramework)
 
 BOOST_AUTO_TEST_CASE(fireAllRules)
 {
