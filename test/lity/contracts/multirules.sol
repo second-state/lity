@@ -4,13 +4,13 @@ contract C {
         uint balance;
     }
 
-    rule "myRule1" when {
+    rule "ageLT18" when {
         p: Person(age < 18);
     } then {
         p.balance += 10;
     }
 
-    rule "myRule2" when {
+    rule "ageGT20" when {
         p: Person(age > 20);
     } then {
         p.balance += 7;

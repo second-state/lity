@@ -5,7 +5,7 @@ contract C {
         address addr;
     }
 
-    rule "myRule" when {
+    rule "ageGT10newbie" when {
         p: Person(age > 10, eligible);
     } then {
         p.addr.transfer(10);
