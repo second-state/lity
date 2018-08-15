@@ -32,6 +32,7 @@ add_executable(rttest
     RPCSession.cpp
     lity/SmokeTest.cpp
     lity/RulesTest.cpp
+    lity/SimpleRulesTest.cpp
     lity/ContractExecutionFramework.cpp
     libsolidity/SolidityExecutionFramework.cpp
 )
