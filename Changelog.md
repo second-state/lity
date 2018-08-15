@@ -4,13 +4,13 @@
 
 Language Features:
  * Rule language 1.0 implementaion:
-  * one-fact rules 
-  * factInsert (only available with storage struct)
-  * fireAllRules
-  * Known Issues:
-   * in rule then block:
-    * cannot have variable definitions in rule then block
-    * only expression statements are available
+   * one-fact rules 
+   * factInsert (only available with storage struct)
+   * fireAllRules
+ * Known Issues:
+   * Rule: cannot have variable definitions in rule then block
+   * Rule: only expression statements are available
+
 ### Lity 1.1.1 (2018-07-24)
 
 Language Features:
