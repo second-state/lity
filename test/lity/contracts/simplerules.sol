@@ -4,7 +4,7 @@ contract C {
         bool eligible;
     }
 
-    rule "myRule" when {
+    rule "ageLT18newbie" when {
         p: Person(age < 18, eligible);
     } then {
         p.eligible = false;
