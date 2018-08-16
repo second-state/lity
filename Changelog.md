@@ -1,15 +1,17 @@
-
-
 ### Lity 1.2.0 (2018-08-15)
 
 Language Features:
- * Rule language 1.0 implementaion:
-   * one-fact rules 
-   * factInsert (only available with storage struct)
-   * fireAllRules
- * Known Issues:
-   * Rule: cannot have variable definitions in rule then block
-   * Rule: only expression statements are available
+ * Rule: implement rule-engine spec v1.0
+   - one-fact rules
+   - factInsert (only available with storage struct)
+   - fireAllRules
+
+Features:
+ * Tests: Isolate runtime-tests for rule-engine from `soltest`.
+
+Known Issues:
+ * Rule: cannot have variable definitions in rule then block
+ * Rule: only expression statements are available
 
 ### Lity 1.1.1 (2018-07-24)
 
