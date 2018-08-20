@@ -1662,12 +1662,12 @@ void ExpressionCompiler::appendArithmeticOperatorCode(Token::Value _operator, Ty
 {
 	IntegerType const& type = dynamic_cast<IntegerType const&>(_type);
 	bool const c_isSigned = type.isSigned();
-	bool const c_isToken = type.isToken();
+	bool const c_isSafeUint = type.isSafeUint();
 
 	if (_type.category() == Type::Category::FixedPoint)
 		solUnimplemented("Not yet implemented - FixedPointType.");
 
-	if( c_isToken )
+	if( c_isSafeUint )
 		appendSafeArithmeticCheckCode(_operator, _type);
 
 	switch (_operator)

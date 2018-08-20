@@ -209,7 +209,7 @@ namespace solidity
 	K(UFixed, "ufixed", 0)                                             \
 	T(IntM, "intM", 0)                                                 \
 	T(UIntM, "uintM", 0)                                               \
-	K(TokenT, "token_t", 0)                                            \
+	K(SafeUint, "safeuint", 0)                                         \
 	T(BytesM, "bytesM", 0)                                             \
 	T(FixedMxN, "fixedMxN", 0)                                         \
 	T(UFixedMxN, "ufixedMxN", 0)                                       \

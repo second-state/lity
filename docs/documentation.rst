@@ -31,7 +31,7 @@ ERC Contract Standard Checker
 Overflow Protection
 ```````````````````
 
-- :ref:`token_t - a new type with native SafeMath support <token-type>`
+- :ref:`safeuint - a new type with native SafeMath support <safeuint-type>`
 - :ref:`Bec token with overflow protection <overflow-protection>`
 
 Ethereum Native Interface (ENI)
