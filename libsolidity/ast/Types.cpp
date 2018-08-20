@@ -289,8 +289,8 @@ TypePointer Type::fromElementaryTypeName(ElementaryTypeNameToken const& _type)
 		return make_shared<IntegerType>(256, IntegerType::Modifier::Signed);
 	case Token::UInt:
 		return make_shared<IntegerType>(256, IntegerType::Modifier::Unsigned);
-	case Token::TokenT:
-		return make_shared<IntegerType>(256 , IntegerType::Modifier::Token);
+	case Token::SafeUint:
+		return make_shared<IntegerType>(256 , IntegerType::Modifier::SafeUint);
 	case Token::Fixed:
 		return make_shared<FixedPointType>(128, 18, FixedPointType::Modifier::Signed);
 	case Token::UFixed:
@@ -456,8 +456,8 @@ string IntegerType::richIdentifier() const
 {
 	if (isAddress())
 		return "t_address";
-	if (isToken())
-		return "t_token";
+	if (isSafeUint())
+		return "t_safeuint";
 	else
 		return "t_" + string(isSigned() ? "" : "u") + "int" + std::to_string(numBits());
 }
@@ -471,8 +471,8 @@ bool IntegerType::isImplicitlyConvertibleTo(Type const& _convertTo) const
 			return false;
 		if (isAddress())
 			return convertTo.isAddress();
-		if (isToken())
-			return convertTo.isToken();
+		if (isSafeUint())
+			return convertTo.isSafeUint();
 		else if (isSigned())
 			return convertTo.isSigned();
 		else
@@ -484,7 +484,7 @@ bool IntegerType::isImplicitlyConvertibleTo(Type const& _convertTo) const
 
 		if (isAddress())
 			return false;
-		if (isToken())
+		if (isSafeUint())
 			return false;
 		else
 			return maxValue() <= convertTo.maxIntegerValue() && minValue() >= convertTo.minIntegerValue();
@@ -533,8 +533,8 @@ string IntegerType::toString(bool) const
 {
 	if (isAddress())
 		return "address";
-	if (isToken())
-		return "token_t";
+	if (isSafeUint())
+		return "safeuint";
 	string prefix = isSigned() ? "int" : "uint";
 	return prefix + dev::toString(m_bits);
 }
