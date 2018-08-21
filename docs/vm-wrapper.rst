@@ -2,7 +2,7 @@
 VM Wrapper
 ================================================================
 
-.. _VM Wrapper:
+.. _vm-wrapper:
 
 VM Wrapper give a way to dynamic load evm shared library which compatible EVMC 5.0.0
 
