@@ -1,4 +1,4 @@
-### Lity 1.2.0 (2018-08-15)
+### Lity 1.2.0 (2018-08-20)
 
 Language Features:
  * Rule: implement rule-engine spec v1.0
@@ -8,6 +8,9 @@ Language Features:
 
 Features:
  * Tests: Isolate runtime-tests for rule-engine from `soltest`.
+
+Breaking Changes:
+ * General: Rename type name ``token_t`` to ``safeuint``
 
 Known Issues:
  * Rule: cannot have variable definitions in rule then block
