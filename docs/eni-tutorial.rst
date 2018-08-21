@@ -1,9 +1,12 @@
-Run Travis Node
-```````````````
+ENI Tutorial
+============
 
 .. _eni-tutorial:
 
-What is travis? See `here <https://github.com/CyberMiles/travis>`_ for
+Run Travis Node
+```````````````
+
+What is travis? See `here <https://github.com/CyberMiles/travis>` for
 instructions to start a Travis node.
 
 Make sure to checkout to the `lity` branch.
@@ -73,7 +76,7 @@ Compile Your Contract with Lityc
 Test Locally
 ````````````
 
-Get our EVM from `here <https://github.com/CyberMiles/go-ethereum>`_.
+Get our EVM from `here <https://github.com/CyberMiles/go-ethereum>`.
 
 Run with `ABCDE` as input to your contract.
 
