@@ -6,7 +6,7 @@ Overflow Protection
 Introduction
 ------------
 
-In order to prevent crypto token leak incident like `this <https://medium.com/cybermiles/27c96a7e78fd>`_,
+In order to prevent crypto token leak incident like `BeautyChain(BEC) <https://medium.com/cybermiles/27c96a7e78fd>`_,
 Lity provides two approaches: improving compiler or Ethereum virtual machine(EVM).
 The first approach converts every integer operation to SafeMath operations at compile time.
 The Second approach modifies EVM so that any overflow is detected at runtime.
