@@ -3,15 +3,48 @@ Overflow Protection
 
 .. _overflow-protection:
 
+Introduction
+------------
+
+In order to prevent crypto token leak incident like `this <https://medium.com/cybermiles/27c96a7e78fd>`_,
+Lity provides two approaches: improving compiler or Ethereum virtual machine(EVM).
+The first approach converts every integer operation to SafeMath operations at compile time.
+The Second approach modifies EVM so that any overflow is detected at runtime.
+
+Lity Compiler
+`````````````
+
+Lity automatically converts integer operations to SafeMath operations,
+so any overflow would cause a contract execution fail.
+Compiler options could be set manually to enable/disable this feature.
+
+Lity's Ethereum Virtual machine
+```````````````````````````````
+
+While executes a smart contract, Lity's EVM analyzes each integer operation.
+When an overflow occurs, it will terminate the contract execution and report an error.
+
+Currently, three arithmetic operations are overflow-checked: ADD, SUB and MUL.
+And overflow checking only applies for 32-byte integers.
+
+Since signed and unsigned overflow must be checked in a different method,
+each of those integer operations(ADD, SUB and MUL) divides into a signed operation and an unsigned operation.
+We see original operation(e.g. ADD) as unsigned ones and a new operation(e.g. SADD) as signed one.
+
+Note that this approach only applies for Lity's version of compiler and EVM.
+
+Examples
+--------
+
 This example shows how Lity and CyberMiles Virtual Machine helps users to avoid potential security issues of number overflow.
 
 Run a CyberMiles Local Node
------------------------------
+```````````````````````````
 
 Follow the instructions here to have a `running CyberMiles local node to deploy a contract <https://www.litylang.org/getting_started/>`_. 
 
 Compile BEC Contract
---------------------
+````````````````````
 
 There is an overflow issue at this statement :code:`uint256 amount = uint256(cnt) * _value;` of the function :code:`batchTransfer` .
 
@@ -315,10 +348,10 @@ Make sure you are in the directory where you downloaded lityc
   $ cat output/BecToken.abi
   [{"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"unpause","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"version","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"paused","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_receivers","type":"address[]"},{"name":"_value","type":"uint256"}],"name":"batchTransfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[],"name":"pause","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"remaining","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"payable":false,"stateMutability":"nonpayable","type":"fallback"},{"anonymous":false,"inputs":[],"name":"Pause","type":"event"},{"anonymous":false,"inputs":[],"name":"Unpause","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"previousOwner","type":"address"},{"indexed":true,"name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"owner","type":"address"},{"indexed":true,"name":"spender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"}]
   $ cat output/BecToken.bin
-  
+
 
 Deploy contract to Travis locally
----------------------------------
+`````````````````````````````````
 
 After we get contract ABI and bytecode, we could deploy it to Travis chain.
 
@@ -345,7 +378,7 @@ After we get contract ABI and bytecode, we could deploy it to Travis chain.
   );
 
 Test overflow protection
-------------------------
+````````````````````````
 
 .. _BECTransaction: https://etherscan.io/tx/0xad89ff16fd1ebe3a0a7cf4ed282302c06626c1af33221ebe0d3a470aba4a660f
 
