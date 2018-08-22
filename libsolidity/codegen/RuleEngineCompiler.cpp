@@ -30,13 +30,13 @@ void RuleEngineCompiler::appendFireAllRules(ContractDefinition const& _contract)
 	_contract.accept(*this);
 }
 
-// TODO: handle memory type
 void RuleEngineCompiler::appendFactInsert(TypePointer const& factType)
 {
 	// stack pre:  itemAddr
 	// stack post: factID
+	// Note that in current implementation, factID = itemAddr
 
-	// currently we only supports insertion of storage struct type
+	// Only struct types with storage data location can be inserted
 	solAssert(
 		dynamic_pointer_cast<StructType const>(factType) &&
 		dynamic_pointer_cast<ReferenceType const>(factType)->location() == DataLocation::Storage
@@ -44,16 +44,16 @@ void RuleEngineCompiler::appendFactInsert(TypePointer const& factType)
 	);
 
 	h256 listOfThisType = keccak256(factType->richIdentifier()+"_ptr-factlist"); // TODO: fix type name issue
-	h256 IDToFact = keccak256("IDTofact");
 
 	m_context << Instruction::DUP1;
 
+	// stack: itemAddr itemAddr
+
 	appendPushItemToStorageArray(listOfThisType);
+
+	// stack: itemAddr listLen'
+
 	m_context << Instruction::POP;
-
-	appendPushItemToStorageArray(IDToFact);
-
-	// stack: listLen'
 }
 
 // TODO: implementation
@@ -143,7 +143,7 @@ bool RuleEngineCompiler::visit(FieldExpression const& fieldExpr)
 
 	m_context << 0 << outListAddr << Instruction::SSTORE; // set list as empty
 	m_context << 0;                                          // i=0
-	// stack: i                                              
+	// stack: i
 	m_context << loopStart;                                  // loop:
     m_context << inListAddr << Instruction::SLOAD;           //
 	// stack: i len
@@ -212,7 +212,7 @@ bool RuleEngineCompiler::visit(Block const& block)
 	// stack: i
 	ExpressionCompiler exprCompiler(m_context);
 	block.accept(exprCompiler);
-	
+
 	// pop out stack elements in this block
 	// TODO: Fix this
 	for(auto stmt : block.statements())
