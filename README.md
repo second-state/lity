@@ -1,4 +1,4 @@
-# Lity
+# [![Lity](docs/_static/images/logo@25x.png)](#)
 
 [![Latest Release](https://img.shields.io/github/release-date/CyberMiles/lity.svg)](https://github.com/CyberMiles/lity/releases)
 [![Build Status](https://img.shields.io/travis/CyberMiles/lity.svg)](https://travis-ci.org/CyberMiles/lity)
