@@ -60,6 +60,8 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 using namespace std;
 namespace po = boost::program_options;
@@ -1284,6 +1286,41 @@ void CommandLineInterface::outputCompilationResults()
 
 	if (m_args.count(g_argFormal))
 		cerr << "Support for the Why3 output was removed." << endl;
+}
+
+void CommandLineInterface::executeOyente()
+{
+	string path(getenv("PATH"));
+	vector<string> dirs;
+	boost::split(dirs, path, boost::is_any_of(":"), boost::token_compress_on);
+	for (string const& dir: dirs)
+	{
+		boost::filesystem::path oyente("oyente");
+		boost::filesystem::path target = dir / oyente;
+		if (boost::filesystem::exists(target))
+		{
+			if (m_args.count(g_argInputFile))
+			{
+				for (string source: m_args[g_argInputFile].as<vector<string>>()) {
+					pid_t pid = fork();
+					if (pid == -1)
+					{
+						return;
+					}
+					else if (pid > 0)
+					{
+						wait(NULL);
+					}
+					else
+					{
+						execl(target.string().c_str(), "oyente", "-s", source.c_str(), NULL);
+						exit(0);
+					}
+				}
+			}
+			break;
+		}
+	}
 }
 
 }
