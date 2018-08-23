@@ -50,6 +50,8 @@ public:
 	/// Perform actions on the input depending on provided compiler arguments
 	/// @returns true on success.
 	bool actOnInput();
+	/// Execute Oyente analysis
+	void executeOyente();
 
 private:
 	bool link();

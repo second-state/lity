@@ -68,6 +68,9 @@ int main(int argc, char** argv)
 		cerr << "Exception during output generation: " << boost::diagnostic_information(_exception) << endl;
 		success = false;
 	}
+	if (success) {
+		cli.executeOyente();
+	}
 
 	return success ? 0 : 1;
 }
