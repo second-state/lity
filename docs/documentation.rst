@@ -34,6 +34,11 @@ Overflow Protection
 - :ref:`safeuint - a new type with native SafeMath support <safeuint-type>`
 - :ref:`Bec token with overflow protection <overflow-protection>`
 
+Analysis Tool
+`````````````
+
+- :ref:`Oyente Integration <oyente-integration>`
+
 Ethereum Native Interface (ENI)
 ```````````````````````````````
 
