@@ -30,7 +30,7 @@ void RuleEngineCompiler::appendFireAllRules(ContractDefinition const& _contract)
 	_contract.accept(*this);
 }
 
-void RuleEngineCompiler::appendFactInsert(TypePointer const& factType)
+void RuleEngineCompiler::appendFactInsert(TypePointer const& _factType)
 {
 	// stack pre:  itemAddr
 	// stack post: factID
@@ -38,12 +38,12 @@ void RuleEngineCompiler::appendFactInsert(TypePointer const& factType)
 
 	// Only struct types with storage data location can be inserted
 	solAssert(
-		dynamic_pointer_cast<StructType const>(factType) &&
-		dynamic_pointer_cast<ReferenceType const>(factType)->location() == DataLocation::Storage
+		dynamic_pointer_cast<StructType const>(_factType) &&
+		dynamic_pointer_cast<ReferenceType const>(_factType)->location() == DataLocation::Storage
 		, "Invalid factInsert operand type"
 	);
 
-	h256 listOfThisType = keccak256(factType->richIdentifier()+"_ptr-factlist"); // TODO: fix type name issue
+	h256 listOfThisType = keccak256(_factType->richIdentifier()+"_ptr-factlist"); // TODO: fix type name issue
 
 	m_context << Instruction::DUP1;
 
@@ -116,7 +116,7 @@ bool RuleEngineCompiler::visit(FactDeclaration const& _node)
 	return true;
 }
 
-bool RuleEngineCompiler::visit(FieldExpression const& fieldExpr)
+bool RuleEngineCompiler::visit(FieldExpression const& _fieldExpr)
 {
 	// stack pre:
 	// stack post:
@@ -162,7 +162,7 @@ bool RuleEngineCompiler::visit(FieldExpression const& fieldExpr)
 	// TODO: Fix this temperary(wrong) method
 	m_context << 0x1234 << Instruction::MSTORE;
 	                                                         //   if fieldExpr(fact)
-	ExpressionCompiler(m_context).compile(fieldExpr.expression());
+	ExpressionCompiler(m_context).compile(_fieldExpr.expression());
 	// stack: i fact fieldExpr(fact)
 	m_context << 1 << Instruction::XOR;
 	m_context.appendConditionalJumpTo(noAddToList);
@@ -185,7 +185,7 @@ bool RuleEngineCompiler::visit(FieldExpression const& fieldExpr)
 	return false;
 }
 
-bool RuleEngineCompiler::visit(Block const& block)
+bool RuleEngineCompiler::visit(Block const& _block)
 {
 	eth::AssemblyItem loopStart = m_context.newTag();
 	eth::AssemblyItem loopEnd = m_context.newTag();
@@ -211,13 +211,13 @@ bool RuleEngineCompiler::visit(Block const& block)
 	m_context << 0x1234 << Instruction::MSTORE;
 	// stack: i
 	ExpressionCompiler exprCompiler(m_context);
-	block.accept(exprCompiler);
+	_block.accept(exprCompiler);
 
 	// pop out stack elements in this block
 	// TODO: Fix this
-	for(auto stmt : block.statements())
+	for(auto stmt: _block.statements())
 	{
-		if(auto exprStmt = dynamic_cast<ExpressionStatement const*>(stmt.get()))
+		if (auto exprStmt = dynamic_cast<ExpressionStatement const*>(stmt.get()))
 			CompilerUtils(m_context).popStackElement(*(exprStmt->expression().annotation().type));
 		else
 			solUnimplemented("Sorry, currently only expressionStatements are allowed in then block");
@@ -258,20 +258,20 @@ CompilerUtils RuleEngineCompiler::utils()
 // listAddr is a compile-time known address
 // stack: item
 // stack: len'
-void RuleEngineCompiler::appendPushItemToStorageArray(h256 listAddr)
+void RuleEngineCompiler::appendPushItemToStorageArray(h256 _listAddr)
 {
 	// stack: itemAddr
-	m_context << listAddr << listAddr << Instruction::SLOAD;
-	// stack: itemADDr listAddr listLen
+	m_context << _listAddr << _listAddr << Instruction::SLOAD;
+	// stack: itemAddr _listAddr listLen
 	m_context << 1 << Instruction::ADD;
-	// stack: itemADDr listAddr listLen'
+	// stack: itemAddr _listAddr listLen'
 	m_context << Instruction::DUP1 << Instruction::SWAP2;
-	// stack: itemADDr listLen' listLen' listAddr
+	// stack: itemAddr listLen' listLen' _listAddr
 	m_context << Instruction::SSTORE;                                 // store len
-	// stack: itemADDr listLen'
+	// stack: itemAddr listLen'
 	m_context << Instruction::SWAP1 << Instruction::DUP2;
-	// stack: listLen' itemADDr listLen'
-	m_context << listAddr << Instruction::ADD << Instruction::SSTORE; // store item
+	// stack: listLen' itemAddr listLen'
+	m_context << _listAddr << Instruction::ADD << Instruction::SSTORE; // store item
 	// stack: listLen'
 }
 
