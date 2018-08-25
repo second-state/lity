@@ -46,22 +46,32 @@ void RuleEngineCompiler::appendFactInsert(TypePointer const& _factType)
 	h256 listOfThisType = keccak256(_factType->richIdentifier()+"_ptr-factlist"); // TODO: fix type name issue
 
 	m_context << Instruction::DUP1;
-
 	// stack: itemAddr itemAddr
 
+	// Save the mapping which maps "itemAddr(aka factID)" to listOfThisType
+	m_context << getIdToListXorMask() << Instruction::XOR;
+	// stack: itemAddr (itemAddr^idToListXorMask)
+	m_context << listOfThisType << Instruction::SWAP1 << Instruction::SSTORE;
+
+	// stack: itemAddr
+	m_context << Instruction::DUP1;
+	// stack: itemAddr itemAddr
 	appendPushItemToStorageArray(listOfThisType);
-
 	// stack: itemAddr listLen'
-
 	m_context << Instruction::POP;
 }
 
-// TODO: implementation
-// 1. find out the factID's type.
-// 2. remove the fact from working memory.
 void RuleEngineCompiler::appendFactDelete()
 {
-	solUnimplemented("Sorry, factDelete not implemented yet.QQ\n");
+	// stack: factID
+	m_context << Instruction::DUP1;
+	// stack: factID factID
+
+	// now we try to find out the listAddress which the factID stored in
+	m_context << getIdToListXorMask() << Instruction::XOR << Instruction::SLOAD;
+	// stack: factID listOfThisType
+
+	appendDeleteItemInStorageArray();
 }
 
 
@@ -258,6 +268,7 @@ CompilerUtils RuleEngineCompiler::utils()
 // listAddr is a compile-time known address
 // stack: item
 // stack: len'
+// TODO: Take _listAddr from stack instead of from function parameter. (For more flexibility)
 void RuleEngineCompiler::appendPushItemToStorageArray(h256 _listAddr)
 {
 	// stack: itemAddr
@@ -275,6 +286,70 @@ void RuleEngineCompiler::appendPushItemToStorageArray(h256 _listAddr)
 	// stack: listLen'
 }
 
+// remove an item in storage array, by using O(N) linear search to find the item,
+// then move the last item in the array to the deleted location, then decrease the array length.
+// If can not find the element, call invalid instruction
+// stack pre: itemValue listAddr
+// stack post:
+void RuleEngineCompiler::appendDeleteItemInStorageArray()
+{
+	eth::AssemblyItem loopStart = m_context.newTag();
+	eth::AssemblyItem loopEnd = m_context.newTag();
+	eth::AssemblyItem elementNotFound = m_context.newTag();
+
+	m_context << 0;
+	// stack: itemValue listAddr i                           // i=0
+	m_context << loopStart;                                  // loop:
+	m_context << Instruction::DUP2 << Instruction::SLOAD;
+
+	// stack: itemValue listAddr i len
+	m_context << Instruction::DUP2 << Instruction::LT;
+	// stack: itemValue listAddr i (i < len)
+	m_context << 1 << Instruction::XOR;
+	// stack: itemValue listAddr i (i >= len)
+	m_context.appendConditionalJumpTo(elementNotFound);
+	// stack: itemValue listAddr i
+	m_context << Instruction::DUP2 << Instruction::DUP2;
+	// stack: itemValue listAddr i listAddr i
+	appendAccessIndexStorage();
+	// stack: itemValue listAddr i fact
+	m_context << Instruction::DUP4 << Instruction::EQ;
+	// stack: itemValue listAddr i (fact == itemValue)
+	m_context.appendConditionalJumpTo(loopEnd);
+	// stack: itemValue listAddr i
+
+	m_context << 1 << Instruction::ADD;                      //   i++
+	m_context.appendJumpTo(loopStart);
+
+	m_context << elementNotFound;                            // elementNotFound:
+	m_context << Instruction::INVALID;
+
+	m_context << loopEnd;                                    // loopEnd:
+	// stack: itemValue listAddr i
+	m_context << Instruction::DUP2 << Instruction::SLOAD;    // TODO: Avoid SLOAD(listAddr) twice
+	// stack: itemValue listAddr i len
+	m_context << 1 << Instruction::SWAP1 << Instruction::SUB;
+	// stack: itemValue listAddr i (len-1)
+	m_context << Instruction::DUP3 << Instruction::SWAP1;
+	// stack: itemValue listAddr i listAddr (len-1)
+	appendAccessIndexStorage();
+	// stack: itemValue listAddr i fact
+	m_context << Instruction::DUP3 << Instruction::DUP3 << Instruction::DUP3;
+	appendWriteIndexStorage();
+	// stack: itemValue listAddr i fact
+	m_context << Instruction::POP << Instruction::POP;
+
+	// Decrease length
+	// stack: itemValue listAddr
+	m_context << Instruction::DUP1 << Instruction::SLOAD;
+	// stack: itemValue listAddr len
+	m_context << 1 << Instruction::SWAP1 << Instruction::SUB;
+	// stack: itemValue listAddr (len-1)
+	m_context << Instruction::SWAP1 << Instruction::SSTORE;
+	// stack: itemValue
+	m_context << Instruction::POP;
+}
+
 // stack pre: array index
 // stack post: item
 void RuleEngineCompiler::appendAccessIndexStorage()
@@ -284,6 +359,17 @@ void RuleEngineCompiler::appendAccessIndexStorage()
 	// stack: array index+1
 	m_context << Instruction::ADD << Instruction::SLOAD;
 	// stack: item
+}
+
+// stack pre: listAddr index value
+// stack post:
+void RuleEngineCompiler::appendWriteIndexStorage()
+{
+	m_context << Instruction::DUP2 << 1 << Instruction::ADD;
+	// stack: listAddr index value (index+1)
+	m_context << Instruction::DUP4 << Instruction::ADD;
+	// stack: listAddr index value (listAddr+index+1)
+	m_context << Instruction::SSTORE << Instruction::POP << Instruction::POP;
 }
 
 }

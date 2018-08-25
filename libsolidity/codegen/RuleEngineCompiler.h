@@ -17,7 +17,7 @@ namespace solidity {
 class RuleEngineCompiler: private ASTConstVisitor
 {
 public:
-	explicit RuleEngineCompiler(CompilerContext& _compilerContext): m_context(_compilerContext) {}
+	explicit RuleEngineCompiler(CompilerContext& _compilerContext): m_context(_compilerContext) { }
 
 	/// Appends inline code to fire all rules
 	void appendFireAllRules(ContractDefinition const& _contract);
@@ -48,11 +48,16 @@ public:
 private:
 
 	void appendPushItemToStorageArray(h256 _itemAddr);
+	void appendDeleteItemInStorageArray();
 	void appendAccessIndexStorage();
+	void appendWriteIndexStorage();
 
 	const Rule* m_currentRule;
 	const FactDeclaration* m_currentFact;
 	int m_currentFieldNo=0;
+
+	/// magic constant used for create a mapping from factID to typeList
+	h256 getIdToListXorMask() const { return keccak256("__idToListXorMask~~__"); }
 
 	std::vector<dev::u256> m_nodeOutListAddr;
 
