@@ -102,6 +102,53 @@ BOOST_AUTO_TEST_CASE(pay)
 	BOOST_CHECK_EQUAL(balanceAt(account(2)), balance[2]);
 }
 
+BOOST_AUTO_TEST_CASE(factDeleteBasicTest)
+{
+	deployContract();
+	int const numUser = 5;
+	u256 balance[numUser+1];
+	bool inWorkingMemory[numUser+1];
+	for (int i = 1; i <= numUser; i++)
+	{
+		balance[i] = 1000 * ether;
+		sendEther(account(i), balance[i]);
+		BOOST_REQUIRE(callContractFunctionFrom(i, "addPerson(uint256)", u256(18)) == encodeArgs());
+		balance[i] -= gasCost();
+		BOOST_CHECK_EQUAL(balanceAt(account(i)), balance[i]);
+		inWorkingMemory[i] = true;
+	}
+
+	int numPersonInWorkingMemory = numUser;
+
+	srand(42); // TODO: Use more deterministic random number generator
+	// randomly manipulate working memory
+	for (int i = 0; i < 13; i++)
+	{
+		int u = rand()%numUser + 1;
+		if (inWorkingMemory[u])
+			BOOST_REQUIRE(callContractFunctionFrom(u, "deletePerson()") == encodeArgs());
+		else
+			BOOST_REQUIRE(callContractFunctionFrom(u, "addPerson(uint256)", u256(18)) == encodeArgs());
+		balance[u] -= gasCost();
+		BOOST_CHECK_EQUAL(balanceAt(account(u)), balance[u]);
+		inWorkingMemory[u] = !inWorkingMemory[u];
+		numPersonInWorkingMemory += inWorkingMemory[u]*2 - 1;
+	}
+
+	assert(0 < numPersonInWorkingMemory && numPersonInWorkingMemory < numUser);
+
+	// check if number of person in working memory is correct
+	// TODO: In rules.sol , numberOfPeople() do not correctly return number of people in working memory
+	// BOOST_REQUIRE(callContractFunction("numberOfPeople()") == encodeArgs(u256(numPersonInWorkingMemory)));
+
+	// pay money to persons in working memory
+	sendEther(m_contractAddress, u256(10000) * numUser);
+	BOOST_REQUIRE(callContractFunction("pay()") == encodeArgs());
+
+	for (int i = 1; i <= numUser; i++)
+		BOOST_CHECK_EQUAL(balanceAt(account(i)), balance[i] + 10*inWorkingMemory[i]);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 }

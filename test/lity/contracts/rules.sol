@@ -15,6 +15,7 @@ contract C {
     mapping (address => uint) addr2idx;
     Person[] ps;
 
+    // TODO: should subtract the number of people deleted
     function numberOfPeople() public view returns (uint) {
         return ps.length;
     }
@@ -28,10 +29,10 @@ contract C {
         ps.push(Person(age, true, msg.sender));
         addr2idx[msg.sender] = factInsert ps[ps.length-1];
     }
-    // Not implemented yet.
-    // function deletePerson() public {
-    //     factDelete addr2idx[msg.sender];
-    // }
+    function deletePerson() public {
+        factDelete addr2idx[msg.sender];
+        delete addr2idx[msg.sender];
+    }
     function pay() public {
         fireAllRules;
     }
