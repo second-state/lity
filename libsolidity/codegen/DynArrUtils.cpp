@@ -146,6 +146,44 @@ void DynArrUtils::accessIndex(bool _doBoundsCheck)
 	m_context << Instruction::ADD << Instruction::MLOAD;
 }
 
+/// Stack pre : reference
+/// Stack post:
+/// Stack state of f:
+///   Stack pre : elmtMemAddr
+///   Stack post:
+void DynArrUtils::forEachDo(std::function<void(CompilerContext&)> f)
+{
+	eth::AssemblyItem loopStart = m_context.newTag();
+	eth::AssemblyItem loopEnd = m_context.newTag();
+	m_context << Instruction::DUP1 << Instruction::MLOAD;
+	// stack: refer
+	m_context << Instruction::DUP2;
+	getLen();
+	// stack: refer len
+	m_context << 0;
+	// stack: refer len i
+	m_context << loopStart;                                  // loop:
+	m_context << Instruction::DUP2 << Instruction::DUP2;
+	// stack: ... len i
+	m_context << Instruction::LT;       //   if i>=len
+	m_context << 1 << Instruction::XOR;
+	// stack: ... !(len>i)
+	m_context.appendConditionalJumpTo(loopEnd);              //     break
+	// stack: refer len i
+	m_context << Instruction::DUP3 << Instruction::DUP2;
+	// stack: ... refer i
+	accessIndex(false);
+	// stack: ... elmtMemAddr
+	f(m_context);
+	// stack: refer len i
+	m_context << 1 << Instruction::ADD;                      //   i++
+	m_context.appendJumpTo(loopStart);
+	m_context << loopEnd;                                    // loopEnd:
+	// stack: refer len i
+	for(int i=0; i<3; i++)
+		m_context << Instruction::POP;
+}
+
 CompilerUtils DynArrUtils::utils()
 {
 	return CompilerUtils(m_context);

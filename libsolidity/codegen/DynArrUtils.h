@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <functional>
+#include <libsolidity/codegen/CompilerContext.h>
 
 namespace dev
 {
@@ -56,9 +57,16 @@ public:
 	void reAlloc();
 
 	/// Note that one more MLOAD is required to get the item value(ref).
-	/// Stack pre: reference index
+	/// Stack pre : reference index
 	/// Stack post: memory_offset
 	void accessIndex(bool _doBoundsCheck = true);
+
+	/// For each element do f.
+	/// Stack pre : reference
+	/// Stack post:
+	/// Stack state of f:
+	///   Stack pre : elmtMemAddr
+	///   Stack post:
 	void forEachDo(std::function<void(CompilerContext&)> f);
 private:
 
