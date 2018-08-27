@@ -28,7 +28,7 @@ An rule statement contains three parts:
 
     rule "ruleName" when {
         // Filter Statement
-    } when {
+    } then {
         // Action Statement
     }
 
