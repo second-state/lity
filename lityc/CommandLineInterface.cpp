@@ -125,6 +125,7 @@ static string const g_strERC721 = "ERC721";
 static string const g_strERC827 = "ERC827";
 static string const g_strERC884 = "ERC884";
 static string const g_strContractStandard = "contract-standard";
+static string const g_strDisableOyente = "disable-oyente";
 
 static string const g_argAbi = g_strAbi;
 static string const g_argPrettyJson = g_strPrettyJson;
@@ -163,6 +164,7 @@ static string const g_argVersion = g_strVersion;
 static string const g_stdinFileName = g_stdinFileNameStr;
 static string const g_argIgnoreMissingFiles = g_strIgnoreMissingFiles;
 static string const g_argContractStandard = g_strContractStandard;
+static string const g_argDisableOyente = g_strDisableOyente;
 
 /// Possible arguments to for --combined-json
 static set<string> const g_combinedJsonArgs
@@ -645,7 +647,8 @@ Allowed options)",
 			po::value<string>()->value_name(boost::join(g_contractStandardArgs, ",")),
 			"Check whether contract's interface conforms with given standard. "
 			"'auto' will try to guess what standard is meant to be implemented, then list missing functions for those standard."
-		);
+		)
+		(g_argDisableOyente.c_str(), "Diable Oyente analysis.");
 	po::options_description outputComponents("Output Components");
 	outputComponents.add_options()
 		(g_argAst.c_str(), "AST of all source files.")
@@ -1290,6 +1293,9 @@ void CommandLineInterface::outputCompilationResults()
 
 void CommandLineInterface::executeOyente()
 {
+	bool disableOyente = m_args.count(g_argDisableOyente);
+	if (disableOyente)
+		return;
 	string path(getenv("PATH"));
 	vector<string> dirs;
 	boost::split(dirs, path, boost::is_any_of(":"), boost::token_compress_on);
@@ -1299,6 +1305,7 @@ void CommandLineInterface::executeOyente()
 		boost::filesystem::path target = dir / oyente;
 		if (boost::filesystem::exists(target))
 		{
+			cout << endl << "======= Oyente Analysis Report =======" << endl;
 			if (m_args.count(g_argInputFile))
 			{
 				for (string source: m_args[g_argInputFile].as<vector<string>>()) {
