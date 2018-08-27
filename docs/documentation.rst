@@ -19,8 +19,11 @@ Rule Engine
 - :ref:`Lity Rule by Examples <rule-tutorial>`
 - `Lity rule engine v1.0 spec <_static/files/lity-rule-engine-spec-v1-0.pdf>`_
 
+Security & Safe
+```````````````
+
 ERC Contract Standard Checker
-`````````````````````````````
++++++++++++++++++++++++++++++
 
 - :ref:`ERC20 Checker <erc20-contract-standard-checker>`
 - :ref:`ERC223 Checker <erc223-contract-standard-checker>`
@@ -29,21 +32,31 @@ ERC Contract Standard Checker
 - :ref:`ERC884 Checker <erc884-contract-standard-checker>`
 
 Overflow Protection
-```````````````````
++++++++++++++++++++
 
 - :ref:`safeuint - a new type with native SafeMath support <safeuint-type>`
 - :ref:`Bec token with overflow protection <overflow-protection>`
 
+Validator-Only Contract
++++++++++++++++++++++++
+
+- :ref:`Validator-Only Contract <validator-only-contract>`
+
 Analysis Tool
-`````````````
++++++++++++++
 
 - :ref:`Oyente Integration <oyente-integration>`
 
-Ethereum Native Interface (ENI)
-```````````````````````````````
+Performant & Flexible
+`````````````````````
 
-ENI Tutorial
-++++++++++++
+Schedule Transaction
+++++++++++++++++++++
+
+- :ref:`Schedule Transaction <schedule-tx>`
+
+Ethereum Native Interface (ENI) Tutorial
+++++++++++++++++++++++++++++++++++++++++
 
 - :ref:`Tutorial <eni-tutorial>`
 
