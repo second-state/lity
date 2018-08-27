@@ -5,6 +5,11 @@ Oyente Integration
 
 Lity now integrate analysis tool Oyente and generates analysis report after compiling contract if Oyente installed.
 
+Requirements
+------------
+
+Install our `lityc <https://github.com/CyberMiles/lity>`_ and `evm <https://github.com/CyberMiles/go-ethereum>`_.
+
 Installation
 ------------
 
