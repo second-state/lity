@@ -47,6 +47,7 @@ void DynArrUtils::pushItem()
 	m_context.appendConditionalJumpTo(noRealloc);
 
 	// stack: refer item
+	m_context << Instruction::DUP2;
 	getCap();
 	// stack: refer item cap
 	m_context << 1 << Instruction::ADD << 2 << Instruction::MUL;
@@ -88,18 +89,19 @@ void DynArrUtils::popItem()
 	m_context << Instruction::POP;
 }
 
-// Stack pre : reference cap'
+// Stack pre : reference cap'(#elmts)
 // Stack post:
 void DynArrUtils::reAlloc()
 {
+	m_context << 32 << Instruction::MUL;
 	m_context << Instruction::DUP1;
-	// stack: refer cap' cap'
+	// stack: refer 32cap' 32cap'
 	m_context << Instruction::DUP3;
-	// stack: ... cap' refer
+	// stack: ... 32cap' refer
 	m_context << 64 << Instruction::ADD;
-	// stack: ... cap' refer+64
+	// stack: ... 32cap' refer+64
 	m_context << Instruction::MSTORE;
-	// stack: refer cap'
+	// stack: refer 32cap'
 	utils().allocateMemory();
 	// stack: refer dataPtr'
 	
@@ -122,6 +124,7 @@ void DynArrUtils::reAlloc()
 // Stack post:
 void DynArrUtils::incrLen()
 {
+	m_context << Instruction::DUP1;
 	getLen();
 	// stack: refer len
 	m_context << 1 << Instruction::ADD;
