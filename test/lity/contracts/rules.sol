@@ -33,8 +33,9 @@ contract C {
         factDelete addr2idx[msg.sender];
         delete addr2idx[msg.sender];
     }
-    function pay() public {
+    function pay() public returns (bool) {
         fireAllRules;
+        return true;
     }
     function () public payable { }
 }
