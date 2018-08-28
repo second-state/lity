@@ -1556,7 +1556,7 @@ void ExpressionCompiler::endVisit(Identifier const& _identifier)
 	{
 		// save load fact from a place
 		// TODO: Fix this temperary(wrong) method
-		m_context << 0x1234 << Instruction::MLOAD;
+		m_context << 0x1234 << Instruction::SLOAD;
 	}
 	else
 	{

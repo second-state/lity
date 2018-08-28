@@ -170,7 +170,7 @@ bool RuleEngineCompiler::visit(FieldExpression const& _fieldExpr)
 
 	// save fact to a place
 	// TODO: Fix this temperary(wrong) method
-	m_context << 0x1234 << Instruction::MSTORE;
+	m_context << 0x1234 << Instruction::SSTORE;
 	                                                         //   if fieldExpr(fact)
 	ExpressionCompiler(m_context).compile(_fieldExpr.expression());
 	// stack: i fact fieldExpr(fact)
@@ -218,7 +218,7 @@ bool RuleEngineCompiler::visit(Block const& _block)
 
 	// save fact to a place
 	// TODO: Fix this temperary(wrong) method
-	m_context << 0x1234 << Instruction::MSTORE;
+	m_context << 0x1234 << Instruction::SSTORE;
 	// stack: i
 	ExpressionCompiler exprCompiler(m_context);
 	_block.accept(exprCompiler);
