@@ -61,12 +61,11 @@ void DynArrUtils::pushItem()
 	m_context << Instruction::DUP2;
 	// stack: refer item refer
 	incrLen();
-	// stack: refer item
-	m_context << Instruction::DUP2 << Instruction::DUP1;
-	// stack: refer item refer refer
-	getLen();
-	m_context << 1 << Instruction::SUB;
-	// stack: refer item refer len'-1
+	// stack: refer item len'
+	m_context << Instruction::DUP3 << Instruction::SWAP1;
+	// stack: refer item refer len'
+	m_context << 1 << Instruction::SWAP1 << Instruction::SUB;
+	// stack: ... refer len'-1
 	accessIndex(false);
 	// stack: refer item memAddrToBePlaced
 	m_context << Instruction::MSTORE; // TODO: item with elementSize
@@ -93,20 +92,21 @@ void DynArrUtils::popItem()
 // Stack post:
 void DynArrUtils::reAlloc()
 {
-	m_context << 32 << Instruction::MUL;
 	m_context << Instruction::DUP1;
-	// stack: refer 32cap' 32cap'
+	// stack: refer cap' cap'
 	m_context << Instruction::DUP3;
-	// stack: ... 32cap' refer
+	// stack: ... cap' refer
 	m_context << 64 << Instruction::ADD;
-	// stack: ... 32cap' refer+64
-	m_context << Instruction::MSTORE;
-	// stack: refer 32cap'
+	// stack: ... cap' refer+64
+	m_context << Instruction::MSTORE;                    // cap++
+	// stack: refer cap'
+	m_context << 32*elementSize << Instruction::MUL;
+	// stack: refer len*32*eleSize
 	utils().allocateMemory();
 	// stack: refer dataPtr'
-	
 	m_context << Instruction::DUP2 << Instruction::MLOAD;
 	// stack: refer dataPtr' dataPtr
+	m_context << Instruction::DUP2 << Instruction::DUP4 << Instruction::MSTORE;
 	m_context << Instruction::DUP3 << 32 << Instruction::ADD;
 	// stack: refer dataPtr' dataPtr refer+32
 	m_context << Instruction::MLOAD;
@@ -121,7 +121,7 @@ void DynArrUtils::reAlloc()
 }
 
 // Stack pre : reference
-// Stack post:
+// Stack post: len'
 void DynArrUtils::incrLen()
 {
 	m_context << Instruction::DUP1;
@@ -129,9 +129,9 @@ void DynArrUtils::incrLen()
 	// stack: refer len
 	m_context << 1 << Instruction::ADD;
 	// stack: refer len'
-	m_context << Instruction::DUP2 << 32 << Instruction::ADD;
-	// stack: refer len' refer+32
-	m_context << Instruction::MSTORE << Instruction::POP;
+	m_context << Instruction::DUP1 << Instruction::SWAP2 << 32 << Instruction::ADD;
+	// stack: len' len' refer+32
+	m_context << Instruction::MSTORE;
 }
 
 // Stack pre: reference index
@@ -146,7 +146,7 @@ void DynArrUtils::accessIndex(bool _doBoundsCheck)
 	// refer index*32*eleSize
 	m_context << Instruction::SWAP1 << Instruction::MLOAD;
 	// 32*index*eleSize dataPtr
-	m_context << Instruction::ADD << Instruction::MLOAD;
+	m_context << Instruction::ADD;
 }
 
 /// Stack pre : reference
@@ -156,11 +156,11 @@ void DynArrUtils::accessIndex(bool _doBoundsCheck)
 ///   Stack post:
 void DynArrUtils::forEachDo(std::function<void(CompilerContext&)> f)
 {
+	int beginH = m_context.stackHeight();
 	eth::AssemblyItem loopStart = m_context.newTag();
 	eth::AssemblyItem loopEnd = m_context.newTag();
-	m_context << Instruction::DUP1 << Instruction::MLOAD;
 	// stack: refer
-	m_context << Instruction::DUP2;
+	m_context << Instruction::DUP1;
 	getLen();
 	// stack: refer len
 	m_context << 0;
@@ -185,6 +185,10 @@ void DynArrUtils::forEachDo(std::function<void(CompilerContext&)> f)
 	// stack: refer len i
 	for(int i=0; i<3; i++)
 		m_context << Instruction::POP;
+	
+	int endH=m_context.stackHeight();
+	solAssert(beginH - endH == 1, "stack height error in DynArrUtils::forEachDo");
+	
 }
 
 CompilerUtils DynArrUtils::utils()
