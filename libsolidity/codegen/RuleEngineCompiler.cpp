@@ -27,7 +27,9 @@ namespace solidity
 // TODO: refresh the set of facts in each alpha nodes,
 void RuleEngineCompiler::appendFireAllRules(ContractDefinition const& _contract)
 {
+	RuleEngineCompiler::appendLockRuleEngineOrFail();
 	_contract.accept(*this);
+	RuleEngineCompiler::appendUnlockRuleEngine();
 }
 
 void RuleEngineCompiler::appendFactInsert(TypePointer const& _factType)
@@ -42,6 +44,8 @@ void RuleEngineCompiler::appendFactInsert(TypePointer const& _factType)
 		dynamic_pointer_cast<ReferenceType const>(_factType)->location() == DataLocation::Storage
 		, "Invalid factInsert operand type"
 	);
+
+	appendAssertNoRuleEngineLock(); // fail if we are inside fireAllRules
 
 	h256 listOfThisType = keccak256(_factType->richIdentifier()+"_ptr-factlist"); // TODO: fix type name issue
 
@@ -63,6 +67,8 @@ void RuleEngineCompiler::appendFactInsert(TypePointer const& _factType)
 
 void RuleEngineCompiler::appendFactDelete()
 {
+	appendAssertNoRuleEngineLock(); // fail if we are inside fireAllRules
+
 	// stack: factID
 	m_context << Instruction::DUP1;
 	// stack: factID factID
@@ -370,6 +376,36 @@ void RuleEngineCompiler::appendWriteIndexStorage()
 	m_context << Instruction::DUP4 << Instruction::ADD;
 	// stack: listAddr index value (listAddr+index+1)
 	m_context << Instruction::SSTORE << Instruction::POP << Instruction::POP;
+}
+
+void RuleEngineCompiler::appendLockRuleEngineOrFail()
+{
+	m_context << getRuleEngineLockLocation() << Instruction::SLOAD;
+	// stack: isLocked
+	m_context << 1 << Instruction::XOR;
+	// stack: !isLocked
+	eth::AssemblyItem setLock = m_context.newTag();
+	m_context.appendConditionalJumpTo(setLock);
+	m_context << Instruction::INVALID; // already locked
+	m_context << setLock;
+	m_context << 1 << getRuleEngineLockLocation() << Instruction::SSTORE;
+}
+
+void RuleEngineCompiler::appendUnlockRuleEngine()
+{
+	m_context << 0 << getRuleEngineLockLocation() << Instruction::SSTORE;
+}
+
+void RuleEngineCompiler::appendAssertNoRuleEngineLock()
+{
+	m_context << getRuleEngineLockLocation() << Instruction::SLOAD;
+	// stack: isLocked
+	m_context << 1 << Instruction::XOR;
+	// stack: !isLocked
+	eth::AssemblyItem ok = m_context.newTag();
+	m_context.appendConditionalJumpTo(ok);
+	m_context << Instruction::INVALID; // already locked
+	m_context << ok;
 }
 
 }
