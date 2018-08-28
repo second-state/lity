@@ -66,7 +66,7 @@ private:
 	/// magic constant used for create a mapping from factID to typeList
 	h256 getIdToListXorMask() const { return keccak256("__idToListXorMask~~__"); }
 
-	std::vector<dev::u256> m_nodeOutListAddr;
+	std::vector<dev::u256> m_nodeOutListPtrAddr;
 
 	CompilerContext& m_context;
 };

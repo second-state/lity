@@ -12,6 +12,7 @@
 #include <libsolidity/codegen/CompilerUtils.h>
 #include <libsolidity/codegen/LValue.h>
 #include <libsolidity/codegen/ENIHandler.h>
+#include <libsolidity/codegen/DynArrUtils.h>
 #include <libevmasm/GasMeter.h>
 
 #include <libdevcore/Whiskers.h>
@@ -91,13 +92,14 @@ bool RuleEngineCompiler::visit(FactDeclaration const& _node)
 {
 	m_currentFact = &_node;
 	m_currentFieldNo = 0;
-	// storage
+	// storage list
 	auto inListAddr = keccak256(_node.type()->richIdentifier()+"-factlist");
-	// storage
-	auto outListAddr = keccak256(m_currentRule->name()+_node.name()+"-factlist");
-	m_nodeOutListAddr.push_back(outListAddr);
-
-	m_context << 0 << outListAddr << Instruction::SSTORE; // set list as empty
+	// listPtr(to memList) in storage
+	auto outListPtrAddr = keccak256(m_currentRule->name()+_node.name()+"-factlist");
+	m_nodeOutListPtrAddr.push_back(outListPtrAddr);
+	m_context << 32*3;
+	utils().allocateMemory();
+	m_context << outListPtrAddr << Instruction::SSTORE;
 
 	eth::AssemblyItem loopStart = m_context.newTag();
 	eth::AssemblyItem loopEnd = m_context.newTag();
@@ -116,8 +118,10 @@ bool RuleEngineCompiler::visit(FactDeclaration const& _node)
 	// stack: i len inList i
 	appendAccessIndexStorage();
 	// stack: i len fact
-	appendPushItemToStorageArray(outListAddr);
-	m_context << Instruction::POP;
+	m_context << outListPtrAddr << Instruction::SLOAD;
+	m_context << Instruction::SWAP1;
+	// stack: listMemAddr fact
+	DynArrUtils(m_context, 1).pushItem();
 	// stack: i len
 	m_context << Instruction::DUP2 << 1 << Instruction::ADD;  //   i++
 	// stack: i len i'
@@ -138,114 +142,83 @@ bool RuleEngineCompiler::visit(FieldExpression const& _fieldExpr)
 	// stack post:
 
 	// Node function
-	// input  : list of factID (in storage)
-	// output : list of factID (in storage)
+	// input  : list of factID (in memory)
+	// output : list of factID (in memory)
 	// outline:
-	//   get inList address by hash
-	//   get outList address by hash
+	//   get inList address
+	//   get outList address
 	//   for each fact in inList
 	//     if FieldExp(the item)
 	//     put this fact to outList
 
-	eth::AssemblyItem loopStart = m_context.newTag();
-	eth::AssemblyItem loopEnd = m_context.newTag();
-	eth::AssemblyItem noAddToList = m_context.newTag();
 	string nodeName = m_currentRule->name()+"-"+m_currentFact->name()+"-"+to_string(m_currentFieldNo);
 
-	m_nodeOutListAddr.push_back(keccak256(nodeName+"-factlist")); // TODO: dynamic allocation
+	m_nodeOutListPtrAddr.push_back(keccak256(nodeName+"-factlist")); // TODO: dynamic allocation
 
-	auto inListAddr = m_nodeOutListAddr[m_nodeOutListAddr.size()-2];
-	auto outListAddr = m_nodeOutListAddr[m_nodeOutListAddr.size()-1];
+	// listPtr(to memList) in storage
+	auto inListPtrAddr  = m_nodeOutListPtrAddr[m_nodeOutListPtrAddr.size()-2];
+	auto outListPtrAddr = m_nodeOutListPtrAddr[m_nodeOutListPtrAddr.size()-1];
 
-	m_context << 0 << outListAddr << Instruction::SSTORE; // set list as empty
-	m_context << 0;                                          // i=0
-	// stack: i
-	m_context << loopStart;                                  // loop:
-    m_context << inListAddr << Instruction::SLOAD;           //
-	// stack: i len
-	m_context << Instruction::DUP2 << Instruction::LT;       //   if i>=len
-	m_context << 1 << Instruction::XOR;
-	// stack: i !(len>i)
-	m_context.appendConditionalJumpTo(loopEnd);              //     break
-	// stack: i
-	m_context << inListAddr << Instruction::DUP2;
-	// stack: i inList i
-	appendAccessIndexStorage();
-	// stack: i fact
-	m_context << Instruction::DUP1;
+	m_context << 32*3;
+	utils().allocateMemory();
+	m_context << outListPtrAddr << Instruction::SSTORE;
 
-	// save fact to a place
-	// TODO: Fix this temperary(wrong) method
-	m_context << 0x1234 << Instruction::SSTORE;
-	                                                         //   if fieldExpr(fact)
-	ExpressionCompiler(m_context).compile(_fieldExpr.expression());
-	// stack: i fact fieldExpr(fact)
-	m_context << 1 << Instruction::XOR;
-	m_context.appendConditionalJumpTo(noAddToList);
-	// stack: i fact
-	m_context << Instruction::DUP1;
-	// stack: i fact fact
-	appendPushItemToStorageArray(outListAddr);                //     add fact to outList
-	// stack: i fact len'
-	m_context << Instruction::POP;
-	// stack: i fact
-	m_context << noAddToList;
-	// stack: i fact
-	m_context << Instruction::POP;
-	// stack: i
-	m_context << 1 << Instruction::ADD;                      //   i++
-	m_context.appendJumpTo(loopStart);
-	m_context << loopEnd;                                    // loopEnd:
-	// stack: i
-	m_context << Instruction::POP;
+	m_context << inListPtrAddr << Instruction::SLOAD;
+	DynArrUtils(m_context, 1).forEachDo(
+		[&_fieldExpr, &outListPtrAddr] (CompilerContext& context) {
+			// stack: elmtMemAddr
+			// TODO: item with elementSize
+			context << Instruction::MLOAD;
+			// stack: fact
+			eth::AssemblyItem noAdd = context.newTag();
+			// save fact to a place
+			// TODO: Fix this temperary(wrong) method
+			context << 0x1234 << Instruction::SSTORE;
+			// stack:
+			ExpressionCompiler(context).compile(_fieldExpr.expression());
+			context << 1 << Instruction::XOR;
+			context.appendConditionalJumpTo(noAdd);
+			context << outListPtrAddr << Instruction::SLOAD;
+			// stack: outListMemAddr
+			context << 0x1234 << Instruction::SLOAD;
+			// stack: outListMemAddr fact
+			DynArrUtils(context, 1).pushItem();
+			context << noAdd;
+			// stack:
+		}
+	);
 	return false;
 }
 
 bool RuleEngineCompiler::visit(Block const& _block)
 {
-	eth::AssemblyItem loopStart = m_context.newTag();
-	eth::AssemblyItem loopEnd = m_context.newTag();
-	auto inListAddr = m_nodeOutListAddr.back();
+	auto inListPtrAddr = m_nodeOutListPtrAddr.back();
 
-	m_context << 0;
-	// stack: i                                              // i=0
-	m_context << loopStart;                                  // loop:
-	m_context << inListAddr << Instruction::SLOAD;           //
-	// stack: i len
-	m_context << Instruction::DUP2 << Instruction::LT;       //   if i>=len
-	m_context << 1 << Instruction::XOR;
-	// stack: i !(len>i)
-	m_context.appendConditionalJumpTo(loopEnd);              //     break
-	// stack: i
-	m_context << inListAddr << Instruction::DUP2;
-	// stack: i inList i
-	appendAccessIndexStorage();
-	// stack: i fact
+	m_context << inListPtrAddr << Instruction::SLOAD;
+	DynArrUtils(m_context, 1).forEachDo(
+		[&_block] (CompilerContext& context) {
+			// stack: elmtMemAddr
+			// TODO: item with elementSize
+			context << Instruction::MLOAD;
+			// stack: fact
+			// save fact to a place
+			// TODO: Fix this temperary(wrong) method
+			context << 0x1234 << Instruction::SSTORE;
+			// stack:
+			ExpressionCompiler exprCompiler(context);
+			_block.accept(exprCompiler);
 
-	// save fact to a place
-	// TODO: Fix this temperary(wrong) method
-	m_context << 0x1234 << Instruction::SSTORE;
-	// stack: i
-	ExpressionCompiler exprCompiler(m_context);
-	_block.accept(exprCompiler);
-
-	// pop out stack elements in this block
-	// TODO: Fix this
-	for(auto stmt: _block.statements())
-	{
-		if (auto exprStmt = dynamic_cast<ExpressionStatement const*>(stmt.get()))
-			CompilerUtils(m_context).popStackElement(*(exprStmt->expression().annotation().type));
-		else
-			solUnimplemented("Sorry, currently only expressionStatements are allowed in then block");
-	}
-
-	// stack: i
-	m_context << 1 << Instruction::ADD;                      //   i++
-	m_context.appendJumpTo(loopStart);
-	m_context << loopEnd;                                    // loopEnd:
-
-	// stack: i
-	m_context << Instruction::POP;
+			// pop out stack elements in this block
+			// TODO: Fix this
+			for(auto stmt: _block.statements())
+			{
+				if(auto exprStmt = dynamic_cast<ExpressionStatement const*>(stmt.get()))
+					CompilerUtils(context).popStackElement(*(exprStmt->expression().annotation().type));
+				else
+					solUnimplemented("Sorry, currently only expressionStatements are allowed in then block");
+			}
+		}
+	);
 	return false;
 }
 
