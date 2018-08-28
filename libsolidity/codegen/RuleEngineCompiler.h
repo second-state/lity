@@ -52,6 +52,13 @@ private:
 	void appendAccessIndexStorage();
 	void appendWriteIndexStorage();
 
+	/// We want to prevent user from using factInsert/factDelete/fireAllRules
+	/// inside then-block.
+	void appendLockRuleEngineOrFail();
+	void appendUnlockRuleEngine();
+	void appendAssertNoRuleEngineLock();
+	h256 getRuleEngineLockLocation() const { return keccak256("__lityRuleEngineLock~~__"); }
+
 	const Rule* m_currentRule;
 	const FactDeclaration* m_currentFact;
 	int m_currentFieldNo=0;
