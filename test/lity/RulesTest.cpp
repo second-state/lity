@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE(pay)
 
 	// pay, only account(1) get paid
 	sendEther(m_contractAddress, 10000);
-	BOOST_REQUIRE(callContractFunction("pay()") == encodeArgs());
+	BOOST_REQUIRE(callContractFunction("pay()") == encodeArgs(true));
 	BOOST_CHECK_EQUAL(balanceAt(account(1)), balance[1] + 10);
 	BOOST_CHECK_EQUAL(balanceAt(account(2)), balance[2]);
 }
@@ -143,7 +143,7 @@ BOOST_AUTO_TEST_CASE(factDeleteBasicTest)
 
 	// pay money to persons in working memory
 	sendEther(m_contractAddress, u256(10000) * numUser);
-	BOOST_REQUIRE(callContractFunction("pay()") == encodeArgs());
+	BOOST_REQUIRE(callContractFunction("pay()") == encodeArgs(true));
 
 	for (int i = 1; i <= numUser; i++)
 		BOOST_CHECK_EQUAL(balanceAt(account(i)), balance[i] + 10*inWorkingMemory[i]);
