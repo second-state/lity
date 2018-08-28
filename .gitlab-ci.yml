@@ -43,7 +43,9 @@ runtime-test:
   variables:
     TERM: "linux"
   before_script:
-    - eth --test -d /tmp/rttest >/tmp/rttest.log 2>&1 &
+    - curl -sL -o ./aleth --header "Private-Token:"$PRIVATE_TOKEN "https://git-cybermiles.skymizer.com/cybermiles/cpp-ethereum/-/jobs/artifacts/lity/raw/aleth?job=build"
+    - chmod +x ./aleth
+    - ./aleth --test -d /tmp/rttest >/tmp/rttest.log 2>&1 &
     - while [ ! -S /tmp/rttest/geth.ipc ] ; do sleep 1; done && sleep 2
   script:
     - ./build/test/rttest -- --testpath ./test --ipcpath /tmp/rttest/geth.ipc --show-messages
