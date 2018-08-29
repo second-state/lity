@@ -123,6 +123,9 @@ void ENIHandler::storeSizeOfDataSection() {
 	utils().fetchFreeMemoryPointer();
 	/// stack: typeSectionOffset dataSectionOffset dataSectionOffset curFreeMemoryPtr
 	*m_Context << Instruction::DUP2 << Instruction::SWAP1 << Instruction::SUB;
+	/// stack: typeSectionOffset dataSectionOffset dataSectionOffset (freeMemoryPtr-dataSectionOffset)
+	*m_Context << u256(0x20) << Instruction::SWAP1 << Instruction::SUB;
+	/// stack: typeSectionOffset dataSectionOffset dataSectionOffset dataSectionSize
 	*m_Context << Instruction::SWAP1 << Instruction::MSTORE;
 	/// stack: typeSectionOffset dataSectionOffset
 	*m_Context << Instruction::SWAP1;
