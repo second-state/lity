@@ -1,3 +1,18 @@
+### Lity 1.2.1 (2018-08-30)
+
+Features:
+ * General: Integrate static analysis tool - *oyente* into lityc.
+
+Language Features:
+ * Rule:
+   - Now you can use "factDelete *factID*" to remove a fact from working memory.
+   - To improve security, usage of rule engine in RHS will now cause transaction failure.
+   - Provide dynamic memory array utilities for Rule Engine.
+
+Bugfixes:
+ * Rule: Avoid unlikely memory corruption issue caused by immense memory usage.
+ * ENI: Data section length should be (freeMemoryPtr-dataSectionOffset-0x20)
+
 ### Lity 1.2.0 (2018-08-20)
 
 Language Features:
