@@ -17,7 +17,7 @@ Docs
 Rule Engine
 ```````````
 - :ref:`Lity Rule by Examples <rule-tutorial>`
-- `Lity rule engine v1.0 spec <_static/files/lity-rule-engine-spec-v1-0.pdf>`_
+- :ref:`Lity rule engine specs <rule-engine-specs>`
 
 Security & Safe
 ```````````````
