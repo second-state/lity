@@ -6,7 +6,7 @@ ENI Tutorial
 Run Travis Node
 ```````````````
 
-What is travis? See `here <https://github.com/CyberMiles/travis>` for
+What is travis? See `here <https://github.com/CyberMiles/travis>`_ for
 instructions to start a Travis node.
 
 Make sure to checkout to the `lity` branch.
