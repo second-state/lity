@@ -16,8 +16,14 @@ Docs
 
 Rule Engine
 ```````````
+
 - :ref:`Lity Rule by Examples <rule-tutorial>`
 - :ref:`Lity rule engine specs <rule-engine-specs>`
+
+Types
+`````
+
+- :ref:`types-fixed-point-numbers`
 
 Security & Safe
 ```````````````
