@@ -509,6 +509,13 @@ bool ContractCompiler::visit(FunctionDefinition const& _function)
 	return false;
 }
 
+
+bool ContractCompiler::visit(Rule const&)
+{
+	// TODO
+	return false;
+}
+
 bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 {
 	unsigned startStackHeight = m_context.stackHeight();

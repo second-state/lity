@@ -26,8 +26,8 @@
 #include <functional>
 #include <libsolidity/ast/ASTVisitor.h>
 #include <libsolidity/codegen/CompilerContext.h>
+#include <libevmasm/AssemblyItem.h>
 #include <libevmasm/Assembly.h>
-
 namespace dev {
 namespace solidity {
 
@@ -97,6 +97,7 @@ private:
 
 	virtual bool visit(VariableDeclaration const& _variableDeclaration) override;
 	virtual bool visit(FunctionDefinition const& _function) override;
+	virtual bool visit(Rule const& _rule) override;
 	virtual bool visit(InlineAssembly const& _inlineAssembly) override;
 	virtual bool visit(IfStatement const& _ifStatement) override;
 	virtual bool visit(WhileStatement const& _whileStatement) override;
@@ -132,6 +133,7 @@ private:
 	std::vector<eth::AssemblyItem> m_continueTags; ///< tag to jump to for a "continue" statement
 	/// Tag to jump to for a "return" statement, needs to be stacked because of modifiers.
 	std::vector<eth::AssemblyItem> m_returnTags;
+	std::vector<eth::AssemblyItem> m_rules;
 	unsigned m_modifierDepth = 0;
 	FunctionDefinition const* m_currentFunction = nullptr;
 	unsigned m_stackCleanupForReturn = 0; ///< this number of stack elements need to be removed before jump to m_returnTag

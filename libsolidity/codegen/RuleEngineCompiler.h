@@ -19,6 +19,8 @@ class RuleEngineCompiler: private ASTConstVisitor
 public:
 	explicit RuleEngineCompiler(CompilerContext& _compilerContext): m_context(_compilerContext) { }
 
+	eth::AssemblyItem compile(Rule const& _node);
+
 	/// Appends inline code to fire all rules
 	void appendFireAllRules(ContractDefinition const& _contract);
 
@@ -33,6 +35,7 @@ public:
 	/// stack post:
 	void appendFactDelete();
 
+private:
 	bool visit(Rule const& _node) override;
 	bool visit(FactDeclaration const& _node) override;
 	bool visit(FieldExpression const& _node) override;
@@ -43,10 +46,7 @@ public:
 	void endVisit(FactDeclaration const&) override;
 	void endVisit(FieldExpression const&) override;
 
-	CompilerUtils utils();
-
-private:
-
+	// TODO: use ArrayUtils
 	void appendPushItemToStorageArray(h256 _itemAddr);
 	void appendDeleteItemInStorageArray();
 	void appendAccessIndexStorage();
@@ -65,6 +65,8 @@ private:
 
 	/// magic constant used for create a mapping from factID to typeList
 	h256 getIdToListXorMask() const { return keccak256("__idToListXorMask~~__"); }
+
+	CompilerUtils utils();
 
 	std::vector<dev::u256> m_nodeOutListPtrAddr;
 
