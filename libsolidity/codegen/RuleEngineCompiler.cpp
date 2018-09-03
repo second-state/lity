@@ -172,7 +172,7 @@ bool RuleEngineCompiler::visit(FieldExpression const& _fieldExpr)
 			// stack: fact
 			eth::AssemblyItem noAdd = context.newTag();
 			// save fact to a place
-			// TODO: Fix this temperary(wrong) method
+			// TODO: Fix this temporary(wrong) method
 			context << 0x1234 << Instruction::SSTORE;
 			// stack:
 			ExpressionCompiler(context).compile(_fieldExpr.expression());
@@ -202,9 +202,10 @@ bool RuleEngineCompiler::visit(Block const& _block)
 			context << Instruction::MLOAD;
 			// stack: fact
 			// save fact to a place
-			// TODO: Fix this temperary(wrong) method
+			// TODO: Fix this temporary(wrong) method
 			context << 0x1234 << Instruction::SSTORE;
 			// stack:
+			// TODO: Fix this temporary method
 			ExpressionCompiler exprCompiler(context);
 			_block.accept(exprCompiler);
 

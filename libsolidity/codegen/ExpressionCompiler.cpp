@@ -1559,7 +1559,7 @@ void ExpressionCompiler::endVisit(Identifier const& _identifier)
 	else if (dynamic_cast<FactDeclaration const*>(declaration))
 	{
 		// save load fact from a place
-		// TODO: Fix this temperary(wrong) method
+		// TODO: Fix this temporary(wrong) method
 		m_context << 0x1234 << Instruction::SLOAD;
 	}
 	else
