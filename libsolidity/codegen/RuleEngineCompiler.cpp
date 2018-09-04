@@ -110,7 +110,7 @@ bool RuleEngineCompiler::visit(FactDeclaration const& _node)
 	// stack: i len
 	m_context << Instruction::DUP2 << Instruction::DUP2;
 	// stack: i len i len
-	m_context << Instruction::GT << 1 << Instruction::XOR;   //   if i>=len
+	m_context << Instruction::GT << Instruction::ISZERO;     //   if i>=len
 	// stack: i len !(len>i)
 	m_context.appendConditionalJumpTo(loopEnd);              //     break
 	// stack: i len
@@ -176,7 +176,7 @@ bool RuleEngineCompiler::visit(FieldExpression const& _fieldExpr)
 			context << 0x1234 << Instruction::SSTORE;
 			// stack:
 			ExpressionCompiler(context).compile(_fieldExpr.expression());
-			context << 1 << Instruction::XOR;
+			context << Instruction::ISZERO;
 			context.appendConditionalJumpTo(noAdd);
 			context << outListPtrAddr << Instruction::SLOAD;
 			// stack: outListMemAddr
@@ -285,7 +285,7 @@ void RuleEngineCompiler::appendDeleteItemInStorageArray()
 	// stack: itemValue listAddr i len
 	m_context << Instruction::DUP2 << Instruction::LT;
 	// stack: itemValue listAddr i (i < len)
-	m_context << 1 << Instruction::XOR;
+	m_context << Instruction::ISZERO;
 	// stack: itemValue listAddr i (i >= len)
 	m_context.appendConditionalJumpTo(elementNotFound);
 	// stack: itemValue listAddr i
@@ -356,7 +356,7 @@ void RuleEngineCompiler::appendLockRuleEngineOrFail()
 {
 	m_context << getRuleEngineLockLocation() << Instruction::SLOAD;
 	// stack: isLocked
-	m_context << 1 << Instruction::XOR;
+	m_context << Instruction::ISZERO;
 	// stack: !isLocked
 	eth::AssemblyItem setLock = m_context.newTag();
 	m_context.appendConditionalJumpTo(setLock);
@@ -374,7 +374,7 @@ void RuleEngineCompiler::appendAssertNoRuleEngineLock()
 {
 	m_context << getRuleEngineLockLocation() << Instruction::SLOAD;
 	// stack: isLocked
-	m_context << 1 << Instruction::XOR;
+	m_context << Instruction::ISZERO;
 	// stack: !isLocked
 	eth::AssemblyItem ok = m_context.newTag();
 	m_context.appendConditionalJumpTo(ok);
