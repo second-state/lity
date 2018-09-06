@@ -254,6 +254,7 @@ public:
 			ScopeGuard([&]{ _compilerContext.popVisitedNodes(); }) { _compilerContext.pushVisitedNodes(&_node); }
 	};
 
+	eth::AssemblyItem entryFireAllRules(ContractDefinition const&);
 private:
 	/// Searches the inheritance hierarchy towards the base starting from @a _searchStart and returns
 	/// the first function definition that is overwritten by _function.
@@ -298,6 +299,8 @@ private:
 		mutable std::queue<Declaration const*> m_functionsToCompile;
 	} m_functionCompilationQueue;
 
+	std::map<ContractDefinition const*, eth::AssemblyItem> m_entryFireAllRules;
+	
 	eth::AssemblyPointer m_asm;
 	/// Version of the EVM to compile against.
 	EVMVersion m_evmVersion;
