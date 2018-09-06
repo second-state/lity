@@ -27,6 +27,7 @@
 #include <libsolidity/codegen/ExpressionCompiler.h>
 #include <libsolidity/codegen/RuleEngineCompiler.h>
 #include <libsolidity/codegen/CompilerUtils.h>
+#include <libsolidity/codegen/DynArrUtils.h>
 
 #include <libevmasm/Instruction.h>
 #include <libevmasm/Assembly.h>
@@ -73,6 +74,7 @@ void ContractCompiler::compileContract(
 
 	initializeContext(_contract, _contracts);
 	appendFunctionSelector(_contract);
+	appendRules(_contract);
 	appendMissingFunctions();
 }
 
@@ -390,6 +392,38 @@ void ContractCompiler::appendReturnValuePacker(TypePointers const& _typeParamete
 	}
 }
 
+void ContractCompiler::appendRules(ContractDefinition const& _contract)
+{
+	m_context << m_context.entryFireAllRules(_contract);
+	for(auto rule: _contract.rules())
+	{
+		RuleEngineCompiler ruleEngineCompiler(m_context);
+		// compile network nodes
+		ruleEngineCompiler.compileNodes(*rule);
+		// compile then Block (terminal node)
+		auto inListPtrAddr = ruleEngineCompiler.terminalNodeInListPtr();
+		m_context << inListPtrAddr << Instruction::SLOAD;
+		Statement const& block = rule->thenBody();
+		// stack: listMemAddr
+		DynArrUtils(m_context, 1).forEachDo
+		(
+			[&block, this] (CompilerContext& context)
+			{
+				// stack: elmtMemAddr
+				// TODO: item with elementSize
+				context << Instruction::MLOAD;
+				// stack: fact
+				// save fact to a place
+				// TODO: Fix this temporary(wrong) method
+				context << 0x1234 << Instruction::SSTORE;
+				// stack:
+				block.accept(*this);
+			}
+		);
+	}
+	m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);
+}
+
 void ContractCompiler::registerStateVariables(ContractDefinition const& _contract)
 {
 	for (auto const& var: ContractType(_contract).stateVariables())
@@ -506,13 +540,6 @@ bool ContractCompiler::visit(FunctionDefinition const& _function)
 	/// The constructor and the fallback function doesn't to jump out.
 	if (!_function.isConstructor() && !_function.isFallback())
 		m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);
-	return false;
-}
-
-
-bool ContractCompiler::visit(Rule const&)
-{
-	// TODO
 	return false;
 }
 

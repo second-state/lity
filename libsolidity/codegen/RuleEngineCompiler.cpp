@@ -25,11 +25,13 @@ namespace solidity
 {
 
 
-// TODO: refresh the set of facts in each alpha nodes,
 void RuleEngineCompiler::appendFireAllRules(ContractDefinition const& _contract)
 {
 	RuleEngineCompiler::appendLockRuleEngineOrFail();
-	_contract.accept(*this);
+	eth::AssemblyItem returnLabel = m_context.pushNewTag();
+	m_context.appendJumpTo(m_context.entryFireAllRules(_contract));
+	m_context << returnLabel;
+	m_context.adjustStackOffset(-1);
 	RuleEngineCompiler::appendUnlockRuleEngine();
 }
 
@@ -82,9 +84,15 @@ void RuleEngineCompiler::appendFactDelete()
 }
 
 
-bool RuleEngineCompiler::visit(Rule const& _node)
+eth::AssemblyItem RuleEngineCompiler::compileNodes(Rule const& _rule)
 {
-	m_currentRule = &_node;
+	_rule.accept(*this);
+	return m_context.newTag();
+}
+
+bool RuleEngineCompiler::visit(Rule const& _rule)
+{
+	m_currentRule = &_rule;
 	return true;
 }
 
@@ -185,39 +193,6 @@ bool RuleEngineCompiler::visit(FieldExpression const& _fieldExpr)
 			DynArrUtils(context, 1).pushItem();
 			context << noAdd;
 			// stack:
-		}
-	);
-	return false;
-}
-
-bool RuleEngineCompiler::visit(Block const& _block)
-{
-	auto inListPtrAddr = m_nodeOutListPtrAddr.back();
-
-	m_context << inListPtrAddr << Instruction::SLOAD;
-	DynArrUtils(m_context, 1).forEachDo(
-		[&_block] (CompilerContext& context) {
-			// stack: elmtMemAddr
-			// TODO: item with elementSize
-			context << Instruction::MLOAD;
-			// stack: fact
-			// save fact to a place
-			// TODO: Fix this temporary(wrong) method
-			context << 0x1234 << Instruction::SSTORE;
-			// stack:
-			// TODO: Fix this temporary method
-			ExpressionCompiler exprCompiler(context);
-			_block.accept(exprCompiler);
-
-			// pop out stack elements in this block
-			// TODO: Fix this
-			for(auto stmt: _block.statements())
-			{
-				if(auto exprStmt = dynamic_cast<ExpressionStatement const*>(stmt.get()))
-					CompilerUtils(context).popStackElement(*(exprStmt->expression().annotation().type));
-				else
-					solUnimplemented("Sorry, currently only expressionStatements are allowed in then block");
-			}
 		}
 	);
 	return false;

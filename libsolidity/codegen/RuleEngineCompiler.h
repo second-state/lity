@@ -19,7 +19,9 @@ class RuleEngineCompiler: private ASTConstVisitor
 public:
 	explicit RuleEngineCompiler(CompilerContext& _compilerContext): m_context(_compilerContext) { }
 
-	eth::AssemblyItem compile(Rule const& _node);
+	/// Compiles rule engine network.
+	/// Note that then block is compiled by ContractCompiler.
+	eth::AssemblyItem compileNodes(Rule const& _rule);
 
 	/// Appends inline code to fire all rules
 	void appendFireAllRules(ContractDefinition const& _contract);
@@ -35,12 +37,11 @@ public:
 	/// stack post:
 	void appendFactDelete();
 
+	dev::u256 terminalNodeInListPtr() const { return m_nodeOutListPtrAddr.back(); }
 private:
-	bool visit(Rule const& _node) override;
-	bool visit(FactDeclaration const& _node) override;
-	bool visit(FieldExpression const& _node) override;
-	bool visit(FunctionDefinition const&) override { return false; }
-	bool visit(Block const& _function) override;
+	bool visit(Rule const&) override;
+	bool visit(FactDeclaration const&) override;
+	bool visit(FieldExpression const&) override;
 
 	void endVisit(Rule const&) override;
 	void endVisit(FactDeclaration const&) override;
@@ -59,6 +60,7 @@ private:
 	void appendAssertNoRuleEngineLock();
 	h256 getRuleEngineLockLocation() const { return keccak256("__lityRuleEngineLock~~__"); }
 
+
 	const Rule* m_currentRule;
 	const FactDeclaration* m_currentFact;
 	int m_currentFieldNo=0;
@@ -67,7 +69,7 @@ private:
 	h256 getIdToListXorMask() const { return keccak256("__idToListXorMask~~__"); }
 
 	CompilerUtils utils();
-
+	// pointer (in storage) to factList of Node
 	std::vector<dev::u256> m_nodeOutListPtrAddr;
 
 	CompilerContext& m_context;

@@ -390,6 +390,7 @@ public:
 	std::vector<ModifierDefinition const*> functionModifiers() const { return filteredNodes<ModifierDefinition>(m_subNodes); }
 	std::vector<FunctionDefinition const*> definedFunctions() const { return filteredNodes<FunctionDefinition>(m_subNodes); }
 	std::vector<EventDefinition const*> events() const { return filteredNodes<EventDefinition>(m_subNodes); }
+	std::vector<Rule const*> rules() const { return filteredNodes<Rule>(m_subNodes); }
 	std::vector<EventDefinition const*> const& interfaceEvents() const;
 	bool isLibrary() const { return m_contractKind == ContractKind::Library; }
 
@@ -1773,6 +1774,7 @@ public:
 	virtual TypePointer type() const override;
 
 	int numOfFacts() const { return m_factDeclarations.size(); }
+	Statement const& thenBody() const {return *m_thenBody.get(); }
 private:
 	std::vector<ASTPointer<FactDeclaration>> m_factDeclarations;
 	ASTPointer<Statement> m_thenBody;

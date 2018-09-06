@@ -97,7 +97,6 @@ private:
 
 	virtual bool visit(VariableDeclaration const& _variableDeclaration) override;
 	virtual bool visit(FunctionDefinition const& _function) override;
-	virtual bool visit(Rule const& _rule) override;
 	virtual bool visit(InlineAssembly const& _inlineAssembly) override;
 	virtual bool visit(IfStatement const& _ifStatement) override;
 	virtual bool visit(WhileStatement const& _whileStatement) override;
@@ -115,6 +114,7 @@ private:
 	/// Repeatedly visits all function which are referenced but which are not compiled yet.
 	void appendMissingFunctions();
 
+	void appendRules(ContractDefinition const& _contract);
 	/// Appends one layer of function modifier code of the current function, or the function
 	/// body itself if the last modifier was reached.
 	void appendModifierOrFunctionCode();

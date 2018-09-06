@@ -433,6 +433,19 @@ eth::AssemblyItem CompilerContext::FunctionCompilationQueue::entryLabelIfExists(
 	return res == m_entryLabels.end() ? eth::AssemblyItem(eth::UndefinedItem) : res->second.tag();
 }
 
+eth::AssemblyItem CompilerContext::entryFireAllRules(ContractDefinition const& _declaration)
+{
+	auto res = m_entryFireAllRules.find(&_declaration);
+	if (res == m_entryFireAllRules.end())
+	{
+		eth::AssemblyItem tag(newTag());
+		m_entryFireAllRules.insert(make_pair(&_declaration, tag));
+		return tag.tag();
+	}
+	else
+		return res->second.tag();
+}
+
 Declaration const* CompilerContext::FunctionCompilationQueue::nextFunctionToCompile() const
 {
 	while (!m_functionsToCompile.empty())
