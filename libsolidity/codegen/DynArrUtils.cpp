@@ -151,10 +151,13 @@ void DynArrUtils::accessIndex(bool _doBoundsCheck)
 
 /// Stack pre : reference
 /// Stack post:
-/// Stack state of f:
+/// Stack state of f (if not breakable):
 ///   Stack pre : elmtMemAddr
 ///   Stack post:
-void DynArrUtils::forEachDo(std::function<void(CompilerContext&)> f)
+/// Stack state of f (if breakable):
+///   Stack pre : elmtMemAddr
+///   Stack post: breakOrNot
+void DynArrUtils::forEachDo(std::function<void(CompilerContext&)> f, bool breakable)
 {
 	int beginH = m_context.stackHeight();
 	eth::AssemblyItem loopStart = m_context.newTag();
@@ -178,6 +181,8 @@ void DynArrUtils::forEachDo(std::function<void(CompilerContext&)> f)
 	accessIndex(false);
 	// stack: ... elmtMemAddr
 	f(m_context);
+	if (breakable)
+		m_context.appendConditionalJumpTo(loopEnd);
 	// stack: refer len i
 	m_context << 1 << Instruction::ADD;                      //   i++
 	m_context.appendJumpTo(loopStart);
@@ -185,10 +190,10 @@ void DynArrUtils::forEachDo(std::function<void(CompilerContext&)> f)
 	// stack: refer len i
 	for(int i=0; i<3; i++)
 		m_context << Instruction::POP;
-	
+
 	int endH=m_context.stackHeight();
 	solAssert(beginH - endH == 1, "stack height error in DynArrUtils::forEachDo");
-	
+
 }
 
 CompilerUtils DynArrUtils::utils()
