@@ -407,7 +407,7 @@ void ContractCompiler::appendRules(ContractDefinition const& _contract)
 		// stack: listMemAddr
 		DynArrUtils(m_context, 1).forEachDo
 		(
-			[&block, this] (CompilerContext& context)
+			[&] (CompilerContext& context)
 			{
 				// stack: elmtMemAddr
 				// TODO: item with elementSize
@@ -418,7 +418,27 @@ void ContractCompiler::appendRules(ContractDefinition const& _contract)
 				context << 0x1234 << Instruction::SSTORE;
 				// stack:
 				block.accept(*this);
+
+				m_context << 0; // marker used to determine to break or not
+				ruleEngineCompiler.pushWhetherNeedReevaluation();
+				m_context << Instruction::ISZERO;
+				eth::AssemblyItem noReeval = m_context.newTag();
+				// stack: 0 !reeval
+				m_context.appendConditionalJumpTo(noReeval);
+
+				// stack: 0
+				ruleEngineCompiler.appendCleanUpNodes();
+				ruleEngineCompiler.resetReevaluationMarker();
+
+				ruleEngineCompiler.appendUnlockRuleEngine();
+				ruleEngineCompiler.appendFireAllRules(_contract);
+				ruleEngineCompiler.appendLockRuleEngineOrFail();
+				m_context << Instruction::ISZERO; // make a break
+				// stack: 1
+
+				m_context << noReeval;
 			}
+		, true // use breakable version of forEachDo
 		);
 	}
 	m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);
