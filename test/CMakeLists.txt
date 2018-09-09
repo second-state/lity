@@ -32,6 +32,7 @@ add_executable(rttest
     RPCSession.cpp
     lity/SmokeTest.cpp
     lity/RulesTest.cpp
+    lity/UpdateRulesTest.cpp
     lity/RecursiveRulesTest.cpp
     lity/SimpleRulesTest.cpp
     lity/MultiRulesTest.cpp
