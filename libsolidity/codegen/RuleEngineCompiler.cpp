@@ -24,7 +24,6 @@ namespace dev
 namespace solidity
 {
 
-
 void RuleEngineCompiler::appendFireAllRules(ContractDefinition const& _contract)
 {
 	RuleEngineCompiler::appendLockRuleEngineOrFail();
@@ -82,7 +81,6 @@ void RuleEngineCompiler::appendFactDelete()
 
 	appendDeleteItemInStorageArray();
 }
-
 
 eth::AssemblyItem RuleEngineCompiler::compileNodes(Rule const& _rule)
 {
@@ -305,6 +303,16 @@ void RuleEngineCompiler::appendDeleteItemInStorageArray()
 	m_context << Instruction::POP;
 }
 
+void RuleEngineCompiler::appendUpdate()
+{
+	// execute Instruction::INVALID if the rule engine is not executing
+	appendAssertHaveRuleEngineLock();
+	// In current implementation we don't care which fact is updated, so we just pop it
+	m_context << Instruction::POP;
+	// set reevaluation mark to true
+	m_context << 1 << getRuleEngineReevaluateLocation() << Instruction::SSTORE;
+}
+
 // stack pre: array index
 // stack post: item
 void RuleEngineCompiler::appendAccessIndexStorage()
@@ -355,6 +363,25 @@ void RuleEngineCompiler::appendAssertNoRuleEngineLock()
 	m_context.appendConditionalJumpTo(ok);
 	m_context << Instruction::INVALID; // already locked
 	m_context << ok;
+}
+
+void RuleEngineCompiler::appendAssertHaveRuleEngineLock()
+{
+	m_context << getRuleEngineLockLocation() << Instruction::SLOAD;
+	// stack: isLocked
+	eth::AssemblyItem ok = m_context.newTag();
+	m_context.appendConditionalJumpTo(ok);
+	m_context << Instruction::INVALID; // no lock
+	m_context << ok;
+}
+
+void RuleEngineCompiler::appendCleanUpNodes()
+{
+	for (auto ptr: m_nodeOutListPtrAddr)
+	{
+		m_context << ptr << Instruction::SLOAD;
+		DynArrUtils(m_context, 1).clearArray();
+	}
 }
 
 }

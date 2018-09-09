@@ -138,6 +138,7 @@ namespace solidity
 	T(Dec, "--", 0)                                                    \
 	K(FactInsert, "factInsert", 0)                                     \
 	K(FactDelete, "factDelete", 0)                                     \
+	K(Update, "update", 0)                                             \
 	K(Delete, "delete", 0)                                             \
 	\
 	/* Keywords */                                                     \

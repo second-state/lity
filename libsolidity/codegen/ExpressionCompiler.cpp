@@ -391,6 +391,9 @@ bool ExpressionCompiler::visit(UnaryOperation const& _unaryOperation)
 	case Token::FactDelete:
 		RuleEngineCompiler(m_context).appendFactDelete();
 		break;
+	case Token::Update:
+		RuleEngineCompiler(m_context).appendUpdate();
+		break;
 	default:
 		solAssert(false, "Invalid unary operator: " + string(Token::toString(_unaryOperation.getOperator())));
 	}

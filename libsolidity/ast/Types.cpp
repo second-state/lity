@@ -1452,6 +1452,11 @@ TypePointer ReferenceType::unaryOperatorResult(Token::Value _operator) const
 		this->location() == DataLocation::Storage
 	)
 		return make_shared<IntegerType>(256);
+	else if (
+		_operator == Token::Update &&
+		dynamic_cast<StructType const*>(this)
+	)
+		return make_shared<TupleType>();
 	return TypePointer();
 }
 

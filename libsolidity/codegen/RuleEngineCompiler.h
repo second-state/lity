@@ -1,4 +1,5 @@
 #pragma once
+
 #include <functional>
 #include <memory>
 #include <boost/noncopyable.hpp>
@@ -7,6 +8,16 @@
 #include <libsolidity/ast/ASTVisitor.h>
 #include <libsolidity/codegen/LValue.h>
 #include <libsolidity/interface/Exceptions.h>
+#include <libevmasm/Instruction.h>
+#include <libevmasm/Assembly.h>
+#include <libevmasm/GasMeter.h>
+#include <libsolidity/codegen/ContractCompiler.h>
+#include <libsolidity/inlineasm/AsmCodeGen.h>
+#include <libsolidity/ast/AST.h>
+#include <libsolidity/interface/ErrorReporter.h>
+#include <libsolidity/codegen/ExpressionCompiler.h>
+#include <libsolidity/codegen/CompilerUtils.h>
+#include <libsolidity/codegen/DynArrUtils.h>
 
 namespace dev {
 namespace solidity {
@@ -37,7 +48,28 @@ public:
 	/// stack post:
 	void appendFactDelete();
 
+	/// Mark a fact as updated. In current implementation, rule engine will be restarted.
+	/// stack pre: fact
+	/// stack post:
+	void appendUpdate();
+
 	dev::u256 terminalNodeInListPtr() const { return m_nodeOutListPtrAddr.back(); }
+
+	/// Clean up Rete network nodes
+	/// stack pre:
+	/// stack post:
+	void appendCleanUpNodes();
+
+	void pushWhetherNeedReevaluation() { m_context << getRuleEngineReevaluateLocation() << Instruction::SLOAD; }
+	void resetReevaluationMarker() { m_context << 0 << getRuleEngineReevaluateLocation() << Instruction::SSTORE; }
+
+	/// We want to prevent user from using factInsert/factDelete/fireAllRules
+	/// inside then-block.
+	void appendLockRuleEngineOrFail();
+	void appendUnlockRuleEngine();
+	void appendAssertNoRuleEngineLock();
+	void appendAssertHaveRuleEngineLock();
+
 private:
 	bool visit(Rule const&) override;
 	bool visit(FactDeclaration const&) override;
@@ -53,13 +85,7 @@ private:
 	void appendAccessIndexStorage();
 	void appendWriteIndexStorage();
 
-	/// We want to prevent user from using factInsert/factDelete/fireAllRules
-	/// inside then-block.
-	void appendLockRuleEngineOrFail();
-	void appendUnlockRuleEngine();
-	void appendAssertNoRuleEngineLock();
 	h256 getRuleEngineLockLocation() const { return keccak256("__lityRuleEngineLock~~__"); }
-
 
 	const Rule* m_currentRule;
 	const FactDeclaration* m_currentFact;
@@ -71,6 +97,8 @@ private:
 	CompilerUtils utils();
 	// pointer (in storage) to factList of Node
 	std::vector<dev::u256> m_nodeOutListPtrAddr;
+
+	h256 getRuleEngineReevaluateLocation() const { return keccak256("__ruleEngineReevaluationLoc~~__"); }
 
 	CompilerContext& m_context;
 };
