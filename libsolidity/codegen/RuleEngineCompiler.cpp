@@ -82,10 +82,22 @@ void RuleEngineCompiler::appendFactDelete()
 	appendDeleteItemInStorageArray();
 }
 
-eth::AssemblyItem RuleEngineCompiler::compileNodes(Rule const& _rule)
-{
+eth::AssemblyItem RuleEngineCompiler::compileNetwork(Rule const& _rule)
+{	
+	eth::AssemblyItem ruleTag = m_context.newTag();
+	m_context.appendJumpTo(ruleTag);
+	// nodes
 	_rule.accept(*this);
-	return m_context.newTag();
+	// controll flow of nodes
+	m_context << ruleTag;
+	for(auto nodeLabel: m_nodeOrder)
+	{
+		eth::AssemblyItem returnLabel = m_context.pushNewTag();
+		m_context.appendJumpTo(nodeLabel);
+		m_context << returnLabel;
+		m_context.adjustStackOffset(-1);
+	}
+	return ruleTag;
 }
 
 bool RuleEngineCompiler::visit(Rule const& _rule)
@@ -94,14 +106,30 @@ bool RuleEngineCompiler::visit(Rule const& _rule)
 	return true;
 }
 
-bool RuleEngineCompiler::visit(FactDeclaration const& _node)
+eth::AssemblyItem RuleEngineCompiler::entryFact(FactDeclaration const& _fact)
 {
-	m_currentFact = &_node;
+	if (0 == m_entryFact.count(&_fact))
+		m_entryFact.insert(make_pair(&_fact, m_context.newTag()));
+	return m_entryFact.find(&_fact)->second;
+}
+
+eth::AssemblyItem RuleEngineCompiler::entryField(FieldExpression const& _field)
+{
+	if (0 == m_entryField.count(&_field))
+		m_entryField.insert(make_pair(&_field, m_context.newTag()));
+	return m_entryField.find(&_field)->second;
+}
+
+bool RuleEngineCompiler::visit(FactDeclaration const& _fact)
+{	
+	m_context << entryFact(_fact);
+	m_nodeOrder.push_back(entryFact(_fact));
+	m_currentFact = &_fact;
 	m_currentFieldNo = 0;
 	// storage list
-	auto inListAddr = keccak256(_node.type()->richIdentifier()+"-factlist");
+	auto inListAddr = keccak256(_fact.type()->richIdentifier()+"-factlist");
 	// listPtr(to memList) in storage
-	auto outListPtrAddr = keccak256(m_currentRule->name()+_node.name()+"-factlist");
+	auto outListPtrAddr = keccak256(m_currentRule->name()+_fact.name()+"-factlist");
 	m_nodeOutListPtrAddr.push_back(outListPtrAddr);
 	m_context << 32*3;
 	utils().allocateMemory();
@@ -139,6 +167,8 @@ bool RuleEngineCompiler::visit(FactDeclaration const& _node)
 
 	// stack: i len
 	m_context << Instruction::POP << Instruction::POP;
+	m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);
+	m_context.setStackOffset(0); // not sure this is the right place
 	return true;
 }
 
@@ -156,6 +186,8 @@ bool RuleEngineCompiler::visit(FieldExpression const& _fieldExpr)
 	//   for each fact in inList
 	//     if FieldExp(the item)
 	//     put this fact to outList
+	m_context << entryField(_fieldExpr);
+	m_nodeOrder.push_back(entryField(_fieldExpr));
 
 	string nodeName = m_currentRule->name()+"-"+m_currentFact->name()+"-"+to_string(m_currentFieldNo);
 
@@ -193,6 +225,8 @@ bool RuleEngineCompiler::visit(FieldExpression const& _fieldExpr)
 			// stack:
 		}
 	);
+	m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);
+	m_context.setStackOffset(0); // not sure this is the right place
 	return false;
 }
 
