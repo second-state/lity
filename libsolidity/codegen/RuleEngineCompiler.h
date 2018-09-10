@@ -32,9 +32,11 @@ public:
 
 	/// Compiles rule engine network.
 	/// Note that then block is compiled by ContractCompiler.
-	eth::AssemblyItem compileNodes(Rule const& _rule);
-
-	/// Appends inline code to fire all rules
+	eth::AssemblyItem compileNetwork(Rule const&);
+	eth::AssemblyItem entryFact(FactDeclaration const&);
+	eth::AssemblyItem entryField(FieldExpression const&);
+	
+	/// Appends jump to fire all rules
 	void appendFireAllRules(ContractDefinition const& _contract);
 
 	/// Insert a fact into working memory.
@@ -87,8 +89,8 @@ private:
 
 	h256 getRuleEngineLockLocation() const { return keccak256("__lityRuleEngineLock~~__"); }
 
-	const Rule* m_currentRule;
-	const FactDeclaration* m_currentFact;
+	Rule const* m_currentRule;
+	FactDeclaration const* m_currentFact;
 	int m_currentFieldNo=0;
 
 	/// magic constant used for create a mapping from factID to typeList
@@ -100,6 +102,9 @@ private:
 
 	h256 getRuleEngineReevaluateLocation() const { return keccak256("__ruleEngineReevaluationLoc~~__"); }
 
+	std::map<FactDeclaration const*, eth::AssemblyItem> m_entryFact;
+	std::map<FieldExpression const*, eth::AssemblyItem> m_entryField;
+	std::vector<eth::AssemblyItem> m_nodeOrder;
 	CompilerContext& m_context;
 };
 

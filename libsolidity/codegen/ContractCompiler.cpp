@@ -399,7 +399,7 @@ void ContractCompiler::appendRules(ContractDefinition const& _contract)
 	{
 		RuleEngineCompiler ruleEngineCompiler(m_context);
 		// compile network nodes
-		ruleEngineCompiler.compileNodes(*rule);
+		ruleEngineCompiler.compileNetwork(*rule);
 		// compile then Block (terminal node)
 		auto inListPtrAddr = ruleEngineCompiler.terminalNodeInListPtr();
 		m_context << inListPtrAddr << Instruction::SLOAD;
