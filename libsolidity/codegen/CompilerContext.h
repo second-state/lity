@@ -72,7 +72,9 @@ public:
 
 	void addStateVariable(VariableDeclaration const& _declaration, u256 const& _storageOffset, unsigned _byteOffset);
 	void addVariable(VariableDeclaration const& _declaration, unsigned _offsetToCurrent = 0);
+	void addFact(FactDeclaration const&, unsigned _offsetToCurrent = 0);
 	void removeVariable(VariableDeclaration const& _declaration);
+	void removeFact(FactDeclaration const&);
 
 	void setCompiledContracts(std::map<ContractDefinition const*, eth::Assembly const*> const& _contracts) { m_compiledContracts = _contracts; }
 	eth::Assembly const& compiledContract(ContractDefinition const& _contract) const;
@@ -135,6 +137,8 @@ public:
 	ModifierDefinition const& resolveVirtualFunctionModifier(ModifierDefinition const& _modifier) const;
 	/// Returns the distance of the given local variable from the bottom of the stack (of the current function).
 	unsigned baseStackOffsetOfVariable(Declaration const& _declaration) const;
+	/// Returns the distance of the given fact from the bottom of the stack (of the current function).
+	unsigned baseStackOffsetOfFact(FactDeclaration const& _declaration) const;
 	/// If supplied by a value returned by @ref baseStackOffsetOfVariable(variable), returns
 	/// the distance of that variable from the current top of the stack.
 	unsigned baseToCurrentStackOffset(unsigned _baseOffset) const;
@@ -315,6 +319,8 @@ private:
 	/// modifier is applied twice, the position of the variable needs to be restored
 	/// after the nested modifier is left.
 	std::map<Declaration const*, std::vector<unsigned>> m_localVariables;
+	/// Offsets of local facts on the stack (relative to stack base).
+	std::map<Declaration const*, unsigned> m_localFacts;
 	/// List of current inheritance hierarchy from derived to base.
 	std::vector<ContractDefinition const*> m_inheritanceHierarchy;
 	/// Stack of current visited AST nodes, used for location attachment

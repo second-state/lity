@@ -121,7 +121,7 @@ eth::AssemblyItem RuleEngineCompiler::entryField(FieldExpression const& _field)
 }
 
 bool RuleEngineCompiler::visit(FactDeclaration const& _fact)
-{	
+{
 	m_context << entryFact(_fact);
 	m_nodeOrder.push_back(entryFact(_fact));
 	m_currentFact = &_fact;
@@ -203,26 +203,27 @@ bool RuleEngineCompiler::visit(FieldExpression const& _fieldExpr)
 
 	m_context << inListPtrAddr << Instruction::SLOAD;
 	DynArrUtils(m_context, 1).forEachDo(
-		[&_fieldExpr, &outListPtrAddr] (CompilerContext& context) {
+		[&] (CompilerContext& context) {
+			eth::AssemblyItem noAdd = context.newTag();
 			// stack: elmtMemAddr
 			// TODO: item with elementSize
 			context << Instruction::MLOAD;
 			// stack: fact
-			eth::AssemblyItem noAdd = context.newTag();
-			// save fact to a place
-			// TODO: Fix this temporary(wrong) method
-			context << 0x1234 << Instruction::SSTORE;
-			// stack:
+			context.addFact(m_currentRule->fact(0), 1);
 			ExpressionCompiler(context).compile(_fieldExpr.expression());
+			context.removeFact(m_currentRule->fact(0));
+			// stack: fact Expr
 			context << Instruction::ISZERO;
 			context.appendConditionalJumpTo(noAdd);
+			// stack: fact
 			context << outListPtrAddr << Instruction::SLOAD;
-			// stack: outListMemAddr
-			context << 0x1234 << Instruction::SLOAD;
-			// stack: outListMemAddr fact
+			// stack: fact outListMemAddr
+			context << Instruction::DUP2;
+			// stack: fact outListMemAddr fact
 			DynArrUtils(context, 1).pushItem();
 			context << noAdd;
-			// stack:
+			// stack: fact
+			context << Instruction::POP;
 		}
 	);
 	m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);

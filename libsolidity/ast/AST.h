@@ -1774,6 +1774,7 @@ public:
 	virtual TypePointer type() const override;
 
 	int numOfFacts() const { return m_factDeclarations.size(); }
+	FactDeclaration const& fact(int i) const { return *m_factDeclarations[i].get(); }
 	Statement const& thenBody() const {return *m_thenBody.get(); }
 private:
 	std::vector<ASTPointer<FactDeclaration>> m_factDeclarations;

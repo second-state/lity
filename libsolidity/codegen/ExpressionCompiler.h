@@ -109,6 +109,8 @@ private:
 
 	/// Appends code for a variable that might be a constant or not
 	void appendVariable(VariableDeclaration const& _variable, Expression const& _expression);
+	/// Appends code for pushing(dup) a fact to stack top
+	void appendFact(FactDeclaration const & _fact);
 	/// Sets the current LValue to a new one (of the appropriate type) from the given declaration.
 	/// Also retrieves the value if it was not requested by @a _expression.
 	void setLValueFromDeclaration(Declaration const& _declaration, Expression const& _expression);
