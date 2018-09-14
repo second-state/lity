@@ -131,12 +131,25 @@ void CompilerContext::addVariable(VariableDeclaration const& _declaration,
 	m_localVariables[&_declaration].push_back(unsigned(m_asm->deposit()) - _offsetToCurrent);
 }
 
+void CompilerContext::addFact(FactDeclaration const& _decl, unsigned _offsetToCurrent)
+{
+	solAssert(m_asm->deposit() >= 0 && unsigned(m_asm->deposit()) >= _offsetToCurrent, "");
+	solAssert(m_localFacts.count(&_decl)==0, "fact already added");
+	m_localFacts[&_decl] = unsigned(m_asm->deposit()) - _offsetToCurrent;
+}
+
 void CompilerContext::removeVariable(VariableDeclaration const& _declaration)
 {
 	solAssert(m_localVariables.count(&_declaration) && !m_localVariables[&_declaration].empty(), "");
 	m_localVariables[&_declaration].pop_back();
 	if (m_localVariables[&_declaration].empty())
 		m_localVariables.erase(&_declaration);
+}
+
+void CompilerContext::removeFact(FactDeclaration const& _decl)
+{
+	solAssert(m_localFacts.count(&_decl), "fact not added");
+	m_localFacts.erase(&_decl);
 }
 
 eth::Assembly const& CompilerContext::compiledContract(const ContractDefinition& _contract) const
@@ -218,6 +231,13 @@ unsigned CompilerContext::baseStackOffsetOfVariable(Declaration const& _declarat
 	solAssert(res != m_localVariables.end(), "Variable not found on stack.");
 	solAssert(!res->second.empty(), "");
 	return res->second.back();
+}
+
+unsigned CompilerContext::baseStackOffsetOfFact(FactDeclaration const& _decl) const
+{
+	auto res = m_localFacts.find(&_decl);
+	solAssert(res != m_localFacts.end(), "Fact not found on stack.");
+	return res->second;
 }
 
 unsigned CompilerContext::baseToCurrentStackOffset(unsigned _baseOffset) const

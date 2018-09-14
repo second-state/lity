@@ -1559,11 +1559,11 @@ void ExpressionCompiler::endVisit(Identifier const& _identifier)
 	{
 		// no-op
 	}
-	else if (dynamic_cast<FactDeclaration const*>(declaration))
+	else if (auto fact = dynamic_cast<FactDeclaration const*>(declaration))
 	{
-		// save load fact from a place
-		// TODO: Fix this temporary(wrong) method
-		m_context << 0x1234 << Instruction::SLOAD;
+		auto baseStackOffset = m_context.baseStackOffsetOfFact(*fact);
+		unsigned stackPos = m_context.baseToCurrentStackOffset(baseStackOffset);
+		m_context << dupInstruction(stackPos + 1);
 	}
 	else
 	{

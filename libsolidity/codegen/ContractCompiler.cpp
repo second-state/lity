@@ -400,7 +400,7 @@ void ContractCompiler::appendRules(ContractDefinition const& _contract)
 		RuleEngineCompiler ruleEngineCompiler(m_context);
 		// compile network nodes
 		ruleEngineCompiler.compileNetwork(*rule);
-		// compile then Block (terminal node)
+		// compile then block (terminal node)
 		auto inListPtrAddr = ruleEngineCompiler.terminalNodeInListPtr();
 		m_context << inListPtrAddr << Instruction::SLOAD;
 		Statement const& block = rule->thenBody();
@@ -413,11 +413,10 @@ void ContractCompiler::appendRules(ContractDefinition const& _contract)
 				// TODO: item with elementSize
 				context << Instruction::MLOAD;
 				// stack: fact
-				// save fact to a place
-				// TODO: Fix this temporary(wrong) method
-				context << 0x1234 << Instruction::SSTORE;
-				// stack:
+				context.addFact(rule->fact(0), 1);
 				block.accept(*this);
+				context.removeFact(rule->fact(0));
+				m_context << Instruction::POP;
 
 				m_context << 0; // marker used to determine to break or not
 				ruleEngineCompiler.pushWhetherNeedReevaluation();
