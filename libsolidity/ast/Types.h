@@ -924,7 +924,8 @@ public:
 		ABIEncodeWithSelector,
 		ABIEncodeWithSignature,
 		GasLeft, ///< gasleft()
-		ENI
+		ENI,
+		IsValidator ///< isValidator()
 	};
 
 	virtual Category category() const override { return Category::Function; }

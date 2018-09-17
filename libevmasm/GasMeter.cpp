@@ -105,7 +105,10 @@ GasMeter::GasConsumption GasMeter::estimateMax(AssemblyItem const& _item, bool _
 			gas += memoryGas(0, -1);
 			break;
 		case Instruction::ENI:
-			//TODO: how many gas does ENI need?
+			gas = GasConsumption::infinite();
+			break;
+		case Instruction::ISVALIDATOR:
+			gas = GasCosts::isValidatorGas;
 			break;
 		case Instruction::CALLDATACOPY:
 		case Instruction::CODECOPY:

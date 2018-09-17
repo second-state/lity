@@ -1063,6 +1063,11 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 		case FunctionType::Kind::GasLeft:
 			m_context << Instruction::GAS;
 			break;
+		case FunctionType::Kind::IsValidator:
+			arguments.front()->accept(*this);
+			utils().convertType(*arguments.front()->annotation().type, *function.parameterTypes().front(), true);
+			m_context << Instruction::ISVALIDATOR;
+			break;
 		case FunctionType::Kind::ENI:
 		{
 			m_context.eniHandler().clearENIObjects();

@@ -78,6 +78,7 @@ public:
 
 	bool hasStaticCall() const { return *this >= byzantium(); }
 	bool hasENI() const {return *this == lity(); }
+	bool hasIsValidator() const {return *this == lity(); }
 	bool hasBitwiseShifting() const { return *this >= constantinople(); }
 
 	/// Whether we have to retain the costs for the call opcode itself (false),
