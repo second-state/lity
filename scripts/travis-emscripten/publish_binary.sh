@@ -30,7 +30,7 @@
 
 set -e
 
-VER=$(cat CMakeLists.txt | grep 'set(PROJECT_VERSION' | sed -e 's/.*set(PROJECT_VERSION "\(.*\)".*/\1/')
+VER=$(cat CMakeLists.txt | grep 'set(SOLC_PROJECT_VERSION' | sed -e 's/.*set(SOLC_PROJECT_VERSION "\(.*\)".*/\1/')
 test -n "$VER"
 VER="v$VER"
 COMMIT=$(git rev-parse --short=8 HEAD)
