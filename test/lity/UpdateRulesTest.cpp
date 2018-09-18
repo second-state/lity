@@ -56,6 +56,18 @@ BOOST_AUTO_TEST_CASE(updateBasicTest)
 		BOOST_CHECK_EQUAL(balanceAt(account(i)), balance[i] + 10*age[i]);
 }
 
+
+BOOST_AUTO_TEST_CASE(fibonacciTest)
+{
+	deployContract("fibonacci.sol");
+
+	sendEther(m_contractAddress, u256(10000));
+
+	BOOST_REQUIRE(callContractFunction("calc()") == encodeArgs(true));
+
+	BOOST_REQUIRE(callContractFunction("get(uint256)", u256(7)) == encodeArgs(u256(13)));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 }
