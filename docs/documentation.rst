@@ -52,6 +52,7 @@ Analysis Tool
 +++++++++++++
 
 - :ref:`Oyente Integration <oyente-integration>`
+- :ref:`Integrate CyberMiles Remix & MetaMask <integrate-cybermiles-remix-metamask>`
 
 Performant & Flexible
 `````````````````````
