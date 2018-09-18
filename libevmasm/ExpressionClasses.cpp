@@ -199,9 +199,9 @@ ExpressionClasses::Id ExpressionClasses::tryToSimplify(Expression const& _expr)
 		//for (Id arg: _expr.arguments)
 		//	cout << fullDAGToString(arg) << ", ";
 		//cout << ")" << endl;
-		//cout << "with rule " << match->first.toString() << endl;
-		//ExpressionTemplate t(match->second());
-		//cout << "to " << match->second().toString() << endl;
+		//cout << "with rule " << match->pattern.toString() << endl;
+		//ExpressionTemplate t(match->action(), _expr.item->location());
+		//cout << "to " << t.toString() << endl;
 		return rebuildExpression(ExpressionTemplate(match->action(), _expr.item->location()));
 	}
 
