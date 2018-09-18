@@ -274,62 +274,93 @@ std::vector<SimplificationRule<Pattern>> simplificationRuleList(
 			}};
 		}
 	}
-
-	// move constants across subtractions
-	rules += std::vector<SimplificationRule<Pattern>>{
+	for (auto const& add_sub: std::vector<std::pair<Instruction, Instruction>>{
+		{Instruction::ADD, Instruction::SUB},
+		{Instruction::SADD, Instruction::SSUB}
+	})
+	{
+		auto const& add = add_sub.first;
+		auto const& sub = add_sub.second;
+		for (auto xa: {std::vector<Pattern>{X, A}, std::vector<Pattern>{A, X}})
 		{
-			// X - A -> X + (-A)
-			{Instruction::SUB, {X, A}},
-			[=]() -> Pattern { return {Instruction::ADD, {X, 0 - A.d()}}; },
-			false
-		}, {
-			// (X + A) - Y -> (X - Y) + A
-			{Instruction::SUB, {{Instruction::ADD, {X, A}}, Y}},
-			[=]() -> Pattern { return {Instruction::ADD, {{Instruction::SUB, {X, Y}}, A}}; },
-			false
-		}, {
-			// (A + X) - Y -> (X - Y) + A
-			{Instruction::SUB, {{Instruction::ADD, {A, X}}, Y}},
-			[=]() -> Pattern { return {Instruction::ADD, {{Instruction::SUB, {X, Y}}, A}}; },
-			false
-		}, {
-			// X - (Y + A) -> (X - Y) + (-A)
-			{Instruction::SUB, {X, {Instruction::ADD, {Y, A}}}},
-			[=]() -> Pattern { return {Instruction::ADD, {{Instruction::SUB, {X, Y}}, 0 - A.d()}}; },
-			false
-		}, {
-			// X - (A + Y) -> (X - Y) + (-A)
-			{Instruction::SUB, {X, {Instruction::ADD, {A, Y}}}},
-			[=]() -> Pattern { return {Instruction::ADD, {{Instruction::SUB, {X, Y}}, 0 - A.d()}}; },
-			false
-		},
-		{
-			// X - A -> X + (-A)
-			{Instruction::SSUB, {X, A}},
-			[=]() -> Pattern { return {Instruction::SADD, {X, 0 - A.d()}}; },
-			false
-		}, {
-			// (X + A) - Y -> (X - Y) + A
-			{Instruction::SSUB, {{Instruction::SADD, {X, A}}, Y}},
-			[=]() -> Pattern { return {Instruction::SADD, {{Instruction::SSUB, {X, Y}}, A}}; },
-			false
-		}, {
-			// (A + X) - Y -> (X - Y) + A
-			{Instruction::SSUB, {{Instruction::SADD, {A, X}}, Y}},
-			[=]() -> Pattern { return {Instruction::SADD, {{Instruction::SSUB, {X, Y}}, A}}; },
-			false
-		}, {
-			// X - (Y + A) -> (X - Y) + (-A)
-			{Instruction::SSUB, {X, {Instruction::SADD, {Y, A}}}},
-			[=]() -> Pattern { return {Instruction::SADD, {{Instruction::SSUB, {X, Y}}, 0 - A.d()}}; },
-			false
-		}, {
-			// X - (A + Y) -> (X - Y) + (-A)
-			{Instruction::SSUB, {X, {Instruction::SADD, {A, Y}}}},
-			[=]() -> Pattern { return {Instruction::SADD, {{Instruction::SSUB, {X, Y}}, 0 - A.d()}}; },
-			false
+			rules += std::vector<SimplificationRule<Pattern>>{{
+				// (X + A) - B -> X + (A - B), X - (B - A)
+				{sub, {{add, xa}, B}},
+				[=]() -> Pattern {
+					if (A.d() < B.d()) {
+						return {sub, {X, B.d() - A.d()}};
+					} else {
+						return {add, {X, A.d() - B.d()}};
+					}
+				},
+				false
+			}, {
+				// B - (X + A) -> (B - A) - X
+				{sub, {B, {add, xa}}},
+				[=]() -> Pattern { return {sub, {B.d() - A.d(), X}}; },
+				false
+			}};
 		}
-	};
+		rules += std::vector<SimplificationRule<Pattern>>{{
+			// (X - A) + B -> X + (B - A), X - (A - B)
+			{add, {{sub, {X, A}}, B}},
+			[=]() -> Pattern {
+				if (B.d() < A.d()) {
+					return {sub, {X, A.d() - B.d()}};
+				} else {
+					return {add, {X, B.d() - A.d()}};
+				}
+			},
+			false
+		}, {
+			// B + (X - A) -> X + (B - A), X - (A - B)
+			{add, {B, {sub, {X, A}}}},
+			[=]() -> Pattern {
+				if (B.d() < A.d()) {
+					return {sub, {X, A.d() - B.d()}};
+				} else {
+					return {add, {X, B.d() - A.d()}};
+				}
+			},
+			false
+		}, {
+			// (X - A) - B -> X - (A + B)
+			// B - (X - A) -> (A + B) - X -> overflow?
+			{sub, {{sub, {X, A}}, B}},
+			[=]() -> Pattern { return {sub, {X, A.d() + B.d()}}; },
+			false
+		}, {
+			// (A - X) - B -> (A - B) - X
+			// B - (A - X) -> X + (B - A) -> underflow?
+			{sub, {{sub, {A, X}}, B}},
+			[=]() -> Pattern { return {sub, {A.d() - B.d(), X}}; },
+			false
+		}};
+
+		// move constants across subtractions
+		rules += std::vector<SimplificationRule<Pattern>>{{
+			// (X + A) - Y -> (X - Y) + A
+			{sub, {{add, {X, A}}, Y}},
+			[=]() -> Pattern { return {add, {{sub, {X, Y}}, A}}; },
+			false
+		}, {
+			// (A + X) - Y -> (X - Y) + A
+			{sub, {{add, {A, X}}, Y}},
+			[=]() -> Pattern { return {add, {{sub, {X, Y}}, A}}; },
+			false
+		}, {
+			// X - (Y + A) -> (X - Y) - A
+			{sub, {X, {add, {Y, A}}}},
+			[=]() -> Pattern { return {sub, {{sub, {X, Y}}, A}}; },
+			false
+		}, {
+			// X - (A + Y) -> (X - Y) - A
+			{sub, {X, {add, {A, Y}}}},
+			[=]() -> Pattern { return {sub, {{sub, {X, Y}}, A}}; },
+			false
+		}};
+	}
+
 	return rules;
 }
 
