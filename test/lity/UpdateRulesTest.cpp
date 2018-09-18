@@ -11,20 +11,20 @@ namespace solidity
 namespace test
 {
 
-static unique_ptr<bytes> s_compiledContract;
+static map<string, unique_ptr<bytes>> s_compiledContracts;
 
 class UpdateRulesTestFramework: public ContractExecutionFramework
 {
 protected:
-	void deployContract()
+	void deployContract(string _contractFileName)
 	{
-		if (!s_compiledContract)
-			s_compiledContract.reset(new bytes(compileContractFile(
-				"test/lity/contracts/updaterules.sol",
+		if (!s_compiledContracts[_contractFileName])
+			s_compiledContracts[_contractFileName].reset(new bytes(compileContractFile(
+				"test/lity/contracts/" + _contractFileName,
 				"C")));
 
 		bytes args = encodeArgs();
-		sendMessage(*s_compiledContract + args, true);
+		sendMessage(*(s_compiledContracts[_contractFileName]) + args, true);
 		BOOST_REQUIRE(!m_output.empty());
 	}
 };
@@ -34,7 +34,7 @@ BOOST_FIXTURE_TEST_SUITE(LityRules, UpdateRulesTestFramework)
 
 BOOST_AUTO_TEST_CASE(updateBasicTest)
 {
-	deployContract();
+	deployContract("updaterules.sol");
 	int const numUser = 10;
 	u256 balance[numUser+1];
 	int age[numUser+1];
