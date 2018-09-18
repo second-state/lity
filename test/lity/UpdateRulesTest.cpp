@@ -68,6 +68,61 @@ BOOST_AUTO_TEST_CASE(fibonacciTest)
 	BOOST_REQUIRE(callContractFunction("get(uint256)", u256(7)) == encodeArgs(u256(13)));
 }
 
+
+BOOST_AUTO_TEST_CASE(catsTest)
+{
+	deployContract("cats.sol");
+
+	sendEther(m_contractAddress, u256(10000));
+
+	srand(42);
+
+	auto singleCatTest = [this]() {
+		int loc = rand()%20;
+		BOOST_REQUIRE(callContractFunction("addCat(uint256)", u256(loc)) == encodeArgs(true));
+		vector<pair<int, int>> foods;
+		int numFood = rand()%7+3;
+		foods.push_back({loc, 10}); // make the cat move 10 unit forward at least
+		for (int i = 1; i < numFood; i++)
+			foods.push_back({rand()%100, rand()%10});
+		for (auto f: foods) {
+			BOOST_REQUIRE(
+				callContractFunction(
+					"addFood(uint256,uint256)",
+					u256(f.first),
+					u256(f.second)
+				) == encodeArgs(true)
+			);
+		}
+		sort(foods.begin(), foods.end());
+		int energy = 0;
+		for (int i = 0 ; i < numFood ;)
+		{
+			if (foods[i].first < loc) { // we have already passed the food
+				i++;
+			}
+			else if (foods[i].first == loc) { // current location have food
+				while (i < numFood && foods[i].first == loc) {
+					energy += foods[i].second;
+					i++;
+				}
+			}
+			else {
+				if (energy == 0)
+					break;
+				loc++;
+				energy--;
+			}
+		}
+		BOOST_REQUIRE(callContractFunction("run()") == encodeArgs(true));
+		BOOST_REQUIRE(callContractFunction("queryCatCoord(uint256)", u256(0)) == encodeArgs(u256(loc)));
+		BOOST_REQUIRE(callContractFunction("reset()") == encodeArgs(true));
+	};
+
+	for (int repeatCounter = 0; repeatCounter < 10; repeatCounter++)
+		singleCatTest();
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 }
