@@ -44,6 +44,29 @@ factInsert
 
 This operator takes a struct with storage data location, evaluates to fact handle, which has type ``uint256``. Insert the reference to the storage struct into working memory.
 
+For example:
+
+.. code-block:: ts
+
+   contract C {
+     struct fact { int x; }
+     fact[] facts;
+     constructor() public {
+        facts.push(fact(0));
+        factInsert facts[facts.length-1]; // insert the fact into working memory
+     }
+   }
+
+And note that the following statement won't compile:
+
+.. code-block:: ts
+
+   factInsert fact(0);
+
+The reason is that ``fact(0)`` is a reference with memory data location, which is not persistant thus cannot be inserted into working memory.
+
+For more details about data location mechanism, please refer to `solidity's documentation <https://solidity.readthedocs.io/en/v0.4.25/types.html#data-location>`_
+
 factDelete
 """"""""""
 
