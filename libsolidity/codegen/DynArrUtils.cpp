@@ -26,18 +26,18 @@ void DynArrUtils::clearArray()
 	m_context << Instruction::MSTORE;
 }
 
-// TODO: item with elementSize
 // Stack pre : reference item
 // Stack post:
 void DynArrUtils::pushItem()
 {
+	int stackHeight = m_context.stackHeight();
 	eth::AssemblyItem noRealloc = m_context.newTag();
 
 	// stack: refer item
-	m_context << Instruction::DUP2;
+	m_context << dupInstruction(elementSize+1);
 	getLen();
 	// stack: refer item len
-	m_context << Instruction::DUP3;
+	m_context << dupInstruction(elementSize+2);
 	getCap();
 	// stack: refer item len cap
 	m_context << Instruction::EQ;
@@ -47,29 +47,36 @@ void DynArrUtils::pushItem()
 	m_context.appendConditionalJumpTo(noRealloc);
 
 	// stack: refer item
-	m_context << Instruction::DUP2;
+	m_context << dupInstruction(elementSize+1);
 	getCap();
 	// stack: refer item cap
 	m_context << 1 << Instruction::ADD << 2 << Instruction::MUL;
 	// stack: refer item (cap+1)*2
-	m_context << Instruction::DUP3 << Instruction::SWAP1;
+	m_context << dupInstruction(elementSize+2) << Instruction::SWAP1;
 	// stack: refer item refer (cap+1)*2
 	reAlloc();
 
 	m_context << noRealloc;
 	// stack: refer item
-	m_context << Instruction::DUP2;
+	m_context << dupInstruction(elementSize+1);
 	// stack: refer item refer
 	incrLen();
 	// stack: refer item len'
-	m_context << Instruction::DUP3 << Instruction::SWAP1;
+	m_context << dupInstruction(elementSize+2) << Instruction::SWAP1;
 	// stack: refer item refer len'
 	m_context << 1 << Instruction::SWAP1 << Instruction::SUB;
 	// stack: ... refer len'-1
 	accessIndex(false);
 	// stack: refer item memAddrToBePlaced
-	m_context << Instruction::MSTORE; // TODO: item with elementSize
-	m_context << Instruction::POP;
+	for(int i=0; i<elementSize; i++)
+	{
+		m_context << Instruction::SWAP1 << Instruction::DUP2;
+		// stack: refer item memAddrToBePlaced item.back(word-sized) memAddrToBePlaced
+		m_context << 32*(elementSize-1-i) << Instruction::ADD << Instruction::MSTORE;
+	}
+	// stack: refer memAddrToBePlaced
+	m_context << Instruction::POP << Instruction::POP;
+	solAssert(stackHeight-(int)m_context.stackHeight() == elementSize+1, "stack height error in DynArrUtils::pushItem");
 }
 
 // Stack pre : reference
