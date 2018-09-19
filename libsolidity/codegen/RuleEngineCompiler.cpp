@@ -23,6 +23,7 @@ namespace dev
 {
 namespace solidity
 {
+dev::u256 ReteNode::serialNo=0;
 
 void RuleEngineCompiler::appendFireAllRules(ContractDefinition const& _contract)
 {
@@ -83,54 +84,35 @@ void RuleEngineCompiler::appendFactDelete()
 }
 
 eth::AssemblyItem RuleEngineCompiler::compileNetwork(Rule const& _rule)
-{	
+{
 	eth::AssemblyItem ruleTag = m_context.newTag();
 	m_context.appendJumpTo(ruleTag);
-	// nodes
+	// gen network nodes
 	_rule.accept(*this);
+	// gen node code
+	for(auto pr: m_alphaNodes) compile(*pr.second);
+	for(auto pr: m_typeNodes) compile(*pr.second);
+	for(auto pr: m_joinNodes) compile(*pr.second);
+	compile(*m_termNode);
 	// controll flow of nodes
 	m_context << ruleTag;
-	for(auto nodeLabel: m_nodeOrder)
+	for(auto node: m_ReteNodeOrder)
 	{
 		eth::AssemblyItem returnLabel = m_context.pushNewTag();
-		m_context.appendJumpTo(nodeLabel);
+		m_context.appendJumpTo(entryNode(*node));
 		m_context << returnLabel;
 		m_context.adjustStackOffset(-1);
 	}
 	return ruleTag;
 }
 
-bool RuleEngineCompiler::visit(Rule const& _rule)
+void RuleEngineCompiler::compile(TypeNode const& _node)
 {
-	m_currentRule = &_rule;
-	return true;
-}
-
-eth::AssemblyItem RuleEngineCompiler::entryFact(FactDeclaration const& _fact)
-{
-	if (0 == m_entryFact.count(&_fact))
-		m_entryFact.insert(make_pair(&_fact, m_context.newTag()));
-	return m_entryFact.find(&_fact)->second;
-}
-
-eth::AssemblyItem RuleEngineCompiler::entryField(FieldExpression const& _field)
-{
-	if (0 == m_entryField.count(&_field))
-		m_entryField.insert(make_pair(&_field, m_context.newTag()));
-	return m_entryField.find(&_field)->second;
-}
-
-bool RuleEngineCompiler::visit(FactDeclaration const& _fact)
-{
-	m_context << entryFact(_fact);
-	m_nodeOrder.push_back(entryFact(_fact));
-	m_currentFact = &_fact;
-	m_currentFieldNo = 0;
+	m_context << entryNode((ReteNode const&)_node);
 	// storage list
-	auto inListAddr = keccak256(_fact.type()->richIdentifier()+"-factlist");
+	auto inListAddr = keccak256(_node.type()->richIdentifier()+"-factlist");
 	// listPtr(to memList) in storage
-	auto outListPtrAddr = keccak256(m_currentRule->name()+_fact.name()+"-factlist");
-	m_nodeOutListPtrAddr.push_back(outListPtrAddr);
+	auto outListPtrAddr = _node.outAddr();
 	m_context << 32*3;
 	utils().allocateMemory();
 	m_context << outListPtrAddr << Instruction::SSTORE;
@@ -169,33 +151,14 @@ bool RuleEngineCompiler::visit(FactDeclaration const& _fact)
 	m_context << Instruction::POP << Instruction::POP;
 	m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);
 	m_context.setStackOffset(0); // not sure this is the right place
-	return true;
 }
 
-bool RuleEngineCompiler::visit(FieldExpression const& _fieldExpr)
+void RuleEngineCompiler::compile(AlphaNode const& _node)
 {
-	// stack pre:
-	// stack post:
-
-	// Node function
-	// input  : list of factID (in memory)
-	// output : list of factID (in memory)
-	// outline:
-	//   get inList address
-	//   get outList address
-	//   for each fact in inList
-	//     if FieldExp(the item)
-	//     put this fact to outList
-	m_context << entryField(_fieldExpr);
-	m_nodeOrder.push_back(entryField(_fieldExpr));
-
-	string nodeName = m_currentRule->name()+"-"+m_currentFact->name()+"-"+to_string(m_currentFieldNo);
-
-	m_nodeOutListPtrAddr.push_back(keccak256(nodeName+"-factlist")); // TODO: dynamic allocation
-
+	m_context << entryNode((ReteNode const&)_node);
 	// listPtr(to memList) in storage
-	auto inListPtrAddr  = m_nodeOutListPtrAddr[m_nodeOutListPtrAddr.size()-2];
-	auto outListPtrAddr = m_nodeOutListPtrAddr[m_nodeOutListPtrAddr.size()-1];
+	auto inListPtrAddr  = _node.parent()->outAddr();
+	auto outListPtrAddr = _node.outAddr();
 
 	m_context << 32*3;
 	utils().allocateMemory();
@@ -206,12 +169,15 @@ bool RuleEngineCompiler::visit(FieldExpression const& _fieldExpr)
 		[&] (CompilerContext& context) {
 			eth::AssemblyItem noAdd = context.newTag();
 			// stack: elmtMemAddr
-			// TODO: item with elementSize
 			context << Instruction::MLOAD;
 			// stack: fact
-			context.addFact(m_currentRule->fact(0), 1);
-			ExpressionCompiler(context).compile(_fieldExpr.expression());
-			context.removeFact(m_currentRule->fact(0));
+			context.addFact(_node.fact(), 1);
+			auto exprs = _node.exprs();
+			for(auto fieldExpr: exprs)
+				ExpressionCompiler(context).compile(fieldExpr->expression());
+			for(int i=0; i< int(exprs.size())-1; i++)
+				m_context << Instruction::AND;
+			context.removeFact(_node.fact());
 			// stack: fact Expr
 			context << Instruction::ISZERO;
 			context.appendConditionalJumpTo(noAdd);
@@ -228,16 +194,85 @@ bool RuleEngineCompiler::visit(FieldExpression const& _fieldExpr)
 	);
 	m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);
 	m_context.setStackOffset(0); // not sure this is the right place
+}
+
+void RuleEngineCompiler::compile(JoinNode const& _node)
+{
+	m_context << entryNode((ReteNode const&)_node);
+	if(_node.leftParent()==nullptr) // alias
+	{
+		m_context << _node.rightParent()->outAddr() << Instruction::SLOAD;
+		m_context << _node.outAddr() << Instruction::SSTORE;
+	}
+	else // join
+	{
+		// TODO: joinNode codegen
+	}
+	m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);
+	m_context.setStackOffset(0); // not sure this is the right place
+}
+
+void RuleEngineCompiler::compile(TermNode const& _node)
+{
+	m_context << entryNode((ReteNode const&)_node);
+	// alias
+	m_context << _node.parent()->outAddr() << Instruction::SLOAD;
+	m_context << _node.outAddr() << Instruction::SSTORE;
+	m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);
+	m_context.setStackOffset(0); // not sure this is the right place
+}
+
+bool RuleEngineCompiler::visit(Rule const& _rule)
+{
+	m_currentRule = &_rule;
+	return true;
+}
+
+bool RuleEngineCompiler::visit(FactDeclaration const& _fact)
+{
+	m_currentFact = &_fact;
+	m_currentFieldNo = 0;
+	return true;
+}
+
+bool RuleEngineCompiler::visit(FieldExpression const& _fieldExpr)
+{
+	ExprUtils exprUiils((Expression const&) _fieldExpr);
+	if (exprUiils.isAlpha())
+		m_alphaExprs[m_currentFact].push_back(&_fieldExpr);
+	else
+		m_betaExprs[m_currentFact].push_back(&_fieldExpr);
 	return false;
 }
 
-void RuleEngineCompiler::endVisit(Rule const&)
+void RuleEngineCompiler::endVisit(Rule const& _rule)
 {
+	TermNode& termNode = this->termNode();
+	termNode.setPar(this->joinNode(_rule.lastFact()));
+
 	m_currentRule = nullptr;
+	m_termNode = &termNode;
+
+	genOrder();
 }
 
-void RuleEngineCompiler::endVisit(FactDeclaration const&)
+void RuleEngineCompiler::endVisit(FactDeclaration const& _fact)
 {
+	auto factType = _fact.type();
+	TypeNode const& typeNode = this->typeNode(factType);
+	AlphaNode& alphaNode = this->alphaNode(_fact);
+	for (auto fieldExpr: m_alphaExprs[m_currentFact])
+		alphaNode.addExpr(*fieldExpr);
+	alphaNode.setPar(typeNode);
+
+	JoinNode& joinNode = this->joinNode(_fact);
+	for (auto fieldExpr: m_betaExprs[m_currentFact])
+		joinNode.addExpr(*fieldExpr);
+	int factIdx = m_currentRule->factIndex(_fact);
+	if(factIdx!=0)
+		joinNode.setLeftPar(this->joinNode(m_currentRule->fact(factIdx-1)));
+	joinNode.setRightPar(alphaNode);
+	
 	m_currentFact = nullptr;
 	m_currentFieldNo = 0;
 }
@@ -412,9 +447,9 @@ void RuleEngineCompiler::appendAssertHaveRuleEngineLock()
 
 void RuleEngineCompiler::appendCleanUpNodes()
 {
-	for (auto ptr: m_nodeOutListPtrAddr)
+	for (auto ptrAddr: getAllNodeOutListPtrAddr())
 	{
-		m_context << ptr << Instruction::SLOAD;
+		m_context << ptrAddr << Instruction::SLOAD;
 		DynArrUtils(m_context, 1).clearArray();
 	}
 }

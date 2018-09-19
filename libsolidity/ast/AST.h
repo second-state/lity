@@ -1775,6 +1775,15 @@ public:
 
 	int numOfFacts() const { return m_factDeclarations.size(); }
 	FactDeclaration const& fact(int i) const { return *m_factDeclarations[i].get(); }
+	FactDeclaration const& lastFact() const { return *m_factDeclarations.back().get(); }
+	// return -1 if not found
+	int factIndex(FactDeclaration const& _fact) const 
+	{
+		for(int i=0; i<(int)m_factDeclarations.size(); i++)
+			if(m_factDeclarations[i].get()==&_fact)
+				return i;
+		return -1;
+	}
 	Statement const& thenBody() const {return *m_thenBody.get(); }
 private:
 	std::vector<ASTPointer<FactDeclaration>> m_factDeclarations;
