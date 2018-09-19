@@ -122,3 +122,10 @@ one ether if they haven't received age pension yet.
     }
 
 The age pension is paid when ``fireAllRules`` is executed.
+
+More about the rule engine
+````````
+For more examples, please see :ref:`rule engine example compilation <rule-examples>`
+
+For specification of the rule engine, please refer to :ref:`rule engine specs <rule-engine-specs>`
+
