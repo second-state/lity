@@ -5,6 +5,14 @@ Verify Dogecoin Block on Travis
 
 Dogecoin verifier is a smart contract on Travis to verify correctness of Dogecoin block header and its pow hash. There is a step by step tutorial for running Dogecoin verifier on Travis locally.
 
+Scrypt ENI Library
+------------------
+
+Dogecoin uses scrypt as its PoW hash algorithm. Our scrypt ENI library provides a simple interface for using scrypt:
+
+- Input: :code:`[0-9a-fA-F]{0,160}`, hex format of 0 to 80 bytes data
+- Output: :code:`[0-9a-f]{64}` hex format of 32 bytes data
+
 Install lity branch of Travis
 -----------------------------
 
