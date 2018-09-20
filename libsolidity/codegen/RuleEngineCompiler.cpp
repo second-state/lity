@@ -174,10 +174,15 @@ void RuleEngineCompiler::compile(AlphaNode const& _node)
 			// stack: fact
 			context.addFact(_node.fact(), 1);
 			auto exprs = _node.exprs();
-			for(auto fieldExpr: exprs)
-				ExpressionCompiler(context).compile(fieldExpr->expression());
-			for(int i=0; i< int(exprs.size())-1; i++)
-				m_context << Instruction::AND;
+			if(exprs.size()==0)
+				context << 1;
+			else
+			{
+				for(auto fieldExpr: exprs)
+					ExpressionCompiler(context).compile(fieldExpr->expression());
+				for(int i=0; i< int(exprs.size())-1; i++)
+					m_context << Instruction::AND;
+			}
 			context.removeFact(_node.fact());
 			// stack: fact Expr
 			context << Instruction::ISZERO;
