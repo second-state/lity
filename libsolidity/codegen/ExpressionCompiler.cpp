@@ -1566,9 +1566,7 @@ void ExpressionCompiler::endVisit(Identifier const& _identifier)
 	}
 	else if (auto fact = dynamic_cast<FactDeclaration const*>(declaration))
 	{
-		auto baseStackOffset = m_context.baseStackOffsetOfFact(*fact);
-		unsigned stackPos = m_context.baseToCurrentStackOffset(baseStackOffset);
-		m_context << dupInstruction(stackPos + 1);
+		appendFact(*fact);
 	}
 	else
 	{
@@ -2157,6 +2155,13 @@ void ExpressionCompiler::appendVariable(VariableDeclaration const& _variable, Ex
 		_variable.value()->accept(*this);
 		utils().convertType(*_variable.value()->annotation().type, *_variable.annotation().type);
 	}
+}
+
+void ExpressionCompiler::appendFact(FactDeclaration const & _fact)
+{
+	auto baseStackOffset = m_context.baseStackOffsetOfFact(_fact);
+	unsigned stackPos = m_context.baseToCurrentStackOffset(baseStackOffset);
+	m_context << dupInstruction(stackPos + 1);
 }
 
 void ExpressionCompiler::setLValueFromDeclaration(Declaration const& _declaration, Expression const& _expression)

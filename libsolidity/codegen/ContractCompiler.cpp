@@ -405,19 +405,20 @@ void ContractCompiler::appendRules(ContractDefinition const& _contract)
 		m_context << inListPtrAddr << Instruction::SLOAD;
 		Statement const& block = rule->thenBody();
 		// stack: listMemAddr
-		DynArrUtils(m_context, 1).forEachDo
+		DynArrUtils(m_context, rule->numOfFacts()).forEachDo
 		(
 			[&] (CompilerContext& context)
 			{
 				// stack: elmtMemAddr
-				// TODO: item with elementSize
-				context << Instruction::MLOAD;
-				// stack: fact
-				context.addFact(rule->fact(0), 1);
+				DynArrUtils(m_context, rule->numOfFacts()).extractElmtToStack();
+				// stack: facts
+				for(int i=0; i<rule->numOfFacts(); i++) context.addFact(rule->fact(i), rule->numOfFacts()-i);
 				block.accept(*this);
-				context.removeFact(rule->fact(0));
-				m_context << Instruction::POP;
-
+				for(int i=0; i<rule->numOfFacts(); i++)
+				{
+					context.removeFact(rule->fact(i));
+					m_context << Instruction::POP;
+				}
 				m_context << 0; // marker used to determine to break or not
 				ruleEngineCompiler.pushWhetherNeedReevaluation();
 				m_context << Instruction::ISZERO;
