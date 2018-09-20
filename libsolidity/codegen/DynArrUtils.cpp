@@ -141,6 +141,21 @@ void DynArrUtils::incrLen()
 	m_context << Instruction::MSTORE;
 }
 
+// Stack post: memory_offset
+// Stack post: elmt
+void DynArrUtils::extractElmtToStack()
+{
+	for(int i=0; i<elementSize; i++)
+	{
+		m_context << dupInstruction(1);
+		m_context << 32*i << Instruction::ADD << Instruction::MLOAD;
+		m_context << Instruction::SWAP1;
+		// stack: ... Ei elmtMemAddr
+	}
+	m_context << Instruction::POP;
+	// stack: E0, E1 ... En-1
+}
+
 // Stack pre: reference index
 // Stack post: memory_offset
 void DynArrUtils::accessIndex(bool _doBoundsCheck)
