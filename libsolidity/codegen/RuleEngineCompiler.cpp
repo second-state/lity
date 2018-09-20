@@ -169,6 +169,7 @@ void RuleEngineCompiler::compile(AlphaNode const& _node)
 		[&] (CompilerContext& context) {
 			eth::AssemblyItem noAdd = context.newTag();
 			// stack: elmtMemAddr
+			// tupleSize=1 since it's alphaNode
 			context << Instruction::MLOAD;
 			// stack: fact
 			context.addFact(_node.fact(), 1);
@@ -199,6 +200,7 @@ void RuleEngineCompiler::compile(AlphaNode const& _node)
 void RuleEngineCompiler::compile(JoinNode const& _node)
 {
 	m_context << entryNode((ReteNode const&)_node);
+
 	if(_node.leftParent()==nullptr) // alias
 	{
 		m_context << _node.rightParent()->outAddr() << Instruction::SLOAD;
@@ -206,7 +208,67 @@ void RuleEngineCompiler::compile(JoinNode const& _node)
 	}
 	else // join
 	{
-		// TODO: joinNode codegen
+		JoinNode const& left = *_node.leftParent();
+		AlphaNode const& right = *_node.rightParent();
+		
+		m_context << 32*3;
+		utils().allocateMemory();
+		m_context << _node.outAddr() << Instruction::SSTORE;
+
+		m_context << right.outAddr() << Instruction::SLOAD;
+		DynArrUtils(m_context, 1).forEachDo(
+			[&] (CompilerContext& context)
+			{
+				// stack: elmtMemAddr
+				// tupleSize=1 since it's alphaNode
+				context << Instruction::MLOAD;
+				// stack: fact
+				context.addFact(right.fact(), 1);
+				context << left.outAddr() << Instruction::SLOAD;
+				
+				DynArrUtils(m_context, left.tupeSize()).forEachDo(
+					[&] (CompilerContext& context)
+					{
+						eth::AssemblyItem noAdd = context.newTag();
+						// stack: elmtMemAddr
+						DynArrUtils(m_context, left.tupeSize()).extractElmtToStack();
+						for(int i=0; i<left.tupeSize(); i++)
+							context.addFact(left.fact(i), left.tupeSize()-i);
+						// stack: left.facts
+						auto exprs = _node.exprs();
+						if(exprs.size()==0)
+							context << 1;
+						else
+						{
+							for(auto fieldExpr: exprs)
+								ExpressionCompiler(context).compile(fieldExpr->expression());
+							for(int i=0; i< int(exprs.size())-1; i++)
+								context << Instruction::AND;
+						}
+						// stack: left.facts Expr
+						context << Instruction::ISZERO;
+						context.appendConditionalJumpTo(noAdd);
+						// stack: left.facts
+						context << _node.outAddr() << Instruction::SLOAD;
+						// stack: left.facts outList
+						for(int i=0; i<left.tupeSize(); i++) appendFact(left.fact(i));
+						appendFact(right.fact());
+						// stack: left.facts outList left.facts right.fact
+						DynArrUtils(m_context, _node.tupeSize()).pushItem();
+
+						context << noAdd;
+						// stack: left.facts
+						for(int i=0; i<left.tupeSize(); i++)
+						{
+							context.removeFact(left.fact(i));
+							context << Instruction::POP;
+						}
+					}
+				);
+				context.removeFact(right.fact());
+				context << Instruction::POP;
+			}
+		);
 	}
 	m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);
 	m_context.setStackOffset(0); // not sure this is the right place
@@ -271,6 +333,8 @@ void RuleEngineCompiler::endVisit(FactDeclaration const& _fact)
 	int factIdx = m_currentRule->factIndex(_fact);
 	if(factIdx!=0)
 		joinNode.setLeftPar(this->joinNode(m_currentRule->fact(factIdx-1)));
+	for(int i=0; i<=factIdx; i++)
+		joinNode.addFact(m_currentRule->fact(i));
 	joinNode.setRightPar(alphaNode);
 	
 	m_currentFact = nullptr;
@@ -285,6 +349,13 @@ void RuleEngineCompiler::endVisit(FieldExpression const&)
 CompilerUtils RuleEngineCompiler::utils()
 {
 	return CompilerUtils(m_context);
+}
+
+void RuleEngineCompiler::appendFact(FactDeclaration const & _fact)
+{
+	auto baseStackOffset = m_context.baseStackOffsetOfFact(_fact);
+	unsigned stackPos = m_context.baseToCurrentStackOffset(baseStackOffset);
+	m_context << dupInstruction(stackPos + 1);
 }
 
 // push item to storage array (WARNING: this is not solidity dynamic array)

@@ -94,17 +94,20 @@ public:
 	JoinNode(): m_leftParent(nullptr), m_rightParent(nullptr) {}
 	JoinNode const* leftParent() const { return m_leftParent; }
 	AlphaNode const* rightParent() const { return m_rightParent; }
+	const std::vector<FieldExpression const*>& exprs() const { return m_exprs; }
 	void setLeftPar(JoinNode const& _node) { m_leftParent = &_node; }
 	void setRightPar(AlphaNode const& _node) { m_rightParent = &_node; }
 	void addExpr(FieldExpression const& _fieldExpr) { m_exprs.push_back(&_fieldExpr); }
-	int tupeSize() { return m_tupleSize; }
+	void addFact(FactDeclaration const& _fact) { m_facts.push_back(&_fact); }
+	int tupeSize() const { return m_facts.size(); }
+	FactDeclaration const& fact(int i) const { return *m_facts[i]; }
 	virtual void print() const override
 	{
 		std::cerr << "JoinNode: " << this << "\n";
 		std::cerr << "  outAddr     : " << m_out << "\n";
 		std::cerr << "  left (beta ):" << m_leftParent << "\n";
 		std::cerr << "  right(alpha): " << m_rightParent << "\n";
-		std::cerr << "  tupleSize   : " << m_tupleSize << "\n";
+		std::cerr << "  tupleSize   : " << m_facts.size() << "\n";
 		for(auto expr: m_exprs)
 		{
 			ASTPrinter printer(*expr);
@@ -122,7 +125,7 @@ private:
 	JoinNode const* m_leftParent;
 	AlphaNode const* m_rightParent;
 	std::vector<FieldExpression const*> m_exprs;
-	int m_tupleSize;
+	std::vector<FactDeclaration const*> m_facts;
 };
 
 // terminal node for a certain rule
@@ -266,6 +269,8 @@ private:
 		ptsAddrs.push_back(m_termNode->outAddr());
 		return ptsAddrs;
 	}
+
+	void appendFact(FactDeclaration const & _fact);
 	// TODO: use ArrayUtils
 	void appendPushItemToStorageArray(h256 _itemAddr);
 	void appendDeleteItemInStorageArray();
