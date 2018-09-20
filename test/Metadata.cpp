@@ -68,7 +68,7 @@ bool isValidMetadata(string const& _metadata)
 	if (!metadata["version"].isNumeric() || metadata["version"] != 1)
 		return false;
 
-	if (!metadata["language"].isString() || metadata["language"].asString() != "Solidity")
+	if (!metadata["language"].isString() || (metadata["language"].asString() != "Lity" && metadata["language"].asString() != "Solidity"))
 		return false;
 
 	/// @TODO add more strict checks

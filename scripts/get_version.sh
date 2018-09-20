@@ -28,4 +28,4 @@
 
 set -e
 
-grep -oP "SOLC_PROJECT_VERSION \"?\K[0-9.]+(?=\")"? $(dirname "$0")/../CMakeLists.txt
+grep -oP "LITY_PROJECT_VERSION \"?\K[0-9.]+(?=\")"? $(dirname "$0")/../CMakeLists.txt
