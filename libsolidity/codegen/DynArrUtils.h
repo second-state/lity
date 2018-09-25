@@ -61,7 +61,7 @@ public:
 	/// Stack post: memory_offset
 	void accessIndex(bool _doBoundsCheck = true);
 
-	/// Stack post: memory_offset
+	/// Stack post: memory_pre
 	/// Stack post: elmt
 	void extractElmtToStack();
 	/// For each element do f.
