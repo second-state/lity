@@ -141,7 +141,7 @@ void DynArrUtils::incrLen()
 	m_context << Instruction::MSTORE;
 }
 
-// Stack post: memory_offset
+// Stack post: memory_pre
 // Stack post: elmt
 void DynArrUtils::extractElmtToStack()
 {

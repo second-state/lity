@@ -1,3 +1,21 @@
+### Lity 1.2.2 (2018-09-25)
+
+Language Features:
+ * Rule:
+   - Implement update clause for rule
+   - Implement multi-pattern grammar
+ * Validator Only Contract:
+   - Provide `isValidator()` to support validator only contract
+
+Bugfixes:
+ * Fix debug code for new Pattern API
+ * Fix SimplificationRuleList preset rules for add/sub overflow errors
+
+Refactoring:
+ * Refine the architecture of RuleEngineCompiler
+ * Replace naive memory address for rule with stack variable
+ * Uninline rule network node
+
 ### Lity 1.2.1 (2018-08-30)
 
 Features:
