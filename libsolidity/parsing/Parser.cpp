@@ -1765,14 +1765,14 @@ ASTPointer<FactDeclaration> Parser::parseFactDeclaration()
 	auto name = expectIdentifierToken();
 	expectToken(Token::Colon);
 	auto type = parseTypeName(false);
-	if (m_scanner->currentToken() != Token::LParen)
-		parserError(string("Expected ("));
-	do
+
+	expectToken(Token::LParen);
+	while (m_scanner->currentToken() != Token::RParen)
 	{
-		m_scanner->next();
 		fieldExpressions.push_back(parseFieldExpression());
+		if(m_scanner->currentToken()==Token::Comma)
+			m_scanner->next();
 	}
-	while (m_scanner->currentToken() == Token::Comma);
 	expectToken(Token::RParen);
 	return nodeFactory.createNode<FactDeclaration>(name, type, fieldExpressions);
 }
