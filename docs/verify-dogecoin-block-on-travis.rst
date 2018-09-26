@@ -16,29 +16,34 @@ Dogecoin uses scrypt as its PoW hash algorithm. Our scrypt ENI library provides 
 Install lity branch of Travis
 -----------------------------
 
-First we need to use lity branch of travis:
+First we need to use lity branch of Travis:
 
 .. code:: bash
 
-  # Get lity branch of Travis
   go get github.com/CyberMiles/travis
   cd $GOPATH/src/github.com/CyberMiles/travis
   git checkout lity
 
-  # Install libeni
-  wget -O $HOME/libeni.tgz https://github.com/CyberMiles/libeni/releases/download/v1.2.0/libeni-1.2.0_ubuntu-16.04.tgz
+and then install latest version of libENI (check `Getting Started of libENI <https://lity.readthedocs.io/projects/libeni/en/latest/getting-started.html>`_ for more detail):
+
+.. code:: bash
+
+  wget -O $HOME/libeni.tgz <LATEST_LIBENI_TARBALL>
   tar zxvf $HOME/libeni.tgz -C $HOME
   mkdir -p $HOME/.travis/eni
   cp -r $HOME/libeni-1.2.0/lib $HOME/.travis/eni/lib
 
-  # Build & Install Travis
+build & install Travis:
+
+.. code:: bash
+
   cd $GOPATH/src/github.com/CyberMiles/travis
   make all
 
 Run Travis locally
 ------------------
 
-Then start a  Travis node locally.
+Then start a Travis node locally.
 
 .. code:: bash
 
