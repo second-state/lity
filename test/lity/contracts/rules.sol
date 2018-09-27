@@ -1,3 +1,4 @@
+pragma lity ^1.2.0;
 contract C {
     struct Person {
         uint age;
