@@ -22,7 +22,7 @@ Examples
 
 .. code:: ts
 
-  pragma solidity ^0.4.23;
+  //pragma solidity ^0.4.23;
 
   contract ERC827Interface {
     function totalSupply() public view returns (uint256);
@@ -54,7 +54,7 @@ Examples
 
 .. code:: ts
 
-  pragma solidity ^0.4.23;
+  //pragma solidity ^0.4.23;
 
   contract ERC827Base {
     function totalSupply() public view returns (uint256);

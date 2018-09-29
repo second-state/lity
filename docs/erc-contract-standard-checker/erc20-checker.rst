@@ -22,7 +22,7 @@ Examples
 
 .. code:: ts
 
-  pragma solidity ^0.4.23;
+  //pragma solidity ^0.4.23;
 
   contract ERC20Interface {
     function totalSupply() public view returns (uint);
@@ -53,7 +53,7 @@ Examples
 
 .. code:: ts
 
-  pragma solidity ^0.4.23;
+  //pragma solidity ^0.4.23;
 
   contract ERC20Interface {
     function totalSupply() public pure returns (uint); // mutability should be view, not pure

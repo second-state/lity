@@ -22,7 +22,7 @@ Examples
 
 .. code:: ts
 
-  pragma solidity ^0.4.23;
+  //pragma solidity ^0.4.23;
 
   contract ERC223Interface {
     function totalSupply() public view returns (uint);
@@ -49,7 +49,7 @@ Examples
 
 .. code:: ts
 
-  pragma solidity ^0.4.11;
+  //pragma solidity ^0.4.11;
 
   library SafeMath {
     function mul(uint a, uint b) internal pure returns (uint) {

@@ -50,7 +50,7 @@ There is an overflow issue at this statement :code:`uint256 amount = uint256(cnt
 
 .. code::
 
-  pragma solidity ^0.4.16;
+  //pragma solidity ^0.4.16;
 
   /**
   * @title SafeMath

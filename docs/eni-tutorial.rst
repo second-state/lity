@@ -41,7 +41,7 @@ Create a contract file called `Reverse.lity`.
 
 .. code:: C++
 
-  pragma solidity ^0.4.23;
+  //pragma solidity ^0.4.23;
   
   contract ReverseContract {
     function reverse(string input) public returns(string) {

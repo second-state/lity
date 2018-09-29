@@ -49,7 +49,7 @@ After running :code:`lityc`, it will automatically invoke :code:`oyente` command
 
   $ cat StringReverse.sol
 
-  pragma solidity ^0.4.0;
+  //pragma solidity ^0.4.0;
   contract StringReverse {
     function test() public pure returns (string) {
       string memory ret;

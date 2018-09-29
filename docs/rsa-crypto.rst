@@ -67,7 +67,7 @@ There is a simple contract that leverage ENI to do RSA encrypt / decrypt.
 
 .. code::
 
-  pragma solidity ^0.4.0;
+  //pragma solidity ^0.4.0;
 
   contract RSACrypto {
       function encrypt(string pubkey, string plaintext) public pure returns (string) {

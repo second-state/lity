@@ -22,7 +22,7 @@ Examples
 
 .. code:: ts
 
-  pragma solidity ^0.4.23;
+  //pragma solidity ^0.4.23;
 
   contract C20 {
     function totalSupply() public view returns (uint256);
@@ -74,7 +74,7 @@ Examples
 
 .. code:: ts
 
-  pragma solidity ^0.4.23;
+  //pragma solidity ^0.4.23;
 
   contract ERC884Interface {
     event Transfer(address indexed _from, address indexed _to, uint256 _tokenId);
