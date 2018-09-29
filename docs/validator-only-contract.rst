@@ -35,7 +35,7 @@ There is a simple contract that leverage isValidator to grant validators to modi
 .. code:: ts
 
   // pragma lity ^1.2.2;
-  pragma solidity ^0.4.24;
+  //pragma solidity ^0.4.24;
 
   contract ValidatorOnlyContractExample {
     uint[] BTCHeaders;
