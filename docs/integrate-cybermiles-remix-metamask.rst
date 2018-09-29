@@ -45,6 +45,7 @@ Using MetaMask in Remix IDE
 .. code:: bash
 
   //pragma solidity ^0.4.0;
+  pragma lity ^1.2.0;
 
   contract StringReverse {
     event log(string s);

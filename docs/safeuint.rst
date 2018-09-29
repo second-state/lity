@@ -28,6 +28,7 @@ Example
 .. code::
 
   //pragma solidity ^0.4.22;
+  pragma lity ^1.2.0;
 
   contract C{
       function c() public pure returns (safeuint) {

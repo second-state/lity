@@ -31,6 +31,7 @@ Here we will provide a contract example and explain a little bit.
 .. code:: C++
 
   //pragma solidity ^0.4.23;
+  pragma lity ^1.2.0;
 
   contract ReverseContract {
     function reverse(string input) public returns(string) {
