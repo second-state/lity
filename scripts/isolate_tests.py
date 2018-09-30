@@ -66,7 +66,7 @@ def extract_docs_cases(path):
           if m:
             ignore = False
         else:
-          m = re.search(r'^[ ]+pragma solidity .*[0-9]+\.[0-9]+\.[0-9]+;$', l)
+          m = re.search(r'^[ ]+pragma lity .*[0-9]+\.[0-9]+\.[0-9]+;$', l)
           if m:
             inside = True
             tests += [l]
