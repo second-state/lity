@@ -457,7 +457,7 @@ string IntegerType::richIdentifier() const
 	if (isAddress())
 		return "t_address";
 	if (isSafeUint())
-		return "t_safeuint";
+		return "t_uint256";
 	else
 		return "t_" + string(isSigned() ? "" : "u") + "int" + std::to_string(numBits());
 }
@@ -534,7 +534,7 @@ string IntegerType::toString(bool) const
 	if (isAddress())
 		return "address";
 	if (isSafeUint())
-		return "safeuint";
+		return "uint256";
 	string prefix = isSigned() ? "int" : "uint";
 	return prefix + dev::toString(m_bits);
 }

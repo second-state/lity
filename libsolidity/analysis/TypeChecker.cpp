@@ -55,6 +55,14 @@ bool typeSupportedByOldABIEncoder(Type const& _type)
 	return true;
 }
 
+string toStringInChecker(Type const& _type)
+{
+	if(auto intT = dynamic_cast<IntegerType const*>(&_type))
+		if(intT->isSafeUint())
+			return "safeuint";
+	return _type.toString();
+}
+
 }
 
 
@@ -594,9 +602,9 @@ void TypeChecker::endVisit(InheritanceSpecifier const& _inheritance)
 					(*arguments)[i]->location(),
 					"Invalid type for argument in constructor call. "
 					"Invalid implicit conversion from " +
-					type(*(*arguments)[i])->toString() +
+					toStringInChecker(*type(*(*arguments)[i])) +
 					" to " +
-					parameterTypes[i]->toString() +
+					toStringInChecker(*parameterTypes[i]) +
 					" requested."
 				);
 	}
@@ -1040,9 +1048,9 @@ void TypeChecker::endVisit(Return const& _return)
 			m_errorReporter.typeError(
 				_return.expression()->location(),
 				"Return argument type " +
-				type(*_return.expression())->toString() +
+				toStringInChecker(*type(*_return.expression())) +
 				" is not implicitly convertible to expected type " +
-				TupleType(returnTypes).toString(false) +
+				toStringInChecker(TupleType(returnTypes)) +
 				"."
 			);
 	}
@@ -1055,9 +1063,9 @@ void TypeChecker::endVisit(Return const& _return)
 			m_errorReporter.typeError(
 				_return.expression()->location(),
 				"Return argument type " +
-				type(*_return.expression())->toString() +
+				toStringInChecker(*type(*_return.expression())) +
 				" is not implicitly convertible to expected type (type of first return variable) " +
-				expected->toString() +
+				toStringInChecker(*expected) +
 				"."
 			);
 	}
@@ -1265,20 +1273,20 @@ bool TypeChecker::visit(VariableDeclarationStatement const& _statement)
 					m_errorReporter.typeError(
 						_statement.location(),
 						"Type " +
-						valueComponentType->toString() +
+						toStringInChecker(*valueComponentType) +
 						" is not implicitly convertible to expected type " +
-						var.annotation().type->toString() +
+						toStringInChecker(*var.annotation().type) +
 						". Try converting to type " +
-						valueComponentType->mobileType()->toString() +
+						toStringInChecker(*valueComponentType->mobileType()) +
 						" or use an explicit conversion."
 					);
 				else
 					m_errorReporter.typeError(
 						_statement.location(),
 						"Type " +
-						valueComponentType->toString() +
+						toStringInChecker(*valueComponentType) +
 						" is not implicitly convertible to expected type " +
-						var.annotation().type->toString() +
+						toStringInChecker(*var.annotation().type) +
 						"."
 					);
 			}
@@ -1785,7 +1793,7 @@ bool TypeChecker::visit(FunctionCall const& _functionCall)
 		{
 			string msg =
 				"The provided argument of type " +
-				type(*arguments.front())->toString() +
+				toStringInChecker(*type(*arguments.front())) +
 				" is not implicitly convertible to expected type bytes memory.";
 			if (v050)
 				m_errorReporter.typeError(_functionCall.location(), msg);
@@ -2394,20 +2402,20 @@ void TypeChecker::expectType(Expression const& _expression, Type const& _expecte
 			m_errorReporter.typeError(
 				_expression.location(),
 				"Type " +
-				type(_expression)->toString() +
+				toStringInChecker(*type(_expression)) +
 				" is not implicitly convertible to expected type " +
-				_expectedType.toString() +
+				toStringInChecker(_expectedType) +
 				". Try converting to type " +
-				type(_expression)->mobileType()->toString() +
+				toStringInChecker(*type(_expression)->mobileType()) +
 				" or use an explicit conversion."
 			);
 		else
 			m_errorReporter.typeError(
 				_expression.location(),
 				"Type " +
-				type(_expression)->toString() +
+				toStringInChecker(*type(_expression)) +
 				" is not implicitly convertible to expected type " +
-				_expectedType.toString() +
+				toStringInChecker(_expectedType) +
 				"."
 			);
 	}
@@ -2439,3 +2447,4 @@ void TypeChecker::requireLValue(Expression const& _expression)
 	else if (!_expression.annotation().isLValue)
 		m_errorReporter.typeError(_expression.location(), "Expression has to be an lvalue.");
 }
+
