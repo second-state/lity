@@ -1,3 +1,9 @@
+### Lity 1.2.3 (2018-10-02)
+
+Breaking Changes:
+ * Replace type `safeuint` with `uint256` in ABI format.
+ * Use `uint256` instead of `safeuint` for generating function signature.
+
 ### Lity 1.2.2 (2018-09-25)
 
 Language Features:
