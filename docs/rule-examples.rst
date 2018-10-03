@@ -130,7 +130,7 @@ Now we can define 2 rules to solve the problem (Note that the order of definitio
 
     rule "catEatFood"
     when {
-        c1: Cat(true);
+        c1: Cat();
         cl1: CatLocation(id == c1.id);
         f1: Food(location == cl1.value, !eaten);
     } then {
@@ -186,7 +186,7 @@ Complete source code of the contract:
         // so cats won't go through a food without eating it.
         rule "catEatFood"
         when {
-            c1: Cat(true);
+            c1: Cat();
             cl1: CatLocation(id == c1.id);
             f1: Food(location == cl1.value, !eaten);
         } then {

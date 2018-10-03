@@ -25,7 +25,7 @@ contract C {
     // so cats won't go through a food without eating it.
     rule "catEatFood"
     when {
-        c1: Cat(true);
+        c1: Cat();
         cl1: CatLocation(id == c1.id);
         f1: Food(location == cl1.value, !eaten);
     } then {
