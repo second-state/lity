@@ -1739,8 +1739,31 @@ ASTPointer<Rule> Parser::parseRule()
 	ASTNodeFactory nodeFactory(*this);
 	expectToken(Token::Rule);
 	auto ruleName = getLiteralAndAdvance();
+	int salience=0;
+	bool noLoop=false, lockOnActive=false;
 	std::vector<ASTPointer<FactDeclaration>> factDeclarations;
 
+	while (m_scanner->currentToken() != Token::When)
+	{
+		if(m_scanner->currentToken()==Token::Salience)
+		{
+			solAssert(m_scanner->peekNextToken()==Token::Number, "salience must be an integer");
+			string literal = m_scanner->peekLiteral();
+			salience = stoi(literal);
+		}
+		else if(m_scanner->currentToken()==Token::NoLoop)
+		{
+			solAssert(m_scanner->peekNextToken()==Token::TrueLiteral || m_scanner->peekNextToken()==Token::FalseLiteral, "no-loop must be an boolean");
+			noLoop = m_scanner->peekNextToken()==Token::TrueLiteral;
+		}
+		else if(m_scanner->currentToken()==Token::LockOnActive)
+		{
+			solAssert(m_scanner->peekNextToken()==Token::TrueLiteral || m_scanner->peekNextToken()==Token::FalseLiteral, "no-loop must be an boolean");
+			lockOnActive = m_scanner->peekNextToken()==Token::TrueLiteral;
+		}
+		m_scanner->next();
+		m_scanner->next();
+	}
 	expectToken(Token::When);
 	expectToken(Token::LBrace);
 	// TODO: parse faceExp
@@ -1753,7 +1776,7 @@ ASTPointer<Rule> Parser::parseRule()
 
 	expectToken(Token::Then);
 	ASTPointer<Statement> thenBody = parseStatement();
-	return nodeFactory.createNode<Rule>(ruleName, factDeclarations, thenBody);
+	return nodeFactory.createNode<Rule>(ruleName, factDeclarations, thenBody, noLoop, lockOnActive, salience);
 }
 
 ASTPointer<FactDeclaration> Parser::parseFactDeclaration()

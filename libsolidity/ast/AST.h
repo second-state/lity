@@ -42,6 +42,7 @@
 #include <vector>
 #include <memory>
 #include <iostream>
+#include <algorithm>
 
 namespace dev
 {
@@ -390,7 +391,7 @@ public:
 	std::vector<ModifierDefinition const*> functionModifiers() const { return filteredNodes<ModifierDefinition>(m_subNodes); }
 	std::vector<FunctionDefinition const*> definedFunctions() const { return filteredNodes<FunctionDefinition>(m_subNodes); }
 	std::vector<EventDefinition const*> events() const { return filteredNodes<EventDefinition>(m_subNodes); }
-	std::vector<Rule const*> rules() const { return filteredNodes<Rule>(m_subNodes); }
+	std::vector<Rule const*> rules() const;
 	std::vector<EventDefinition const*> const& interfaceEvents() const;
 	bool isLibrary() const { return m_contractKind == ContractKind::Library; }
 
@@ -1762,11 +1763,22 @@ private:
 class Rule: public Declaration
 {
 public:
-	Rule(SourceLocation const& _location,
-	ASTPointer<ASTString> const&_name,
-	std::vector<ASTPointer<FactDeclaration>> const&_factDeclarations,
-	ASTPointer<Statement> const&_thenBody
-	): Declaration(_location, _name), m_factDeclarations(_factDeclarations), m_thenBody(_thenBody){}
+	Rule(
+		SourceLocation const& _location,
+		ASTPointer<ASTString> const& _name,
+		std::vector<ASTPointer<FactDeclaration>> const& _factDeclarations,
+		ASTPointer<Statement> const& _thenBody,
+		bool _noLoop,
+		bool _lockOnActive,
+		int _salience
+	):
+		Declaration(_location, _name),
+		m_factDeclarations(_factDeclarations),
+		m_thenBody(_thenBody),
+		m_noLoop(_noLoop),
+		m_lockOnActive(_lockOnActive),
+		m_salience(_salience)
+	{}
 
 	virtual void accept(ASTVisitor& _visitor) override;
 	virtual void accept(ASTConstVisitor& _visitor) const override;
@@ -1777,17 +1789,23 @@ public:
 	FactDeclaration const& fact(int i) const { return *m_factDeclarations[i].get(); }
 	FactDeclaration const& lastFact() const { return *m_factDeclarations.back().get(); }
 	// return -1 if not found
-	int factIndex(FactDeclaration const& _fact) const 
+	int factIndex(FactDeclaration const& _fact) const
 	{
 		for(int i=0; i<(int)m_factDeclarations.size(); i++)
 			if(m_factDeclarations[i].get()==&_fact)
 				return i;
 		return -1;
 	}
-	Statement const& thenBody() const {return *m_thenBody.get(); }
+	Statement const& thenBody() const { return *m_thenBody.get(); }
+	bool noLoop() const { return m_noLoop; }
+	bool lockOnActive() const { return m_lockOnActive; }
+	int salience() const { return m_salience; }
 private:
 	std::vector<ASTPointer<FactDeclaration>> m_factDeclarations;
 	ASTPointer<Statement> m_thenBody;
+	bool m_noLoop;
+	bool m_lockOnActive;
+	int m_salience;
 };
 
 /**
