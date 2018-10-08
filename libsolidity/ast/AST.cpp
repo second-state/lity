@@ -253,6 +253,13 @@ ContractDefinitionAnnotation& ContractDefinition::annotation() const
 	return dynamic_cast<ContractDefinitionAnnotation&>(*m_annotation);
 }
 
+std::vector<Rule const*> ContractDefinition::rules() const
+{
+	std::vector<Rule const*> res = filteredNodes<Rule>(m_subNodes);
+	std::sort(res.begin(), res.end(), [](Rule const* a, Rule const* b){return a->salience()>b->salience();});
+	return res;
+}
+
 TypeNameAnnotation& TypeName::annotation() const
 {
 	if (!m_annotation)
