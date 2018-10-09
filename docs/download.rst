@@ -1,8 +1,8 @@
 How to Download Lity
 ====================
 
-Download the Prebuilt libENI
-----------------------------
+Download the Prebuilt lityc
+---------------------------
 
 See `Lity releases <https://github.com/CyberMiles/lity/releases>`_
 for the latest release.
@@ -48,7 +48,7 @@ Download Source Code
   git clone https://github.com/CyberMiles/lity.git
 
 Install Dependencies
-````````````
+````````````````````
 
 In your lity directory:
 
