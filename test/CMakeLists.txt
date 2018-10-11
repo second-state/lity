@@ -38,6 +38,7 @@ add_executable(rttest
     lity/MultiRulesTest.cpp
     lity/ComplexRulesTest.cpp
     lity/NestedRulesTest.cpp
+    lity/RuleAttributeTest.cpp
     lity/ContractExecutionFramework.cpp
     libsolidity/SolidityExecutionFramework.cpp
 )
