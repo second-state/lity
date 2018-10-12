@@ -53,7 +53,6 @@ enum class Instruction: uint8_t
 	SSUB,				///< signed subtraction operation with overflow checking
 	SMUL,				///< signed multiplication operation with overflow checking
 
-
 	LT = 0x10,			///< less-than comparison
 	GT,					///< greater-than comparison
 	SLT,				///< signed less-than comparison
@@ -69,7 +68,11 @@ enum class Instruction: uint8_t
 	SHR,				///< bitwise SHR operation
 	SAR,				///< bitwise SAR operation
 
-	KECCAK256 = 0x20,		///< compute KECCAK-256 hash
+	KECCAK256 = 0x20,	///< compute KECCAK-256 hash
+	FMUL = 0x2a,		///< fixed-point multiplication operation
+	SFMUL,				///< signed fixed-point multiplication operation
+	FDIV,				///< fixed-point division operation
+	SFDIV,				///< signed fixed-point division operation
 
 	ADDRESS = 0x30,		///< get address of currently executing account
 	BALANCE,			///< get balance of the given account
