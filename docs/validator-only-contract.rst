@@ -66,6 +66,7 @@ There is a simple contract that leverage isValidator to grant validators to modi
 and we could compile it using `lityc` (version >= 1.2.2):
 
 .. code:: ts
+
   $ mkdir output
   $ ./lityc --abi --bin -o output ValidatorOnlyContractExample.sol
   $ cat output/ValidatorOnlyContractExample.abi
