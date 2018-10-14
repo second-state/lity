@@ -60,4 +60,4 @@ See Lity rule language for reference. Lity's rule grammar is very similar with D
 This feature is compatible with official Ethereum Virtual Machine.
 Because, Lity directly compiles rule language into official EVM byte code.
 
-Check :ref:`the tutorial <rule-tutorial>` for writing Lity rules.
+Check :ref:`the rule engine guide <rule-engine-guide>` for writing Lity rules.

@@ -17,8 +17,7 @@ Docs
 Rule Engine
 ```````````
 
-- :ref:`Lity Rule by Examples <rule-tutorial>`
-- :ref:`Lity rule engine specs <rule-engine-specs>`
+- :ref:`The Lity rule engine guide <rule-engine-guide>`
 
 Types
 `````
