@@ -156,6 +156,7 @@ public:
 	eth::AssemblyItem appendJumpToNew() { return m_asm->appendJump().tag(); }
 	/// Appends a JUMP to a tag already on the stack
 	CompilerContext& appendJump(eth::AssemblyItem::JumpType _jumpType = eth::AssemblyItem::JumpType::Ordinary);
+
 	/// Appends an INVALID instruction
 	CompilerContext& appendInvalid();
 	/// Appends a conditional INVALID instruction
@@ -169,6 +170,10 @@ public:
 	CompilerContext& appendConditionalRevert(bool _forwardReturnData = false);
 	/// Appends a JUMP to a specific tag
 	CompilerContext& appendJumpTo(eth::AssemblyItem const& _tag) { m_asm->appendJump(_tag); return *this; }
+	/// Appends a JUMP to a specific tag and return to preceed current instruction
+	/// must make sure that destination shall jump returnTag on the stack
+	CompilerContext& appendJumpToAndReturn(eth::AssemblyItem const& _tag);
+
 	/// Appends pushing of a new tag and @returns the new tag.
 	eth::AssemblyItem pushNewTag() { return m_asm->append(m_asm->newPushTag()).tag(); }
 	/// @returns a new tag without pushing any opcodes or data
@@ -258,7 +263,7 @@ public:
 			ScopeGuard([&]{ _compilerContext.popVisitedNodes(); }) { _compilerContext.pushVisitedNodes(&_node); }
 	};
 
-	eth::AssemblyItem entryFireAllRules(ContractDefinition const&);
+	eth::AssemblyItem entryAllRules(ContractDefinition const&);
 private:
 	/// Searches the inheritance hierarchy towards the base starting from @a _searchStart and returns
 	/// the first function definition that is overwritten by _function.
@@ -303,7 +308,7 @@ private:
 		mutable std::queue<Declaration const*> m_functionsToCompile;
 	} m_functionCompilationQueue;
 
-	std::map<ContractDefinition const*, eth::AssemblyItem> m_entryFireAllRules;
+	std::map<ContractDefinition const*, eth::AssemblyItem> m_entryAllRules;
 	
 	eth::AssemblyPointer m_asm;
 	/// Version of the EVM to compile against.

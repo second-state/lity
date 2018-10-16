@@ -186,8 +186,8 @@ namespace solidity
 	K(When, "when", 0)                                               \
 	K(Then, "then", 0)                                               \
 	K(FireAllRules, "fireAllRules", 0)                                 \
-	K(NoLoop, "no-loop", 0)                                            \
-	K(LockOnActive, "lock-on-active", 0)                               \
+	K(NoLoop, "no_loop", 0)                                            \
+	K(LockOnActive, "lock_on_active", 0)                               \
 	K(Salience, "salience", 0)                                         \
 	\
 	/* Ether subdenominations */                                       \

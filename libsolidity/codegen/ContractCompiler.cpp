@@ -394,7 +394,39 @@ void ContractCompiler::appendReturnValuePacker(TypePointers const& _typeParamete
 
 void ContractCompiler::appendRules(ContractDefinition const& _contract)
 {
-	m_context << m_context.entryFireAllRules(_contract);
+	eth::AssemblyItem rulesExecLabel = m_context.newTag();
+	m_context << m_context.entryAllRules(_contract);
+	// rule init
+	for(auto rule: _contract.rules())
+	{
+		m_context << 32*3;
+		CompilerUtils(m_context).allocateMemory();
+		m_context << keccak256(rule->name()+"-lockOnActive-list") << Instruction::SSTORE;
+	}
+
+	m_context.appendJumpToAndReturn(rulesExecLabel);
+	// clear lock_on_active marker map
+	for(auto rule: _contract.rules())
+	{
+		m_context << RuleEngineCompiler(m_context).lockOnActListPtr(*rule) << Instruction::SLOAD;
+		// markListMAddr
+		DynArrUtils(m_context, 1).forEachDo(
+			[&] (CompilerContext& context)
+			{
+				context << Instruction::MLOAD;
+				// factHash
+				RuleEngineCompiler(context).appendGetLockOnActiveMapMarker(*rule);
+				// markMAddr
+				context << 0 << Instruction::SWAP1 << Instruction::SSTORE;
+			}
+		);
+	}
+	m_context << 0 << RuleEngineCompiler(m_context).noLoopAddr() << Instruction::SSTORE;
+
+	m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);
+	m_context.setStackOffset(0); // not sure this is the right place
+
+	m_context << rulesExecLabel;
 	for(auto rule: _contract.rules())
 	{
 		RuleEngineCompiler ruleEngineCompiler(m_context);
@@ -406,12 +438,53 @@ void ContractCompiler::appendRules(ContractDefinition const& _contract)
 		Statement const& block = rule->thenBody();
 		// stack: listMemAddr
 		DynArrUtils(m_context, rule->numOfFacts()).forEachDo
-		(
+		( // use breakable version of forEachDo
 			[&] (CompilerContext& context)
 			{
-				// stack: elmtMemAddr
+				eth::AssemblyItem thenBlockEnd = m_context.newTag();
+				eth::AssemblyItem reevalEnd = m_context.newTag();
+				ruleEngineCompiler.resetReevaluationMarker();
+				// stack: ifBreak elmtMemAddr
+				if(rule->lockOnActive())
+				{
+					m_context << rule->numOfFacts()*32 << Instruction::DUP2 << Instruction::KECCAK256;
+					// stack: ifBreak elmtMemAddr factHash
+					ruleEngineCompiler.appendGetLockOnActiveMapMarker(*rule);
+					m_context << Instruction::SLOAD;
+					// stack: ifBreak elmtMemAddr lockOnActiveMark
+					m_context.appendConditionalJumpTo(thenBlockEnd);
+					// ========= mark this fact ============
+					// stack: ifBreak elmtMemAddr
+					m_context << rule->numOfFacts()*32 << Instruction::DUP2 << Instruction::KECCAK256;
+					// stack: ifBreak elmtMemAddr factHash
+					// ========= mark this fact in map =====
+					m_context << Instruction::DUP1;
+					ruleEngineCompiler.appendGetLockOnActiveMapMarker(*rule);
+					// stack: ifBreak elmtMemAddr factHash markSAddr
+					m_context << 1 << Instruction::SWAP1 << Instruction::SSTORE;
+					// stack: ifBreak elmtMemAddr factHash
+					// ========= mark this fact in list ====
+					m_context << RuleEngineCompiler(m_context).lockOnActListPtr(*rule) << Instruction::SLOAD;
+					// stack: ifBreak elmtMemAddr factHash markListMAddr
+					m_context << Instruction::SWAP1;
+					DynArrUtils(m_context, 1).pushItem();
+				}
+				// stack: ifBreak elmtMemAddr
+				if(rule->noLoop())
+				{
+					m_context << rule->numOfFacts()*32 << Instruction::DUP2 << Instruction::KECCAK256;
+					// stack: ifBreak elmtMemAddr factHash
+					ruleEngineCompiler.appendGetNoLoopHash(*rule);
+					// stack: ifBreak elmtMemAddr noLoopHash
+					m_context << RuleEngineCompiler(m_context).noLoopAddr() << Instruction::SLOAD;
+					// stack: ifBreak elmtMemAddr noLoopHash lastNoLoopHash
+					m_context <<Instruction::EQ;
+					m_context.appendConditionalJumpTo(reevalEnd);
+				}
+				// stack: ifBreak elmtMemAddr
+				m_context << Instruction::DUP1;
 				DynArrUtils(m_context, rule->numOfFacts()).extractElmtToStack();
-				// stack: facts
+				// stack: ifBreak elmtMemAddr facts
 				for(int i=0; i<rule->numOfFacts(); i++) context.addFact(rule->fact(i), rule->numOfFacts()-i);
 				block.accept(*this);
 				for(int i=0; i<rule->numOfFacts(); i++)
@@ -419,29 +492,33 @@ void ContractCompiler::appendRules(ContractDefinition const& _contract)
 					context.removeFact(rule->fact(i));
 					m_context << Instruction::POP;
 				}
-				m_context << 0; // marker used to determine to break or not
+				m_context << thenBlockEnd;
+				// stack: ifBreak elmtMemAddr
 				ruleEngineCompiler.pushWhetherNeedReevaluation();
 				m_context << Instruction::ISZERO;
-				eth::AssemblyItem noReeval = m_context.newTag();
-				// stack: 0 !reeval
-				m_context.appendConditionalJumpTo(noReeval);
-
-				// stack: 0
+				// stack: ifBreak elmtMemAddr !reeval
+				m_context.appendConditionalJumpTo(reevalEnd);
+				// stack: ifBreak elmtMemAddr
+				{// no-loop tag
+					m_context << rule->numOfFacts()*32 << Instruction::DUP2 << Instruction::KECCAK256;
+					// stack: ifBreak elmtMemAddr factHash
+					ruleEngineCompiler.appendGetNoLoopHash(*rule);
+					m_context << RuleEngineCompiler(m_context).noLoopAddr() << Instruction::SSTORE;
+				}
+				// stack: ifBreak elmtMemAddr
 				ruleEngineCompiler.appendCleanUpNodes();
-				ruleEngineCompiler.resetReevaluationMarker();
 
-				ruleEngineCompiler.appendUnlockRuleEngine();
-				ruleEngineCompiler.appendFireAllRules(_contract);
-				ruleEngineCompiler.appendLockRuleEngineOrFail();
-				m_context << Instruction::ISZERO; // make a break
-				// stack: 1
-
-				m_context << noReeval;
+				m_context.appendJumpToAndReturn(rulesExecLabel);
+				m_context << 1 << Instruction::SWAP2 << Instruction::POP; // make a break
+				// stack: ifBreak elmtMemAddr
+				m_context << reevalEnd;
+				m_context << Instruction::POP;
 			}
-		, true // use breakable version of forEachDo
+		, true
 		);
 	}
 	m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);
+	m_context.setStackOffset(0); // not sure this is the right place
 }
 
 void ContractCompiler::registerStateVariables(ContractDefinition const& _contract)

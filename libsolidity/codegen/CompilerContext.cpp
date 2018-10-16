@@ -264,6 +264,16 @@ CompilerContext& CompilerContext::appendJump(eth::AssemblyItem::JumpType _jumpTy
 	return *this << item;
 }
 
+CompilerContext& CompilerContext::appendJumpToAndReturn(eth::AssemblyItem const& _tag)
+{
+	eth::AssemblyItem returnLabel = this->pushNewTag();
+	m_asm->appendJump(_tag);
+	*this << returnLabel;
+	this->adjustStackOffset(-1);
+	return *this;
+}
+
+
 CompilerContext& CompilerContext::appendInvalid()
 {
 	return *this << Instruction::INVALID;
@@ -453,13 +463,13 @@ eth::AssemblyItem CompilerContext::FunctionCompilationQueue::entryLabelIfExists(
 	return res == m_entryLabels.end() ? eth::AssemblyItem(eth::UndefinedItem) : res->second.tag();
 }
 
-eth::AssemblyItem CompilerContext::entryFireAllRules(ContractDefinition const& _declaration)
+eth::AssemblyItem CompilerContext::entryAllRules(ContractDefinition const& _declaration)
 {
-	auto res = m_entryFireAllRules.find(&_declaration);
-	if (res == m_entryFireAllRules.end())
+	auto res = m_entryAllRules.find(&_declaration);
+	if (res == m_entryAllRules.end())
 	{
 		eth::AssemblyItem tag(newTag());
-		m_entryFireAllRules.insert(make_pair(&_declaration, tag));
+		m_entryAllRules.insert(make_pair(&_declaration, tag));
 		return tag.tag();
 	}
 	else

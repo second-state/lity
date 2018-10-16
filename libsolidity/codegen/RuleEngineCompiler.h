@@ -164,8 +164,8 @@ public:
 	/// Compiles rule engine network.
 	/// Note that then block is compiled by ContractCompiler.
 	eth::AssemblyItem compileNetwork(Rule const&);
-	
-	/// Appends jump to fireAllRules
+
+	/// Appends jump to allRules
 	void appendFireAllRules(ContractDefinition const& _contract);
 
 	/// Insert a fact into working memory.
@@ -184,7 +184,13 @@ public:
 	/// stack post:
 	void appendUpdate();
 
-	dev::u256 terminalNodeInListPtr() const { return m_termNode->outAddr(); }
+	/// List of WMEs to be executed
+	/// The list shall be filled after rule filter phase.
+	u256 terminalNodeInListPtr() const { return m_termNode->outAddr(); }
+	/// List of WMEs that already executed
+	/// This is used for lock-on-active attribute.
+	u256 lockOnActListPtr(Rule const& _rule) const { return keccak256(_rule.name()+"-lockOnActive-list"); }
+	u256 noLoopAddr() const { return keccak256("noLoopHashLoc"); }
 
 	/// Clean up Rete network nodes
 	/// stack pre:
@@ -198,8 +204,14 @@ public:
 	/// inside then-block.
 	void appendLockRuleEngineOrFail();
 	void appendUnlockRuleEngine();
-	void appendAssertNoRuleEngineLock();
-	void appendAssertHaveRuleEngineLock();
+
+	/// Stack pre : factHash
+	/// Stack post: markerStorageAddr
+	void appendGetLockOnActiveMapMarker(Rule const& _rule) const { m_context << keccak256(_rule.name()) << Instruction::XOR; }
+
+	/// Stack pre : factHash
+	/// Stack post: noLoopHash
+	void appendGetNoLoopHash(Rule const& _rule) const { m_context << keccak256(_rule.name()) << Instruction::XOR; }
 
 private:
 	// gen code from network
@@ -277,6 +289,10 @@ private:
 	void appendAccessIndexStorage();
 	void appendWriteIndexStorage();
 
+	void appendAssertNoRuleEngineLock();
+	void appendAssertHaveRuleEngineLock();
+
+
 	h256 getRuleEngineLockLocation() const { return keccak256("__lityRuleEngineLock~~__"); }
 
 	Rule const* m_currentRule;
@@ -312,7 +328,7 @@ public:
 		return facts.size();
 	}
 	bool isAlpha() { return numOfFacts()==1; }
-	virtual void endVisit(Identifier const& _identifier) override 
+	virtual void endVisit(Identifier const& _identifier) override
 	{
 		Declaration const* declaration = _identifier.annotation().referencedDeclaration;
 		if (auto fact = dynamic_cast<FactDeclaration const*>(declaration))

@@ -1758,8 +1758,12 @@ ASTPointer<Rule> Parser::parseRule()
 		}
 		else if(m_scanner->currentToken()==Token::LockOnActive)
 		{
-			solAssert(m_scanner->peekNextToken()==Token::TrueLiteral || m_scanner->peekNextToken()==Token::FalseLiteral, "no-loop must be an boolean");
+			solAssert(m_scanner->peekNextToken()==Token::TrueLiteral || m_scanner->peekNextToken()==Token::FalseLiteral, "lock-on-active must be an boolean");
 			lockOnActive = m_scanner->peekNextToken()==Token::TrueLiteral;
+		}
+		else
+		{
+			solAssert(false, "unknown attribute");
 		}
 		m_scanner->next();
 		m_scanner->next();
