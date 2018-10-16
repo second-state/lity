@@ -42,56 +42,5 @@ Releases
 .. _m111: https://github.com/CyberMiles/lity/releases/download/v1.1.1/lity-v1.1.1-macos.zip
 .. _s111: https://github.com/CyberMiles/lity/releases/download/v1.1.1/lity-v1.1.1-static
 
-Build from source
------------------
+Or, if you prefer to compile lity yourself, please refer to :ref:`developer's guide <developers-guide>`.
 
-Download Source Code
-````````````````````
-
-.. code:: bash
-
-  git clone https://github.com/CyberMiles/lity.git
-
-Install Dependencies
-````````````````````
-
-In your lity directory:
-
-.. code:: bash
-
-  ./scripts/install_deps.sh
-
-Build with CMake
-````````````````
-
-In your lity directory:
-
-.. code:: bash
-
-  mkdir build
-  cd build
-  cmake ..
-  make
-  ./lityc/lityc --version
-
-Run Tests
-`````````
-
-In your lity directory:
-
-.. code:: bash
-
-  ./build/test/soltest -- --testpath ./test --no-ipc --show_progress
-  ./test/cmdlineTests.sh
-
-See `the documentation <download.html>`_ for how to download and install Lity.
-
-Use Lityc to Secure Your Contract
----------------------------------
-
-Some instructions to use ERC checker and overflow protection.
-
-Use ENI in Your Contract
-------------------------
-
-:ref:`ENI Tutorial <eni-tutorial>`

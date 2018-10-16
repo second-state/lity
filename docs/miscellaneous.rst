@@ -1,31 +1,10 @@
-Documentation
+Miscellaneous
 =============
 
-Beginner's Guide
-----------------
-
-:ref:`Beginner's Guide <beginners-guide>`
-
-Developer's Guide
------------------
-
-:ref:`Developer's Guide <developers-guide>`
-
-Docs
-----
-
-Rule Engine
-```````````
-
-- :ref:`The Lity rule engine guide <rule-engine-guide>`
-
-Types
-`````
+New Data Types in Lity
+++++++++++++++++++++++
 
 - :ref:`types-fixed-point-numbers`
-
-Security & Safe
-```````````````
 
 ERC Contract Standard Checker
 +++++++++++++++++++++++++++++
@@ -49,9 +28,6 @@ Analysis Tool
 - :ref:`Oyente Integration <oyente-integration>`
 - :ref:`Integrate CyberMiles Remix & MetaMask <integrate-cybermiles-remix-metamask>`
 
-Performant & Flexible
-`````````````````````
-
 Schedule Transaction
 ++++++++++++++++++++
 
@@ -69,7 +45,3 @@ ENI Examples
 - :ref:`Verify Dogecoin Block on Travis <verify-dogecoin-block-on-travis>`
 - :ref:`RSA encryption and decryption <rsa-crypto>`
 
-FAQ
----
-
-:ref:`FAQ <faq>`

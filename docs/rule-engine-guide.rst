@@ -27,12 +27,16 @@ An rule statement consists of three parts:
 2. Filter Statements (a.k.a. *when block*): one or more statements describe which set of facts should be captured and applied actions in the *then block*.
 3. Action Statements (a.k.a. *then block*): one or more statements to execute on matched objects (which are captured in *when block*.)
 
+A contract with a rule definition looks like this:
+
 .. code:: ts
 
-    rule "ruleName" when {
-        // Filter Statements
-    } then {
-        // Action Statements
+    contract C {
+        rule "ruleName" when {
+            // Filter Statement
+        } then {
+            // Action Statement
+        }
     }
 
 Working Memory
@@ -74,7 +78,7 @@ And note that the following statement won't compile:
 
 The reason is that ``fact(0)`` is a reference with memory data location, which is not persistant thus cannot be inserted into working memory.
 
-For more details about data location mechanism, please refer to `solidity's documentation <https://solidity.readthedocs.io/en/v0.4.25/types.html#data-location>`_
+For more information about data location mechanism, please refer to `solidity's documentation <https://solidity.readthedocs.io/en/v0.4.25/types.html#data-location>`_
 
 factDelete
 ~~~~~~~~~~
@@ -84,7 +88,8 @@ This operator takes a fact handle (uint256) and evaluates to void. Removes the r
 fireAllRules
 ~~~~~~~~~~~~
 
-Fire all rules, just like Drools' ``fireAllRules()``.
+``fireAllRules`` is a special statement that launches lity rule engine execution, it works like drools' ``ksession.fireAllRules()`` API.
+
 
 Rule Examples
 -------------

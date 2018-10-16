@@ -7,39 +7,9 @@ is still work-in-progress.
 Overview
 --------
 
-Lity is an open-source language enhanced from Solidity. With new grammar extension, it is highly optimized for enterprise and easy to use for financial industry developers. The flexible interface and unlimited built-in functions can reduce gas cost and accelerate executing time. You can now encrypt large-sized data in the blink of an eye without running out of gas anymore.
+Lity is an open-source language enhanced from Solidity. With new grammar extension, it is highly optimized for enterprise and easy to use for financial industry developers. The flexible interface and unlimited built-in functions can reduce gas cost and execution time. For example, you can now encrypt large-sized data in the blink of an eye without running out of gas anymore.
 
-How Lity Enhances Security
-``````````````````````````
-
-With `ERC Checker <features.html#erc-checker>`_ and
-`Overflow Protection <features.html#overflow-protection>`_.
-
-How Lity Improves Performance
-`````````````````````````````
-
-With `Ethereum Native Interface (ENI) <features.html#ethereum-native-interface>`_.
-
-See `libENI on Github <https://github.com/CyberMiles/libeni>`_ and the
-`libENI documentation <https://lity.readthedocs.io/projects/libeni/>`_.
-
-Lity by Example
----------------
-
-Here we will provide a contract example and explain a little bit.
-
-.. code:: C++
-
-  //pragma solidity ^0.4.23;
-  pragma lity ^1.2.0;
-
-  contract ReverseContract {
-    function reverse(string input) public returns(string) {
-      string memory output = eni("reverse", input);
-      return output;
-    }
-  }
-
+Since we still supports all features of Solidity, our documentation will focus on unique features realized by Lity.
 
 Contents
 --------
@@ -48,8 +18,11 @@ Contents
    :maxdepth: 2
 
    getting-started
-   features
-   documentation
+   features-overview
+   rule-engine-guide
+   miscellaneous
+   faq
+   developers-guide
    contributing
    news
    events

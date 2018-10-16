@@ -1,17 +1,13 @@
-What's Special About Lity
-=========================
+Features Overview
+=================
 
 Better Security
 ---------------
 
-Make your contract more secure with
-
-* `ERC Checker`_, and
-* `Overflow Protection`_.
-
 ERC Checker
 ```````````
 
+Lity can check if your contract's interface is compatible to specific ERC standards, please refer to `ERC contract checker guide <erc-contract-checker-guide>`_
 
 
 Overflow Protection
@@ -60,4 +56,5 @@ See Lity rule language for reference. Lity's rule grammar is very similar with D
 This feature is compatible with official Ethereum Virtual Machine.
 Because, Lity directly compiles rule language into official EVM byte code.
 
-Check :ref:`the rule engine guide <rule-engine-guide>` for writing Lity rules.
+Check :ref:`the rule engine guide <rule-engine-guide>` for how to use Lity's rule engine.
+
