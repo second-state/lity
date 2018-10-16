@@ -71,8 +71,8 @@ public:
 	///   Stack pre : elmtMemAddr
 	///   Stack post:
 	/// Stack state of f (if breakable):
-	///   Stack pre : elmtMemAddr
-	///   Stack post: breakOrNot
+	///   Stack pre : ifBreak=0 elmtMemAddr
+	///   Stack post: ifBreak
 	void forEachDo(std::function<void(CompilerContext&)> f, bool breakable = false);
 
 private:

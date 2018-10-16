@@ -23,15 +23,12 @@ namespace dev
 {
 namespace solidity
 {
-dev::u256 ReteNode::serialNo=0;
+dev::u256 ReteNode::serialNo=keccak256("rule serial no base");
 
 void RuleEngineCompiler::appendFireAllRules(ContractDefinition const& _contract)
 {
 	RuleEngineCompiler::appendLockRuleEngineOrFail();
-	eth::AssemblyItem returnLabel = m_context.pushNewTag();
-	m_context.appendJumpTo(m_context.entryFireAllRules(_contract));
-	m_context << returnLabel;
-	m_context.adjustStackOffset(-1);
+	m_context.appendJumpToAndReturn(m_context.entryAllRules(_contract));
 	RuleEngineCompiler::appendUnlockRuleEngine();
 }
 
@@ -215,7 +212,7 @@ void RuleEngineCompiler::compile(JoinNode const& _node)
 	{
 		JoinNode const& left = *_node.leftParent();
 		AlphaNode const& right = *_node.rightParent();
-		
+
 		m_context << 32*3;
 		utils().allocateMemory();
 		m_context << _node.outAddr() << Instruction::SSTORE;
@@ -230,7 +227,7 @@ void RuleEngineCompiler::compile(JoinNode const& _node)
 				// stack: fact
 				context.addFact(right.fact(), 1);
 				context << left.outAddr() << Instruction::SLOAD;
-				
+
 				DynArrUtils(m_context, left.tupeSize()).forEachDo(
 					[&] (CompilerContext& context)
 					{
@@ -341,7 +338,7 @@ void RuleEngineCompiler::endVisit(FactDeclaration const& _fact)
 	for(int i=0; i<=factIdx; i++)
 		joinNode.addFact(m_currentRule->fact(i));
 	joinNode.setRightPar(alphaNode);
-	
+
 	m_currentFact = nullptr;
 	m_currentFieldNo = 0;
 }
