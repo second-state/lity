@@ -65,6 +65,27 @@ BOOST_AUTO_TEST_CASE(fizzbuzzTest) // this test is for `salience` keyword
 	BOOST_REQUIRE(callContractFunction("getResult()") == encodeArgs(0x20, v.size()) + ans);
 }
 
+BOOST_AUTO_TEST_CASE(noloop1) // this test is for no-loop and lock-on-active
+{
+	deployContract("noloop1.sol");
+	BOOST_REQUIRE(callContractFunction("calc()") == encodeArgs());
+}
+BOOST_AUTO_TEST_CASE(noloop2) // this test is for no-loop and lock-on-active
+{
+	deployContract("noloop2.sol");
+	BOOST_REQUIRE(callContractFunction("calc()") == encodeArgs(u256(4)));
+}
+BOOST_AUTO_TEST_CASE(noloop3) // this test is for no-loop and lock-on-active
+{
+	deployContract("noloop3.sol");
+	BOOST_REQUIRE(callContractFunction("calc()") == encodeArgs(u256(6)));
+}
+BOOST_AUTO_TEST_CASE(noloop4) // this test is for no-loop and lock-on-active
+{
+	deployContract("noloop4.sol");
+	BOOST_REQUIRE(callContractFunction("calc()") == encodeArgs(u256(4)));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 }
