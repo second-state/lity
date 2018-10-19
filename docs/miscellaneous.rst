@@ -1,47 +1,37 @@
 Miscellaneous
 =============
 
-New Data Types in Lity
-++++++++++++++++++++++
+Overflow Protections
+--------------------
 
-- :ref:`types-fixed-point-numbers`
+.. toctree::
+   :maxdepth: 2
 
-ERC Contract Standard Checker
-+++++++++++++++++++++++++++++
+   safeuint
+   overflow-protection
 
-- :ref:`ERC contract checker guide <erc-contract-checker-guide>`
+Everything about Ethereum Native Interface (ENI)
+------------------------------------------------
 
-Overflow Protection
-+++++++++++++++++++
+.. toctree::
+   :maxdepth: 2
 
-- :ref:`safeuint - a new type with native SafeMath support <safeuint-type>`
-- :ref:`Bec token with overflow protection <overflow-protection>`
+   eni-tutorial
+   reverse-string
+   rsa-crypto
+   verify-dogecoin-block-on-travis
 
-Validator-Only Contract
-+++++++++++++++++++++++
+Other documentations
+--------------------
 
-- :ref:`Validator-Only Contract <validator-only-contract>`
+.. toctree::
+   :maxdepth: 2
 
-Analysis Tool
-+++++++++++++
-
-- :ref:`Oyente Integration <oyente-integration>`
-- :ref:`Integrate CyberMiles Remix & MetaMask <integrate-cybermiles-remix-metamask>`
-
-Schedule Transaction
-++++++++++++++++++++
-
-- :ref:`Schedule Transaction <schedule-tx>`
-
-Ethereum Native Interface (ENI) Tutorial
-++++++++++++++++++++++++++++++++++++++++
-
-- :ref:`Tutorial <eni-tutorial>`
-
-ENI Examples
-++++++++++++
-
-- :ref:`Reverse String <reverse-string>`
-- :ref:`Verify Dogecoin Block on Travis <verify-dogecoin-block-on-travis>`
-- :ref:`RSA encryption and decryption <rsa-crypto>`
+   validator-only-contract
+   integrate-cybermiles-remix-metamask
+   oyente-integration
+   schedule-tx
+   types
+   vm-wrapper
+   erc-contract-checker-guide
 
