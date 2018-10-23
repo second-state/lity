@@ -6,7 +6,7 @@ Integrate CyberMiles Remix & MetaMask
 Install CyberMiles MetaMask Chrome extension
 --------------------------------------------
 
-- Download chrome.crx from https://github.com/CyberMiles/travis-extension/blob/travis/builds/chrome.crx
+- Download chrome.crx from https://github.com/CyberMiles/travis-extension/blob/travis/dist/chrome.crx
 - Install chrome.crx (Go to chrome://extensions/ and drag the chrome.crx extension file to extension page)
 - Open MetaMask to initialize CMT account
 - Switch to **Test Network**
@@ -33,7 +33,6 @@ Using MetaMask in Remix IDE
 ---------------------------
 
 - Check Remix IDE at http://localhost:8080
-- Check compiler version at right panel. It should be `Current version:0.4.25+commit.3c75442c.Emscripten.clang` (`3c75442c` is commit hash of [lity-v1.2.1 release](https://github.com/CyberMiles/lity/releases/tag/v1.2.1))
 - Turn on `Auto compile` option
 
 .. image:: _static/images/remix-metamask/compile-panel.png
@@ -44,8 +43,7 @@ Using MetaMask in Remix IDE
 
 .. code:: bash
 
-  //pragma solidity ^0.4.0;
-  pragma lity ^1.2.0;
+  pragma solidity ^0.4.0;
 
   contract StringReverse {
     event log(string s);
