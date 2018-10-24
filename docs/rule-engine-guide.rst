@@ -473,18 +473,18 @@ Specs
 Grammar
 """""""
 
-Grammar of current rule definition:
+Grammar of rule definition:
 
-.. code-block:: abnf
-   :linenos:
+.. code-block:: bnf
 
-   Rule = 'rule' StringLiteral 'when' '{' RuleLHS '}' 'then' '{' RuleRHS '}'
-   RuleLHS = ( ( Identifier ':' )? FactMatchExpr ';' )
-   FactMatchExpr = Identifier '(' ( FieldExpr (',' FieldExpr)* )? ')'
-   FieldExpr = ( Identifier ':' Identifier ) | Expression
-   RuleRHS = Statement*
+   Rule = 'rule' StringLiteral RuleAttributes 'when' '{' RuleLHS '}' 'then' '{' RuleRHS '}'
+   RuleLHS = ( ( Identifier ':' )? FactMatchExpr ';' )*
+   FactMatchExpr = Identifier '(' ( FieldExpr ( ',' FieldExpr )* )? ')'
+   FieldExpr = Expression
+   RuleRHS = ( Statement | 'update' Identifier ';' )*
+   RuleAttributes = ( 'no_loop true' | 'lock_on_active true' ( 'salience' DecimalNumber ) )*
 
-Note that some nonterminal symbols are defined in solidity's grammar, including ``StringLiteral``, ``Identifier``, ``Expression``, and ``Statement``.
+Note that some nonterminal symbols are defined in solidity's grammar, including ``StringLiteral``, ``Identifier``, ``Expression``, ``Statement``, and ``DecimalNumber``.
 
 Rete Network Generation
 """""""""""""""""""""""
