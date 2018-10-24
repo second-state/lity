@@ -1681,9 +1681,6 @@ void ExpressionCompiler::appendArithmeticOperatorCode(Token::Value _operator, Ty
 	if (c_isSafeUint)
 		appendSafeArithmeticCheckCode(_operator, _type);
 
-	u256 fixedFactor = fixedType ? pow(u256(10), fixedType->fractionalDigits()) : u256(1);
-	bool const c_isLargeFixedOp = fixedType && fixedFactor >= pow(bigint(2), 256 - fixedType->numBits());
-
 	switch (_operator)
 	{
 	case Token::Add:
@@ -1693,37 +1690,30 @@ void ExpressionCompiler::appendArithmeticOperatorCode(Token::Value _operator, Ty
 		m_context << (c_isSigned ? Instruction::SSUB : Instruction::SUB);
 		break;
 	case Token::Mul:
-		m_context << (c_isSigned ? Instruction::SMUL : Instruction::MUL);
-		if (fixedType)
-		{
-			solUnimplementedAssert(!c_isLargeFixedOp, "Not yet implemented - large FixedPointType multiplication");
-			m_context << fixedFactor
-					  << Instruction::SWAP1
-					  << (c_isSigned ? Instruction::SDIV : Instruction::DIV);
-		}
+		if (!fixedType)
+			m_context << (c_isSigned ? Instruction::SMUL : Instruction::MUL);
+		else
+			m_context <<
+				fixedType->fractionalDigits() << Instruction::SWAP2 << Instruction::SWAP1 <<
+				(c_isSigned ? Instruction::SFMUL : Instruction::FMUL);
 		break;
-	case Token::Div:
 	case Token::Mod:
-	{
 		// Test for division by zero
 		m_context << Instruction::DUP2 << Instruction::ISZERO;
 		m_context.appendConditionalInvalid();
-
-		if (_operator == Token::Div)
-		{
-			if (fixedType)
-			{
-				solUnimplementedAssert(!c_isLargeFixedOp, "Not yet implemented - large FixedPointType division");
-				// Division would cancel out factor, this gives the numerator an extra factor so it remains in result
-				m_context << fixedFactor
-						  << Instruction::MUL;
-			}
-			m_context << (c_isSigned ? Instruction::SDIV : Instruction::DIV);
-		}
-		else
-			m_context << (c_isSigned ? Instruction::SMOD : Instruction::MOD);
+		m_context << (c_isSigned ? Instruction::SMOD : Instruction::MOD);
 		break;
-	}
+	case Token::Div:
+		// Test for division by zero
+		m_context << Instruction::DUP2 << Instruction::ISZERO;
+		m_context.appendConditionalInvalid();
+		if (!fixedType)
+			m_context << (c_isSigned ? Instruction::SDIV : Instruction::DIV);
+		else
+			m_context <<
+				fixedType->fractionalDigits() << Instruction::SWAP2 << Instruction::SWAP1 <<
+				(c_isSigned ? Instruction::SFDIV : Instruction::FDIV);
+		break;
 	case Token::Exp:
 		if (fixedType)
 			solAssert(false, "Not yet implemented - FixedPointType exponentiation");
@@ -1742,7 +1732,7 @@ void ExpressionCompiler::appendSafeArithmeticCheckCode(Token::Value _operator, T
 	IntegerType const& type = dynamic_cast<IntegerType const&>(_type);
 	bool const c_isSigned = type.isSigned();
 
-	if( c_isSigned )
+	if (c_isSigned)
 		solUnimplemented("Not yet implemented - Signed integer type.");
 
 	switch (_operator)
