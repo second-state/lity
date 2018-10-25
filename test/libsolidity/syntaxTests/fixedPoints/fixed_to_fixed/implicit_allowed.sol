@@ -6,8 +6,8 @@ contract C {
     ufixed256x19 f2 = a;
 
     fixed256x18 f3 = b;
-    fixed256x18 f4 = b;
+    fixed256x19 f4 = b;
 
     fixed256x18 f5 = a;
-    fixed256x18 f6 = a;
+    fixed256x19 f6 = a;
 }
