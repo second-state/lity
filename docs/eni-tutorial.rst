@@ -41,8 +41,7 @@ Create a contract file called `Reverse.lity`.
 
 .. code::
 
-  //pragma solidity ^0.4.23;
-  pragma lity ^1.2.0;
+  pragma lity ^1.2.4;
 
   contract ReverseContract {
     function reverse(string input) public returns(string) {

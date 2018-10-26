@@ -12,8 +12,7 @@ There is a simple contract that leverage ENI to reverse a string.
 
 .. code::
 
-  //pragma solidity ^0.4.0;
-  pragma lity ^1.2.0;
+  pragma lity ^1.2.4;
   contract StringReverse {
 
   	function test() public returns (string) {

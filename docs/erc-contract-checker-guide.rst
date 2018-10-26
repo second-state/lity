@@ -25,8 +25,7 @@ Examples
 
 .. code:: ts
 
-  //pragma solidity ^0.4.23;
-  pragma lity ^1.2.0;
+  pragma lity ^1.2.4;
 
   contract ERC20Interface {
     function totalSupply() public view returns (uint);
@@ -57,8 +56,7 @@ Examples
 
 .. code:: ts
 
-  //pragma solidity ^0.4.23;
-  pragma lity ^1.2.0;
+  pragma lity ^1.2.4;
 
   contract ERC20Interface {
     function totalSupply() public pure returns (uint); // mutability should be view, not pure
@@ -106,8 +104,7 @@ Examples
 
 .. code:: ts
 
-  //pragma solidity ^0.4.23;
-  pragma lity ^1.2.0;
+  pragma lity ^1.2.4;
 
   contract ERC223Interface {
     function totalSupply() public view returns (uint);
@@ -134,8 +131,7 @@ Examples
 
 .. code:: ts
 
-  //pragma solidity ^0.4.11;
-  pragma lity ^1.2.0;
+  pragma lity ^1.2.4;
 
   library SafeMath {
     function mul(uint a, uint b) internal pure returns (uint) {
@@ -295,8 +291,7 @@ Examples
 
 .. code:: ts
 
-  //pragma solidity ^0.4.23;
-  pragma lity ^1.2.0;
+  pragma lity ^1.2.4;
 
   contract ERC721Interface {
     event Transfer(address indexed _from, address indexed _to, uint256 _tokenId);
@@ -331,8 +326,7 @@ Examples
 
 .. code:: ts
 
-  //pragma solidity ^0.4.23;
-  pragma lity ^1.2.0;
+  pragma lity ^1.2.4;
 
   contract ERC721Interface {
     event Transfer(address indexed _from, address indexed _to, uint256 _tokenId);
@@ -384,8 +378,7 @@ Examples
 
 .. code:: ts
 
-  //pragma solidity ^0.4.23;
-  pragma lity ^1.2.0;
+  pragma lity ^1.2.4;
 
   contract ERC827Interface {
     function totalSupply() public view returns (uint256);
@@ -417,8 +410,7 @@ Examples
 
 .. code:: ts
 
-  //pragma solidity ^0.4.23;
-  pragma lity ^1.2.0;
+  pragma lity ^1.2.4;
 
   contract ERC827Base {
     function totalSupply() public view returns (uint256);
@@ -472,8 +464,7 @@ Examples
 
 .. code:: ts
 
-  //pragma solidity ^0.4.23;
-  pragma lity ^1.2.0;
+  pragma lity ^1.2.4;
 
   contract C20 {
     function totalSupply() public view returns (uint256);
@@ -525,8 +516,7 @@ Examples
 
 .. code:: ts
 
-  //pragma solidity ^0.4.23;
-  pragma lity ^1.2.0;
+  pragma lity ^1.2.4;
 
   contract ERC884Interface {
     event Transfer(address indexed _from, address indexed _to, uint256 _tokenId);
