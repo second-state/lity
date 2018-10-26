@@ -1,3 +1,16 @@
+### Lity 1.2.4 (2018-10-26)
+
+Language Features:
+ * Support `pragma lity`, the version pragma of Lity.
+
+Documentation:
+ * Clean up and revise Rule Engine documents.
+ * Make all documents referenced in toctree.
+
+Bugfixes:
+ * Rule:
+   - Accept no-field fact.
+
 ### Lity 1.2.3 (2018-10-02)
 
 Breaking Changes:
