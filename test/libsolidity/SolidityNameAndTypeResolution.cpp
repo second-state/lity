@@ -4205,7 +4205,10 @@ BOOST_AUTO_TEST_CASE(size_capabilities_of_fixed_point_types)
 			}
 		}
 	)";
-	CHECK_SUCCESS(text);
+	CHECK_ERROR_ALLOW_MULTI(text, TypeError, (std::vector<std::string>{
+		"is not implicitly convertible to expected type ufixed256x77",
+		"is not implicitly convertible to expected type fixed256x76",
+	}));
 }
 
 BOOST_AUTO_TEST_CASE(zero_handling)
