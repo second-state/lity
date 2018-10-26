@@ -20,8 +20,7 @@ There is a simple contract that leverage ENI to do heavy scrypt hash algorithm.
 
 .. code::
 
-  //pragma solidity ^0.4.23;
-  pragma lity ^1.2.0;
+  pragma lity ^1.2.4;
 
   contract DogecoinVerifier {
 
