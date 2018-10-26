@@ -1231,24 +1231,22 @@ shared_ptr<IntegerType const> RationalNumberType::integerType() const
 {
 	solAssert(!isFractional(), "integerType() called for fractional number.");
 	bigint value = m_value.numerator();
-	bool negative = (value < 0);
-	if (negative) // convert to positive number of same bit requirements
+	if (isNegative()) // convert to positive number of same bit requirements
 		value = ((0 - value) - 1) << 1;
 	if (value > u256(-1))
 		return shared_ptr<IntegerType const>();
 	else
 		return make_shared<IntegerType>(
 			max(bytesRequired(value), 1u) * 8,
-			negative ? IntegerType::Modifier::Signed : IntegerType::Modifier::Unsigned
+			isNegative() ? IntegerType::Modifier::Signed : IntegerType::Modifier::Unsigned
 		);
 }
 
 shared_ptr<FixedPointType const> RationalNumberType::fixedPointType() const
 {
-	bool negative = (m_value < 0);
 	unsigned fractionalDigits = 0;
 	rational value = abs(m_value); // We care about the sign later.
-	rational maxValue = negative ?
+	rational maxValue = isNegative() ?
 		rational(bigint(1) << 255, 1):
 		rational((bigint(1) << 256) - 1, 1);
 
@@ -1262,7 +1260,7 @@ shared_ptr<FixedPointType const> RationalNumberType::fixedPointType() const
 		return shared_ptr<FixedPointType const>();
 	// This means we round towards zero for positive and negative values.
 	bigint v = value.numerator() / value.denominator();
-	if (negative)
+	if (isNegative())
 		// modify value to satisfy bit requirements for negative numbers:
 		// add one bit for sign and decrement because negative numbers can be larger
 		v = (v - 1) << 1;
@@ -1275,7 +1273,7 @@ shared_ptr<FixedPointType const> RationalNumberType::fixedPointType() const
 
 	return make_shared<FixedPointType>(
 		totalBits, fractionalDigits,
-		negative ? FixedPointType::Modifier::Signed : FixedPointType::Modifier::Unsigned
+		isNegative() ? FixedPointType::Modifier::Signed : FixedPointType::Modifier::Unsigned
 	);
 }
 
