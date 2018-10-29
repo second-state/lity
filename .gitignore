@@ -37,6 +37,7 @@ docs/utils/__pycache__
 docs/utils/*.pyc
 
 # vim stuff
+*.swo
 *.swp
 
 # IDE files
