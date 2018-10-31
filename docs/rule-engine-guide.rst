@@ -90,6 +90,65 @@ fireAllRules
 
 ``fireAllRules`` is a special statement that launches lity rule engine execution, it works like drools' ``ksession.fireAllRules()`` API.
 
+Rule Attributes
+"""""""""""""""
+
+salience
+~~~~~~~~
+
+If you want some rules to be processed first than other rules (i.e higher priority), ``salience`` keyword can be used. The bigger the number specified, the higher the priority it have.
+
+.. code:: ts
+
+   rule "test1" salience 20 when {
+     p: Person(val >= 10);
+   } then {
+     p.addr.send(1);
+     p.val--;
+     update p;
+   }
+
+   rule "test2" salience 30 when {
+     p: Person(val >= 20);
+   } then {
+     p.addr.send(2);
+     p.val--;
+     update p;
+   }
+
+In the above example, the second rule will have higher priority.
+
+no_loop
+~~~~~~~
+
+Sometimes you may want to update a fact but the activation of the same rule by the same set of fact is not desired.
+
+.. code:: ts
+
+   rule "test" when {
+     p: Person(age >= 20);
+   } then {
+     p.age++;
+     p.addr.send(1);
+     update p;
+   }
+
+If you tried to ``fireAllRules``, the above rule may keep firing (until ``p.age`` overflows). To make it fire only once for each ``fireAllRules``, we can use ``no_loop`` keyword.
+
+.. code:: ts
+
+   rule "test" no_loop true when {
+     p: Person(age >= 20);
+   } then {
+     p.age++;
+     p.addr.send(1);
+     update p;
+   }
+
+lock_on_active
+~~~~~~~~~~~~~~
+
+``lock_on_active`` have the same syntax with ``no_loop``, simply replace ``no_loop`` keyword apperaed in the above example. The difference between ``lock_on_active`` and ``no_loop`` is that, ``lock_on_active`` will also prevent the reactivation of the rule even if it is caused by other rule's then-part.
 
 Rule Examples
 -------------
