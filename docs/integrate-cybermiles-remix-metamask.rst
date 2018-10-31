@@ -6,7 +6,7 @@ Integrate CyberMiles Remix & MetaMask
 Install CyberMiles MetaMask Chrome extension
 --------------------------------------------
 
-- Download chrome.crx from https://github.com/CyberMiles/travis-extension/blob/travis/dist/chrome.crx
+- Download chrome.crx from https://www.cybermiles.io/metamask/
 - Install chrome.crx (Go to chrome://extensions/ and drag the chrome.crx extension file to extension page)
 - Open MetaMask to initialize CMT account
 - Switch to **Test Network**
