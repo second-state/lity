@@ -51,7 +51,9 @@ public:
 	/// Stack post: len
 	void getLen() { m_context << 32 << Instruction::ADD << Instruction::MLOAD; }
 
-	/// reallocate memory space and copy data to the new space
+	/// allocate memory space for array slice, which cost 32*3 bytes
+	void alloc();
+	/// reallocate data memory space and copy data to the new space
 	/// Stack pre : refer cap'
 	/// Stack post:
 	void reAlloc();

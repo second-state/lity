@@ -399,8 +399,8 @@ void ContractCompiler::appendRules(ContractDefinition const& _contract)
 	// rule init
 	for(auto rule: _contract.rules())
 	{
-		m_context << 32*3;
-		CompilerUtils(m_context).allocateMemory();
+		DynArrUtils(m_context, 1).alloc();
+		// lock_on_active listMaddr
 		m_context << keccak256(rule->name()+"-lockOnActive-list") << Instruction::SSTORE;
 	}
 

@@ -110,8 +110,8 @@ void RuleEngineCompiler::compile(TypeNode const& _node)
 	auto inListAddr = keccak256(_node.type()->richIdentifier()+"-factlist");
 	// listPtr(to memList) in storage
 	auto outListPtrAddr = _node.outAddr();
-	m_context << 32*3;
-	utils().allocateMemory();
+
+	DynArrUtils(m_context, 1).alloc();
 	m_context << outListPtrAddr << Instruction::SSTORE;
 
 	eth::AssemblyItem loopStart = m_context.newTag();
@@ -157,8 +157,7 @@ void RuleEngineCompiler::compile(AlphaNode const& _node)
 	auto inListPtrAddr  = _node.parent()->outAddr();
 	auto outListPtrAddr = _node.outAddr();
 
-	m_context << 32*3;
-	utils().allocateMemory();
+	DynArrUtils(m_context, 1).alloc();
 	m_context << outListPtrAddr << Instruction::SSTORE;
 
 	m_context << inListPtrAddr << Instruction::SLOAD;
@@ -213,8 +212,7 @@ void RuleEngineCompiler::compile(JoinNode const& _node)
 		JoinNode const& left = *_node.leftParent();
 		AlphaNode const& right = *_node.rightParent();
 
-		m_context << 32*3;
-		utils().allocateMemory();
+		DynArrUtils(m_context, 1).alloc();
 		m_context << _node.outAddr() << Instruction::SSTORE;
 
 		m_context << right.outAddr() << Instruction::SLOAD;

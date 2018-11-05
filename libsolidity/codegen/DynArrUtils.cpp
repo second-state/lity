@@ -95,6 +95,14 @@ void DynArrUtils::popItem()
 	m_context << Instruction::POP;
 }
 
+// Stack pre :
+// Stack post:
+void DynArrUtils::alloc()
+{
+	m_context << 32*3;
+	utils().allocateMemory();
+}
+
 // Stack pre : reference cap'(#elmts)
 // Stack post:
 void DynArrUtils::reAlloc()
