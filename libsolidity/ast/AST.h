@@ -421,7 +421,6 @@ private:
 	std::vector<ASTPointer<ASTNode>> m_subNodes;
 	ContractKind m_contractKind;
 
-	std::vector<ContractDefinition const*> m_linearizedBaseContracts;
 	mutable std::unique_ptr<std::vector<std::pair<FixedHash<4>, FunctionTypePointer>>> m_interfaceFunctionList;
 	mutable std::unique_ptr<std::vector<EventDefinition const*>> m_interfaceEvents;
 	mutable std::unique_ptr<std::vector<Declaration const*>> m_inheritableMembers;
@@ -1351,6 +1350,7 @@ public:
 	virtual bool saveToENISection(ENIHandler&, CompilerContext&) const { return false; };
 
 	virtual void replaceChild(Expression*, ASTPointer<Expression>){}
+	virtual ASTPointer<Expression> deepCopy() const = 0;
 };
 
 class Conditional: public Expression
@@ -1379,6 +1379,10 @@ public:
 	void setFalseExpression(ASTPointer<Expression> _falseExpression) { m_falseExpression = _falseExpression; }
 	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
 
+	virtual ASTPointer<Expression> deepCopy() const override
+	{
+		return std::make_shared<Conditional>(location(), m_condition->deepCopy(), m_trueExpression->deepCopy(), m_falseExpression->deepCopy());
+	}
 private:
 	ASTPointer<Expression> m_condition;
 	ASTPointer<Expression> m_trueExpression;
@@ -1411,6 +1415,10 @@ public:
 	Expression const& rightHandSide() const { return *m_rightHandSide; }
 	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
 
+	virtual ASTPointer<Expression> deepCopy() const override
+	{
+		return std::make_shared<Assignment>(location(), m_leftHandSide->deepCopy(), m_assigmentOperator, m_rightHandSide->deepCopy());
+	}
 private:
 	ASTPointer<Expression> m_leftHandSide;
 	Token::Value m_assigmentOperator;
@@ -1444,6 +1452,10 @@ public:
 
 	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
 
+	virtual ASTPointer<Expression> deepCopy() const override
+	{
+		return std::make_shared<TupleExpression>(location(), m_components, m_isArray);
+	}
 private:
 	std::vector<ASTPointer<Expression>> m_components;
 	bool m_isArray;
@@ -1479,6 +1491,10 @@ public:
 	void setSubExpression(ASTPointer<Expression> _subExpression) { m_subExpression = _subExpression; }
 	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
 
+	virtual ASTPointer<Expression> deepCopy() const override
+	{
+		return std::make_shared<UnaryOperation>(location(), m_operator, m_subExpression->deepCopy(), m_isPrefix);
+	}
 private:
 	Token::Value m_operator;
 	ASTPointer<Expression> m_subExpression;
@@ -1515,6 +1531,10 @@ public:
 	void setRightExpression(ASTPointer<Expression> _right) { m_right = _right; }
 	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
 
+	virtual ASTPointer<Expression> deepCopy() const override
+	{
+		return std::make_shared<BinaryOperation>(location(), m_left->deepCopy(), m_operator, m_right->deepCopy());
+	}
 private:
 	ASTPointer<Expression> m_left;
 	Token::Value m_operator;
@@ -1545,6 +1565,10 @@ public:
 
 	virtual FunctionCallAnnotation& annotation() const override;
 
+	virtual ASTPointer<Expression> deepCopy() const override
+	{
+		return std::make_shared<FunctionCall>(location(), m_expression, m_arguments, m_names);
+	}
 private:
 	ASTPointer<Expression> m_expression;
 	std::vector<ASTPointer<Expression>> m_arguments;
@@ -1582,6 +1606,10 @@ public:
 
 	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
 
+	virtual ASTPointer<Expression> deepCopy() const override
+	{
+		return std::make_shared<NewExpression>(location(), m_typeName);
+	}
 private:
 	ASTPointer<TypeName> m_typeName;
 };
@@ -1609,6 +1637,10 @@ public:
 
 	virtual MemberAccessAnnotation& annotation() const override;
 
+	virtual ASTPointer<Expression> deepCopy() const override
+	{
+		return std::make_shared<MemberAccess>(location(), m_expression->deepCopy(), m_memberName);
+	}
 private:
 	ASTPointer<Expression> m_expression;
 	ASTPointer<ASTString> m_memberName;
@@ -1636,6 +1668,10 @@ public:
 	void setIndex(ASTPointer<Expression> _index) { m_index = _index; }
 	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
 
+	virtual ASTPointer<Expression> deepCopy() const override
+	{
+		return std::make_shared<IndexAccess>(location(), m_base->deepCopy(), m_index->deepCopy());
+	}
 private:
 	ASTPointer<Expression> m_base;
 	ASTPointer<Expression> m_index;
@@ -1653,7 +1689,6 @@ public:
 	{
 		solAssert(false, "PrimaryExpr has no child.");
 	}
-
 };
 
 /**
@@ -1677,6 +1712,10 @@ public:
 
 	bool saveToENISection(ENIHandler&, CompilerContext&) const override;
 
+	virtual ASTPointer<Expression> deepCopy() const override
+	{
+		return std::make_shared<Identifier>(location(), m_name);
+	}
 private:
 	ASTPointer<ASTString> m_name;
 };
@@ -1697,6 +1736,10 @@ public:
 
 	ElementaryTypeNameToken const& typeName() const { return m_typeToken; }
 
+	virtual ASTPointer<Expression> deepCopy() const override
+	{
+		return std::make_shared<ElementaryTypeNameExpression>(location(), m_typeToken);
+	}
 private:
 	ElementaryTypeNameToken m_typeToken;
 };
@@ -1750,6 +1793,10 @@ public:
 
 	bool saveToENISection(ENIHandler&, CompilerContext&) const override;
 
+	virtual ASTPointer<Expression> deepCopy() const override
+	{
+		return std::make_shared<Literal>(location(), m_token, m_value, m_subDenomination);
+	}
 private:
 	Token::Value m_token;
 	ASTPointer<ASTString> m_value;
@@ -1766,6 +1813,7 @@ public:
 	Rule(
 		SourceLocation const& _location,
 		ASTPointer<ASTString> const& _name,
+		ASTPointer<ASTString> const& _baseName,
 		std::vector<ASTPointer<FactDeclaration>> const& _factDeclarations,
 		ASTPointer<Statement> const& _thenBody,
 		bool _noLoop,
@@ -1773,6 +1821,7 @@ public:
 		int _salience
 	):
 		Declaration(_location, _name),
+		m_baseRuleName(_baseName),
 		m_factDeclarations(_factDeclarations),
 		m_thenBody(_thenBody),
 		m_noLoop(_noLoop),
@@ -1785,7 +1834,15 @@ public:
 
 	virtual TypePointer type() const override;
 
+	ASTString baseRuleName() const
+	{
+		if(m_baseRuleName) return *m_baseRuleName;
+		else return "";
+	}
 	int numOfFacts() const { return m_factDeclarations.size(); }
+	const std::vector<ASTPointer<FactDeclaration>>& facts() const { return m_factDeclarations; }
+	void addFactInBack(ASTPointer<FactDeclaration> _fact) { m_factDeclarations.push_back(_fact); }
+	void addFactInFront(ASTPointer<FactDeclaration> _fact) { m_factDeclarations.insert(m_factDeclarations.begin(), _fact); }
 	FactDeclaration const& fact(int i) const { return *m_factDeclarations[i].get(); }
 	FactDeclaration const& lastFact() const { return *m_factDeclarations.back().get(); }
 	// return -1 if not found
@@ -1801,6 +1858,7 @@ public:
 	bool lockOnActive() const { return m_lockOnActive; }
 	int salience() const { return m_salience; }
 private:
+	ASTPointer<ASTString> m_baseRuleName; // shall be resolved by NameAndTypeResolver
 	std::vector<ASTPointer<FactDeclaration>> m_factDeclarations;
 	ASTPointer<Statement> m_thenBody;
 	bool m_noLoop;
@@ -1825,6 +1883,7 @@ public:
 
 	virtual TypePointer type() const override;
 
+	ASTPointer<TypeName> typeName() { return m_typeName; }
 	std::vector<ASTPointer<FieldExpression>>& fieldExpressions() { return m_fieldExpressions; }
 
 private:
@@ -1848,6 +1907,15 @@ public:
 	void setExpression(ASTPointer<Expression> _expression) {m_expression = _expression; }
 	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
 
+	virtual ASTPointer<Expression> deepCopy() const override
+	{
+		return std::make_shared<FieldExpression>(location(), m_expression->deepCopy());
+	}
+
+	ASTPointer<FieldExpression> fieldDeepCopy() const
+	{
+		return std::make_shared<FieldExpression>(location(), m_expression->deepCopy());
+	}
 private:
 	ASTPointer<Expression> m_expression;
 };

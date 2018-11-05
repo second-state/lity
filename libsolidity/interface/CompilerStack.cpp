@@ -184,8 +184,12 @@ bool CompilerStack::analyze()
 		m_globalContext = make_shared<GlobalContext>();
 		NameAndTypeResolver resolver(m_globalContext->declarations(), m_scopes, m_errorReporter);
 		for (Source const* source: m_sourceOrder)
-			if (!resolver.registerDeclarations(*source->ast))
-				return false;
+		{
+			for (ASTPointer<ASTNode> const& node: source->ast->nodes())
+				if (ContractDefinition* contract = dynamic_cast<ContractDefinition*>(node.get()))
+					if (!resolver.resolveRuleInheritance(*contract)) return false;
+			if (!resolver.registerDeclarations(*source->ast)) return false;
+		}
 
 		map<string, SourceUnit const*> sourceUnitsByName;
 		for (auto& source: m_sources)

@@ -126,8 +126,23 @@ bool NameAndTypeResolver::performImports(SourceUnit& _sourceUnit, map<string, So
 
 bool NameAndTypeResolver::resolveFactMemberReferences(ASTNode& _node)
 {
-	try{
+	try
+	{
 		return FactMemberReferencesResolver(*this).resolve(_node);
+	}
+	catch (FatalError const&)
+	{
+		if (m_errorReporter.errors().empty())
+			throw; // Something is weird here, rather throw again.
+		return false;
+	}
+}
+
+bool NameAndTypeResolver::resolveRuleInheritance(ASTNode& _node)
+{
+	try
+	{
+		return RuleInheritanceResolver(*this).resolve(_node);
 	}
 	catch (FatalError const&)
 	{
@@ -706,7 +721,7 @@ void DeclarationRegistrationHelper::endVisit(Rule&)
 	closeCurrentScope();
 }
 
-bool DeclarationRegistrationHelper::visit(FactDeclaration& _declaration) 
+bool DeclarationRegistrationHelper::visit(FactDeclaration& _declaration)
 {
 	registerDeclaration(_declaration, false);
 	enterNewSubScope(_declaration);
