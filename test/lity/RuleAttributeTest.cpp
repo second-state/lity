@@ -16,7 +16,7 @@ static map<string, unique_ptr<bytes>> s_compiledContracts;
 class RuleAttributeTestFramework: public ContractExecutionFramework
 {
 protected:
-	void deployContract(string _contractFileName)
+	void deployContract(const string& _contractFileName)
 	{
 		if (!s_compiledContracts[_contractFileName])
 			s_compiledContracts[_contractFileName].reset(new bytes(compileContractFile(
