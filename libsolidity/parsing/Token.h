@@ -182,13 +182,14 @@ namespace solidity
 	K(Var, "var", 0)                                                   \
 	K(View, "view", 0)                                                 \
 	K(While, "while", 0)                                               \
-	K(Rule, "rule", 0)                                               \
-	K(When, "when", 0)                                               \
-	K(Then, "then", 0)                                               \
+	K(Rule, "rule", 0)                                                 \
+	K(When, "when", 0)                                                 \
+	K(Then, "then", 0)                                                 \
 	K(FireAllRules, "fireAllRules", 0)                                 \
 	K(NoLoop, "no_loop", 0)                                            \
 	K(LockOnActive, "lock_on_active", 0)                               \
 	K(Salience, "salience", 0)                                         \
+	K(Extends, "extends", 0)                                           \
 	\
 	/* Ether subdenominations */                                       \
 	K(SubWei, "wei", 0)                                                \
@@ -305,7 +306,7 @@ public:
 	static bool isEtherSubdenomination(Value op) { return op == SubWei || op == SubSzabo || op == SubFinney || op == SubEther; }
 	static bool isTimeSubdenomination(Value op) { return op == SubSecond || op == SubMinute || op == SubHour || op == SubDay || op == SubWeek || op == SubYear; }
 	static bool isReservedKeyword(Value op) { return (Abstract <= op && op <= TypeOf); }
-	static bool isRuleSpecifier(Value op) { return op==NoLoop || op==Salience || op==LockOnActive; }
+	static bool isRuleSpecifier(Value op) { return op == NoLoop || op == Salience || op == LockOnActive; }
 
 	// @returns a string corresponding to the JS token string
 	// (.e., "<" for the token LT) or NULL if the token doesn't

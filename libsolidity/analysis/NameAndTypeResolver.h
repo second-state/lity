@@ -28,6 +28,7 @@
 #include <libsolidity/analysis/DeclarationContainer.h>
 #include <libsolidity/analysis/ReferencesResolver.h>
 #include <libsolidity/analysis/FactMemberReferencesResolver.h>
+#include <libsolidity/analysis/RuleInheritanceResolver.h>
 #include <libsolidity/ast/ASTVisitor.h>
 #include <libsolidity/ast/ASTAnnotations.h>
 
@@ -68,6 +69,8 @@ public:
 	bool resolveNamesAndTypes(ASTNode& _node, bool _resolveInsideCode = true);
 	/// Resolve references to member in fact expression
 	bool resolveFactMemberReferences(ASTNode& _node);
+	/// Resolve rule inheritance
+	bool resolveRuleInheritance(ASTNode& _node);
 	/// Updates the given global declaration (used for "this"). Not to be used with declarations
 	/// that create their own scope.
 	/// @returns false in case of error.
@@ -106,6 +109,7 @@ public:
 	/// Sets the current scope.
 	void setScope(ASTNode const* _node);
 
+	std::map<ASTString, Rule const *>& rules() { return m_rules; }
 private:
 	/// Internal version of @a resolveNamesAndTypes (called from there) throws exceptions on fatal errors.
 	bool resolveNamesAndTypesInternal(ASTNode& _node, bool _resolveInsideCode = true);
@@ -126,6 +130,7 @@ private:
 	/// not contain code.
 	/// Aliases (for example `import "x" as y;`) create multiple pointers to the same scope.
 	std::map<ASTNode const*, std::shared_ptr<DeclarationContainer>>& m_scopes;
+	std::map<ASTString, Rule const *> m_rules;
 
 	DeclarationContainer* m_currentScope = nullptr;
 	ErrorReporter& m_errorReporter;

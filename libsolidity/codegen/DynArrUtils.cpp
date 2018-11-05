@@ -203,8 +203,10 @@ void DynArrUtils::forEachDo(std::function<void(CompilerContext&)> f, bool breaka
 	accessIndex(false);
 	// stack: ... elmtMemAddr
 	if (breakable)
-		m_context << 0 << Instruction::SWAP1;
+		m_context << 0 << Instruction::SWAP1; // breakOrNot
+	// stack: ... (breakOrNot) elmtMemAddr
 	f(m_context);
+	// stack: ... (breakOrNot)
 	if (breakable)
 		m_context.appendConditionalJumpTo(loopEnd);
 	// stack: refer len i

@@ -417,14 +417,16 @@ void ContractCompiler::appendRules(ContractDefinition const& _contract)
 				// factHash
 				RuleEngineCompiler(context).appendGetLockOnActiveMapMarker(*rule);
 				// markMAddr
+				// set lock_on_active marker as false
 				context << 0 << Instruction::SWAP1 << Instruction::SSTORE;
 			}
 		);
 	}
+	// set no_loop marker as empty
 	m_context << 0 << RuleEngineCompiler(m_context).noLoopAddr() << Instruction::SSTORE;
 
 	m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);
-	m_context.setStackOffset(0); // not sure this is the right place
+	m_context.setStackOffset(0);
 
 	m_context << rulesExecLabel;
 	for(auto rule: _contract.rules())
@@ -518,7 +520,7 @@ void ContractCompiler::appendRules(ContractDefinition const& _contract)
 		);
 	}
 	m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);
-	m_context.setStackOffset(0); // not sure this is the right place
+	m_context.setStackOffset(0);
 }
 
 void ContractCompiler::registerStateVariables(ContractDefinition const& _contract)

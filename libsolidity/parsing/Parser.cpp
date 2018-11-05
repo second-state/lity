@@ -1738,35 +1738,42 @@ ASTPointer<Rule> Parser::parseRule()
 {
 	ASTNodeFactory nodeFactory(*this);
 	expectToken(Token::Rule);
-	auto ruleName = getLiteralAndAdvance();
-	int salience=0;
-	bool noLoop=false, lockOnActive=false;
+	ASTPointer<ASTString> ruleName = getLiteralAndAdvance();
+	ASTPointer<ASTString> baseRuleName;
+	int salience = 0;
+	bool noLoop = false, lockOnActive = false;
 	std::vector<ASTPointer<FactDeclaration>> factDeclarations;
 
 	while (m_scanner->currentToken() != Token::When)
 	{
-		if(m_scanner->currentToken()==Token::Salience)
+		switch (m_scanner->currentToken() )
 		{
-			solAssert(m_scanner->peekNextToken()==Token::Number, "salience must be an integer");
+		case Token::Salience:
+		{
+			if(m_scanner->peekNextToken() != Token::Number)
+				fatalParserError("salience must be an integer");
 			string literal = m_scanner->peekLiteral();
 			salience = stoi(literal);
+			break;
 		}
-		else if(m_scanner->currentToken()==Token::NoLoop)
-		{
-			solAssert(m_scanner->peekNextToken()==Token::TrueLiteral || m_scanner->peekNextToken()==Token::FalseLiteral, "no-loop must be an boolean");
-			noLoop = m_scanner->peekNextToken()==Token::TrueLiteral;
-		}
-		else if(m_scanner->currentToken()==Token::LockOnActive)
-		{
-			solAssert(m_scanner->peekNextToken()==Token::TrueLiteral || m_scanner->peekNextToken()==Token::FalseLiteral, "lock-on-active must be an boolean");
+		case Token::NoLoop:
+			if(m_scanner->peekNextToken() != Token::TrueLiteral && m_scanner->peekNextToken() != Token::FalseLiteral)
+				fatalParserError("no_loop must be an boolean");
+			noLoop = m_scanner->peekNextToken() == Token::TrueLiteral;
+			break;
+		case Token::LockOnActive:
+			if(m_scanner->peekNextToken() != Token::TrueLiteral && m_scanner->peekNextToken() != Token::FalseLiteral)
+				fatalParserError("lock_on_active must be an boolean");
 			lockOnActive = m_scanner->peekNextToken()==Token::TrueLiteral;
+			break;
+		case Token::Extends:
+			baseRuleName = make_shared<ASTString>(m_scanner->peekLiteral());
+			break;
+		default:
+			fatalParserError("unknown attribute");
 		}
-		else
-		{
-			solAssert(false, "unknown attribute");
-		}
-		m_scanner->next();
-		m_scanner->next();
+		m_scanner->next(); // attribute
+		m_scanner->next(); // attribute value
 	}
 	expectToken(Token::When);
 	expectToken(Token::LBrace);
@@ -1780,7 +1787,7 @@ ASTPointer<Rule> Parser::parseRule()
 
 	expectToken(Token::Then);
 	ASTPointer<Statement> thenBody = parseStatement();
-	return nodeFactory.createNode<Rule>(ruleName, factDeclarations, thenBody, noLoop, lockOnActive, salience);
+	return nodeFactory.createNode<Rule>(ruleName, baseRuleName, factDeclarations, thenBody, noLoop, lockOnActive, salience);
 }
 
 ASTPointer<FactDeclaration> Parser::parseFactDeclaration()
