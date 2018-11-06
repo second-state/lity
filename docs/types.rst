@@ -33,10 +33,10 @@ Operators
 
 - Arithmetics: binary ``+``, binary ``-``, unary ``+``, unary ``-``, ``*``, ``/``, ``%``
 - Comparisons: ``<=``, ``<``, ``==``, ``!=``, ``>=``, ``>``
-- Conversions: see types-fixed-point-numbers-conversions_.
+- Conversions: see :ref:`types-fixed-point-numbers-conversions`.
 
 Arithmetic operators may cause implicit
-`truncation <types-fixed-point-numbers-truncations_>`__.
+:ref:`truncation <types-fixed-point-numbers-truncations>`.
 
 Definition
 ``````````
@@ -67,7 +67,7 @@ Conversions between Literals and Fixed Point Types
 ``````````````````````````````````````````````````
 
 Decimal literals can be converted to fixed point types
-implicitly if no `truncation <types-fixed-point-numbers-truncations_>`__
+implicitly if no :ref:`truncation <types-fixed-point-numbers-truncations>`
 occurred.
 
 .. code::
@@ -77,7 +77,7 @@ occurred.
 
     ufixed8x2 b = 9.9; // rational 99/10 to ufixed8x2 [0.00, 2.56], fail
 
-When `truncation <types-fixed-point-numbers-truncations_>`__ will occur,
+When :ref:`truncation <types-fixed-point-numbers-truncations>` will occur,
 explicit conversion is required.
 
 .. code::
@@ -85,7 +85,7 @@ explicit conversion is required.
     ufixed16x2 pi = ufixed16x2(3.1415926535); // truncated to 3.14
 
 Explicit conversion is also required between different fixed point types
-if it might cause `truncation <types-fixed-point-numbers-truncations_>`__.
+if it might cause :ref:`truncation <types-fixed-point-numbers-truncations>`.
 
 .. code::
 
