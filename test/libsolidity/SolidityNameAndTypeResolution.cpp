@@ -4254,8 +4254,8 @@ BOOST_AUTO_TEST_CASE(fixed_type_valid_explicit_conversions)
 	char const* text = R"(
 		contract test {
 			function f() public {
-				ufixed256x80 a = ufixed256x80(1/3); a;
-				ufixed248x80 b = ufixed248x80(1/3); b;
+				ufixed256x18 a = ufixed256x18(1/3); a;
+				ufixed248x18 b = ufixed248x18(1/3); b;
 				ufixed8x1 c = ufixed8x1(1/3); c;
 			}
 		}
@@ -4397,8 +4397,8 @@ BOOST_AUTO_TEST_CASE(rational_to_fixed_literal_expression)
 				ufixed64x8 b = 4 - 2.5;
 				ufixed64x8 c = 11 / 4;
 				ufixed240x5 d = 599 + 0.21875;
-				ufixed256x80 e = ufixed256x80(35.245 % 12.9);
-				ufixed256x80 f = ufixed256x80(1.2 % 2);
+				ufixed256x18 e = ufixed256x18(35.245 % 12.9);
+				ufixed256x18 f = ufixed256x18(1.2 % 2);
 				fixed g = 2 ** -2;
 				a; b; c; d; e; f; g;
 			}
