@@ -48,6 +48,8 @@ Rule Attributes
 
 salience
 ********
+default: 0
+type: integer literal
 
 If you want some rules to be processed first than other rules (i.e higher priority), ``salience`` keyword can be used. The bigger the number specified, the higher the priority it have.
 
@@ -70,15 +72,25 @@ If you want some rules to be processed first than other rules (i.e higher priori
    }
 
 In the above example, the second rule will have higher priority.
+Activation of rules with the same salience would be arbitrary.
+In constrast to Drools, Lity does not support dynamic salience.
+Due to Solidity parser issue, current salience value cannot be negative, but this shall be resolved in the future.
 
 no_loop
 *******
+default: false
+type: bool literal
+
+``no_loop`` forbids a rule to activate itself with the same set of facts.
+This is for the purpose of preventing infinite loop.
 
 lock_on_active
 **************
+default: false
+type: bool literal
 
-``lock_on_active`` have the same syntax with ``no_loop``, simply replace ``no_loop`` keyword apperaed in the above example. The difference between ``lock_on_active`` and ``no_loop`` is that, ``lock_on_active`` will also prevent the reactivation of the rule even if it is caused by other rule's then-part.
-
+``lock_on_active`` forbids a rule to be activated more than once with the same set of facts.
+This is stronger than ``no_loop`` because it also prevent the reactivation of the rule even if it is caused by other rule's then-part.
 
 A simple Example
 ~~~~~~~~~~~~~~~~
@@ -101,6 +113,8 @@ The rule name, ``"payPension"`` is the identifier of the rule declaration, and i
 
 If the rule engine successfully find a person and a budget satisfies above requirements, the code in the second part will be executed, and we should modify the eligiblity of the person to prevent rule engine fire the same rule for the same person again.
 
+Rule inheritance
+~~~~~~~~~~~~~~~~
 
 Rule Examples
 -------------
