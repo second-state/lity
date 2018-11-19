@@ -11,17 +11,19 @@ In industry, people often use `business rule engine <https://en.wikipedia.org/wi
 Despite the wide adoption, it is hard to run the rule engine in a publicly verifiable way (which means to run it on Blockchain). To eliminate the gap between traditional business rule engine and Blockchain technology, we decide to implement part of traditional rule engine features (to make it part of Lity). Rule engine related codes are directly compiled into EVM byte codes, so it can also be executed on Ethereum public chain.
 
 Our rule engine's syntax and semantics are directly borrowed from Drools, so it might be a good idea to look through `Drools documentation <https://www.drools.org/learn/documentation.html>`_ before you use Lity's rule engine.
+Specifically, chapter `Rule Engines and Production Rule Systems (PRS) <https://docs.jboss.org/drools/release/7.1.0.Final/drools-docs/html_single/#_rule_engines_and_production_rule_systems_prs>`_ introduces the basic concept.
 
-Rule Engine Components
+Rule Engine Overview
 ----------------------
 
 Facts
 """""
-A struct that can be pattern matched in rule definitions. A fact must be a struct stored in storage.
+Facts are data that shall be matched and modified by the rule engine.
+In Lity, a fact must be a struct stored in storage.
 
 Working Memory
 """"""""""""""
-Working memory is a containenr hides behind a contract, it stores facts that are ready to be pattern matched. To insert/remove facts to/from working memory, we can use ``factInsert`` and ``factDelete`` operators.
+Working memory is a containenr that stores facts hides behind a contract. To insert/remove facts to/from working memory, we can use ``factInsert`` and ``factDelete`` operators.
 
 Rule Engine Operators
 """""""""""""""""""""
