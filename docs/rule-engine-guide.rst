@@ -25,11 +25,16 @@ Working memory is a containenr that stores facts hides behind a contract. To ins
 
 Rules
 """""
+
+A rule defines that ``when`` certain conditions occur, ``then`` certain actions should be executed.
+
+In Lity, rules are written in the contract and the syntax is very similar with Drools's.
+
 An rule statement consists of four parts:
 
 1. Rule Name: a string literal which served as the identifier of rule.
 2. Rule attributes: optional hints that describe activation behavior of this rule.
-3. Filter Statements (a.k.a. *when block*): one or more statements describe which set of facts should be captured and applied actions in the *then block*.
+3. Filter Statements (a.k.a. *when block*): one or more conditional statements describe which set of facts should be captured.
 4. Action Statements (a.k.a. *then block*): one or more statements to execute on matched objects (which are captured in *when block*.)
 
 A contract with a rule definition looks like this:
@@ -80,13 +85,37 @@ This is stronger than ``no_loop`` because it also prevent the reactivation of th
 
 Filter Statements(when)
 ~~~~~~~~~~~~~~~~~
+When part is composed of patterns(which are explained later).
+When part specifies conditions which set of facts should be activated.
+If all pattern conditions are met, then part shall be executed for this set of facts.
+
+Pattern
+**************
+A pattern describe a fact(struct) with a set of conditions.
+It start with pattern binding, which specifies fact name refered in this rule scope.
+After binding, pattern type specifies the type(struct name) of the fact.
+Then, a set of constraints is descibe conditions of this fact.
+Constraints must be boolean expressions.
+See the example below or refer rule grammar for details.
 
 Action Statements(then)
 ~~~~~~~~~~~~~~~~~
+Then part is composed of normal statements.
+However, there is a special operator, ``update``(explained later), which might be useful in this part.
+
+Due to Solidity compiler issue, variable declaration statement is not supported yet in then block.
+But this shall be resolved in the future.
+
+The update operator
+****************
+``update object`` will inform the rule engine that this object may be modified and rules may need to be reevaluated.
+In current implementation, all rules and facts are reevaluated even for the objects that was not updated.
+So conditions should be taken care when ``update`` is used in any rule.
 
 A simple Example
 ~~~~~~~~~~~~~~~~
-Let's start with a simple example, which pays ether to old people.
+Let's start with a simple example to explain how rule engine works.
+This example pays Ether to old people.
 
 .. code:: ts
 
@@ -103,7 +132,7 @@ Above is a rule definition example which pay money to old people if the budget i
 The rule name, ``"payPension"`` is the identifier of the rule declaration, and it should not have name collision with other identifiers.
 ``Person(age >= 65, eligible == true)`` means we want to match a person who is at least 65 years old and is eligible for receiving the pension. The ``p:`` syntax means to bind the matched person to identifier ``p``, so we can manipulate the person in then-block.
 
-If the rule engine successfully find a person and a budget satisfies above requirements, the code in the second part will be executed, and we should modify the eligiblity of the person to prevent rule engine fire the same rule for the same person again.
+If the rule engine successfully find a person and a budget satisfies above requirements, the code in the then part will be executed, and we should modify the eligiblity of the person to prevent rule engine fire the same rule for the same person again.
 
 Rule inheritance
 ~~~~~~~~~~~~~~~~
