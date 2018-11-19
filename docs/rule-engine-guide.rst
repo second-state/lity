@@ -25,21 +25,24 @@ Working memory is a containenr that stores facts hides behind a contract. To ins
 
 Rules
 """""
-An rule statement consists of three parts:
+An rule statement consists of four parts:
 
 1. Rule Name: a string literal which served as the identifier of rule.
-2. Filter Statements (a.k.a. *when block*): one or more statements describe which set of facts should be captured and applied actions in the *then block*.
-3. Action Statements (a.k.a. *then block*): one or more statements to execute on matched objects (which are captured in *when block*.)
+2. Rule attributes: optional hints that describe activation behavior of this rule.
+3. Filter Statements (a.k.a. *when block*): one or more statements describe which set of facts should be captured and applied actions in the *then block*.
+4. Action Statements (a.k.a. *then block*): one or more statements to execute on matched objects (which are captured in *when block*.)
 
 A contract with a rule definition looks like this:
 
 .. code:: ts
 
     contract C {
-        rule "ruleName" when {
-            // Filter Statement
+        rule "ruleName"
+        // Rule attributes
+        when {
+            // Filter Statements
         } then {
-            // Action Statement
+            // Action Statements
         }
     }
 
@@ -51,29 +54,12 @@ salience
 default: 0
 type: integer literal
 
-If you want some rules to be processed first than other rules (i.e higher priority), ``salience`` keyword can be used. The bigger the number specified, the higher the priority it have.
+Salience specifies the priority of rules in the Activation queue.
+Higher salience indicates higher priority.
+Activation order of rules with the same salience would be arbitrary.
 
-.. code:: ts
-
-   rule "test1" salience 20 when {
-     p: Person(val >= 10);
-   } then {
-     p.addr.send(1);
-     p.val--;
-     update p;
-   }
-
-   rule "test2" salience 30 when {
-     p: Person(val >= 20);
-   } then {
-     p.addr.send(2);
-     p.val--;
-     update p;
-   }
-
-In the above example, the second rule will have higher priority.
-Activation of rules with the same salience would be arbitrary.
 In constrast to Drools, Lity does not support dynamic salience.
+
 Due to Solidity parser issue, current salience value cannot be negative, but this shall be resolved in the future.
 
 no_loop
@@ -91,6 +77,12 @@ type: bool literal
 
 ``lock_on_active`` forbids a rule to be activated more than once with the same set of facts.
 This is stronger than ``no_loop`` because it also prevent the reactivation of the rule even if it is caused by other rule's then-part.
+
+Filter Statements(when)
+~~~~~~~~~~~~~~~~~
+
+Action Statements(then)
+~~~~~~~~~~~~~~~~~
 
 A simple Example
 ~~~~~~~~~~~~~~~~
@@ -492,6 +484,30 @@ Complete source code of the contract:
         function () public payable { }
     }
 
+Examples of salience
+""""""""""""""""""""""""""""""""""""""
+
+If you want some rules to be processed first than other rules (i.e higher priority), ``salience`` keyword can be used. The bigger the number specified, the higher the priority it have.
+
+.. code:: ts
+
+   rule "test1" salience 20 when {
+     p: Person(val >= 10);
+   } then {
+     p.addr.send(1);
+     p.val--;
+     update p;
+   }
+
+   rule "test2" salience 30 when {
+     p: Person(val >= 20);
+   } then {
+     p.addr.send(2);
+     p.val--;
+     update p;
+   }
+
+In the above example, the second rule will have higher priority.
 
 Examples of no_Loop and lock_on_active
 """"""""""""""""""""""""""""""""""""""
