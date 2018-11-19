@@ -19,26 +19,6 @@ Facts
 """""
 A struct that can be pattern matched in rule definitions. A fact must be a struct stored in storage.
 
-Rules
-"""""
-An rule statement consists of three parts:
-
-1. Rule Name: a string literal which served as the identifier of rule.
-2. Filter Statements (a.k.a. *when block*): one or more statements describe which set of facts should be captured and applied actions in the *then block*.
-3. Action Statements (a.k.a. *then block*): one or more statements to execute on matched objects (which are captured in *when block*.)
-
-A contract with a rule definition looks like this:
-
-.. code:: ts
-
-    contract C {
-        rule "ruleName" when {
-            // Filter Statement
-        } then {
-            // Action Statement
-        }
-    }
-
 Working Memory
 """"""""""""""
 Working memory is a containenr hides behind a contract, it stores facts that are ready to be pattern matched. To insert/remove facts to/from working memory, we can use ``factInsert`` and ``factDelete`` operators.
@@ -90,11 +70,31 @@ fireAllRules
 
 ``fireAllRules`` is a special statement that launches lity rule engine execution, it works like drools' ``ksession.fireAllRules()`` API.
 
+Rules
+"""""
+An rule statement consists of three parts:
+
+1. Rule Name: a string literal which served as the identifier of rule.
+2. Filter Statements (a.k.a. *when block*): one or more statements describe which set of facts should be captured and applied actions in the *then block*.
+3. Action Statements (a.k.a. *then block*): one or more statements to execute on matched objects (which are captured in *when block*.)
+
+A contract with a rule definition looks like this:
+
+.. code:: ts
+
+    contract C {
+        rule "ruleName" when {
+            // Filter Statement
+        } then {
+            // Action Statement
+        }
+    }
+
 Rule Attributes
-"""""""""""""""
+~~~~~~~~~~~~~~~
 
 salience
-~~~~~~~~
+********
 
 If you want some rules to be processed first than other rules (i.e higher priority), ``salience`` keyword can be used. The bigger the number specified, the higher the priority it have.
 
@@ -119,7 +119,7 @@ If you want some rules to be processed first than other rules (i.e higher priori
 In the above example, the second rule will have higher priority.
 
 no_loop
-~~~~~~~
+*******
 
 Sometimes you may want to update a fact but the activation of the same rule by the same set of fact is not desired.
 
@@ -146,7 +146,7 @@ If you tried to ``fireAllRules``, the above rule may keep firing (until ``p.age`
    }
 
 lock_on_active
-~~~~~~~~~~~~~~
+**************
 
 ``lock_on_active`` have the same syntax with ``no_loop``, simply replace ``no_loop`` keyword apperaed in the above example. The difference between ``lock_on_active`` and ``no_loop`` is that, ``lock_on_active`` will also prevent the reactivation of the rule even if it is caused by other rule's then-part.
 
@@ -526,7 +526,7 @@ Complete source code of the contract:
         function () public payable { }
     }
 
-Specs
+Specifications
 -----
 
 Grammar
