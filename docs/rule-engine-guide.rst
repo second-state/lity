@@ -16,61 +16,12 @@ Specifically, chapter `Rule Engines and Production Rule Systems (PRS) <https://d
 Rule Engine Overview
 ----------------------
 
-Facts
-"""""
+Facts and Working Memory
+""""""""""""""""""""""""
 Facts are data that shall be matched and modified by the rule engine.
 In Lity, a fact must be a struct stored in storage.
 
-Working Memory
-""""""""""""""
 Working memory is a containenr that stores facts hides behind a contract. To insert/remove facts to/from working memory, we can use ``factInsert`` and ``factDelete`` operators.
-
-Rule Engine Operators
-"""""""""""""""""""""
-
-We have three operators to handle facts and working memory:
-
-1. factInsert: add current object as a new fact to working memory.
-2. factDelete: remove current object from the working memory.
-3. fireAllRules: apply all rules on all facts in working memory.
-
-factInsert
-~~~~~~~~~~
-
-This operator takes a struct with storage data location, evaluates to fact handle, which has type ``uint256``. Insert the reference to the storage struct into working memory.
-
-For example:
-
-.. code-block:: ts
-
-   contract C {
-     struct fact { int x; }
-     fact[] facts;
-     constructor() public {
-        facts.push(fact(0));
-        factInsert facts[facts.length-1]; // insert the fact into working memory
-     }
-   }
-
-And note that the following statement won't compile:
-
-.. code-block:: ts
-
-   factInsert fact(0);
-
-The reason is that ``fact(0)`` is a reference with memory data location, which is not persistant thus cannot be inserted into working memory.
-
-For more information about data location mechanism, please refer to `solidity's documentation <https://solidity.readthedocs.io/en/v0.4.25/types.html#data-location>`_
-
-factDelete
-~~~~~~~~~~
-
-This operator takes a fact handle (uint256) and evaluates to void. Removes the reference of the fact from working memory.
-
-fireAllRules
-~~~~~~~~~~~~
-
-``fireAllRules`` is a special statement that launches lity rule engine execution, it works like drools' ``ksession.fireAllRules()`` API.
 
 Rules
 """""
@@ -123,34 +74,33 @@ In the above example, the second rule will have higher priority.
 no_loop
 *******
 
-Sometimes you may want to update a fact but the activation of the same rule by the same set of fact is not desired.
-
-.. code:: ts
-
-   rule "test" when {
-     p: Person(age >= 20);
-   } then {
-     p.age++;
-     p.addr.send(1);
-     update p;
-   }
-
-If you tried to ``fireAllRules``, the above rule may keep firing (until ``p.age`` overflows). To make it fire only once for each ``fireAllRules``, we can use ``no_loop`` keyword.
-
-.. code:: ts
-
-   rule "test" no_loop true when {
-     p: Person(age >= 20);
-   } then {
-     p.age++;
-     p.addr.send(1);
-     update p;
-   }
-
 lock_on_active
 **************
 
 ``lock_on_active`` have the same syntax with ``no_loop``, simply replace ``no_loop`` keyword apperaed in the above example. The difference between ``lock_on_active`` and ``no_loop`` is that, ``lock_on_active`` will also prevent the reactivation of the rule even if it is caused by other rule's then-part.
+
+
+A simple Example
+~~~~~~~~~~~~~~~~
+Let's start with a simple example, which pays ether to old people.
+
+.. code:: ts
+
+   rule "payPension" when {
+     p: Person(age >= 65, eligible == true);
+     b: Budget(amount >= 10);
+   } then {
+     p.addr.transfer(10);
+     p.eligible = false;
+     b.amount -= 10;
+   }
+
+Above is a rule definition example which pay money to old people if the budget is still enough.
+The rule name, ``"payPension"`` is the identifier of the rule declaration, and it should not have name collision with other identifiers.
+``Person(age >= 65, eligible == true)`` means we want to match a person who is at least 65 years old and is eligible for receiving the pension. The ``p:`` syntax means to bind the matched person to identifier ``p``, so we can manipulate the person in then-block.
+
+If the rule engine successfully find a person and a budget satisfies above requirements, the code in the second part will be executed, and we should modify the eligiblity of the person to prevent rule engine fire the same rule for the same person again.
+
 
 Rule Examples
 -------------
@@ -528,8 +478,81 @@ Complete source code of the contract:
         function () public payable { }
     }
 
+
+Examples of no_Loop and lock_on_active
+""""""""""""""""""""""""""""""""""""""
+Sometimes you may want to update a fact but the activation of the same rule by the same set of fact is not desired.
+
+.. code:: ts
+
+   rule "test" when {
+     p: Person(age >= 20);
+   } then {
+     p.age++;
+     p.addr.send(1);
+     update p;
+   }
+
+If you tried to ``fireAllRules``, the above rule may keep firing (until ``p.age`` overflows). To make it fire only once for each ``fireAllRules``, we can use ``no_loop`` keyword.
+
+.. code:: ts
+
+   rule "test" no_loop true when {
+     p: Person(age >= 20);
+   } then {
+     p.age++;
+     p.addr.send(1);
+     update p;
+   }
+
 Specifications
 -----
+Rule Engine Operators
+"""""""""""""""""""""
+
+We have three operators to handle facts and working memory:
+
+1. factInsert: add current object as a new fact to working memory.
+2. factDelete: remove current object from the working memory.
+3. fireAllRules: apply all rules on all facts in working memory.
+
+factInsert
+~~~~~~~~~~
+
+This operator takes a struct with storage data location, evaluates to fact handle, which has type ``uint256``. Insert the reference to the storage struct into working memory.
+
+For example:
+
+.. code-block:: ts
+
+   contract C {
+     struct fact { int x; }
+     fact[] facts;
+     constructor() public {
+        facts.push(fact(0));
+        factInsert facts[facts.length-1]; // insert the fact into working memory
+     }
+   }
+
+And note that the following statement won't compile:
+
+.. code-block:: ts
+
+   factInsert fact(0);
+
+The reason is that ``fact(0)`` is a reference with memory data location, which is not persistant thus cannot be inserted into working memory.
+
+For more information about data location mechanism, please refer to `solidity's documentation <https://solidity.readthedocs.io/en/v0.4.25/types.html#data-location>`_
+
+factDelete
+~~~~~~~~~~
+
+This operator takes a fact handle (uint256) and evaluates to void. Removes the reference of the fact from working memory.
+
+fireAllRules
+~~~~~~~~~~~~
+
+``fireAllRules`` is a special statement that launches lity rule engine execution, it works like drools' ``ksession.fireAllRules()`` API.
 
 Grammar
 """""""
