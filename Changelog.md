@@ -1,3 +1,13 @@
+### Lity 1.2.5 (2018-11-20)
+
+Language Features:
+ * Support `no-loop`, `lock-on-active`, `salience`.
+ * Support rule inheritance.
+
+Documentation:
+ * Update rule grammar spec.
+ * More details about fixed point numbers.
+
 ### Lity 1.2.4 (2018-10-26)
 
 Language Features:
