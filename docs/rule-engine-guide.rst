@@ -21,7 +21,7 @@ Facts and Working Memory
 Facts are data that shall be matched and modified by the rule engine.
 In Lity, a fact must be a struct stored in storage.
 
-Working memory is a containenr that stores facts hides behind a contract. To insert/remove facts to/from working memory, we can use ``factInsert`` and ``factDelete`` operators.
+Working memory is a container that stores facts hides behind a contract. To insert/remove facts to/from working memory, we can use ``factInsert`` and ``factDelete`` operators.
 
 Rules
 """""
@@ -30,7 +30,7 @@ A rule defines that ``when`` certain conditions occur, ``then`` certain actions 
 
 In Lity, rules are written in the contract and the syntax is very similar with Drools's.
 
-An rule statement consists of four parts:
+A rule statement consists of four parts:
 
 1. Rule Name: a string literal which served as the identifier of rule.
 2. Rule attributes: optional hints that describe activation behavior of this rule.
@@ -132,7 +132,7 @@ Above is a rule definition example which pay money to old people if the budget i
 The rule name, ``"payPension"`` is the identifier of the rule declaration, and it should not have name collision with other identifiers.
 ``Person(age >= 65, eligible == true)`` means we want to match a person who is at least 65 years old and is eligible for receiving the pension. The ``p:`` syntax means to bind the matched person to identifier ``p``, so we can manipulate the person in then-block.
 
-If the rule engine successfully find a person and a budget satisfies above requirements, the code in the then part will be executed, and we should modify the eligiblity of the person to prevent rule engine fire the same rule for the same person again.
+If the rule engine successfully found a person and a budget satisfies above requirements, the code in the then part will be executed, and we should modify the eligiblity of the person to prevent rule engine fire the same rule for the same person again.
 
 Rule inheritance
 ~~~~~~~~~~~~~~~~
@@ -143,7 +143,7 @@ Rule Examples
 Pay Pension
 """""""""""
 
-Let's start with a simple example, which pays ether to old people.
+Let's start with a simple example, which pays Ether to old people.
 
 .. code:: ts
 
@@ -160,7 +160,7 @@ Above is a rule definition example which pay money to old people if the budget i
 The rule name, ``"payPension"`` is the identifier of the rule declaration, and it should not have name collision with other identifiers.
 ``Person(age >= 65, eligible == true)`` means we want to match a person who is at least 65 years old and is eligible for receiving the pension. The ``p:`` syntax means to bind the matched person to identifier ``p``, so we can manipulate the person in then-block.
 
-If the rule engine successfully find a person and a budget satisfies above requirements, the code in the second part will be executed, and we should modify the eligiblity of the person to prevent rule engine fire the same rule for the same person again.
+If the rule engine successfully found a person and a budget satisfies above requirements, the code in the second part will be executed, and we should modify the eligiblity of the person to prevent rule engine fire the same rule for the same person again.
 
 .. code:: ts
 
@@ -593,7 +593,7 @@ For example:
      }
    }
 
-And note that the following statement won't compile:
+And note that the following statement cannot be compiled:
 
 .. code-block:: ts
 
