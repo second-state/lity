@@ -92,16 +92,22 @@ If all pattern conditions are met, then part shall be executed for this set of f
 Pattern
 **************
 A pattern describe a fact(struct) with a set of conditions.
-It start with pattern binding, which specifies fact name refered in this rule scope.
+It start with pattern binding, which specifies fact identifier refered in this rule scope.
 After binding, pattern type specifies the type(struct name) of the fact.
 Then, a set of constraints is descibe conditions of this fact.
 Constraints must be boolean expressions.
 See the example below or refer rule grammar for details.
 
+.. code:: ts
+
+    p: Person(age >= 65, eligible == true);
+
+Above pattern describe that a fact ``p`` with Person type, and its constraints are its ``age`` must be greater or equal to ``65`` and its ``eligible`` must be ``true``.
+
 Action Statements(then)
 ~~~~~~~~~~~~~~~~~
 Then part is composed of normal statements.
-However, there is a special operator, ``update``(explained later), which might be useful in this part.
+However, there is a special operator, ``update`` (explained later), which might be useful in this part.
 
 Due to Solidity compiler issue, variable declaration statement is not supported yet in then block.
 But this shall be resolved in the future.
@@ -114,7 +120,7 @@ So conditions should be taken care when ``update`` is used in any rule.
 
 A simple Example
 ~~~~~~~~~~~~~~~~
-Let's start with a simple example to explain how rule engine works.
+Let's start with a simple example to explain how a rule works.
 This example pays Ether to old people.
 
 .. code:: ts
@@ -128,17 +134,25 @@ This example pays Ether to old people.
      b.amount -= 10;
    }
 
-Above is a rule definition example which pay money to old people if the budget is still enough.
-The rule name, ``"payPension"`` is the identifier of the rule declaration, and it should not have name collision with other identifiers.
-``Person(age >= 65, eligible == true)`` means we want to match a person who is at least 65 years old and is eligible for receiving the pension. The ``p:`` syntax means to bind the matched person to identifier ``p``, so we can manipulate the person in then-block.
+Above is a rule which pays money to old people if the budget is still enough.
+``payPension`` is the identifier of the rule.
+There are two patterns in this rule: ``p`` and ``b`` .
+``Person(age >= 65, eligible == true)`` describes a person who is at least 65 years old and is eligible for receiving the pension.
+The ``p:`` syntax means to bind the qualified person to identifier ``p``, so we can refer the person in then-block.
+``b: Budget(amount >= 10)`` describes the budget must have enough amount. (``10`` in this case)
 
-If the rule engine successfully found a person and a budget satisfies above requirements, the code in the then part will be executed, and we should modify the eligiblity of the person to prevent rule engine fire the same rule for the same person again.
+If the rule engine found a person and a budget satisfies above requirements, the then part will be executed.
+In then part, we modify eligiblity of the person to prevent this rule being applied for the same person again.
+In addition, pension is sent to the person from the budget.
 
-Rule inheritance
+For full source code of this example, refer the section Rule Examples.
+
+Rule Inheritance
 ~~~~~~~~~~~~~~~~
 
 Rule Examples
 -------------
+This section illustrates more use cases for Lity rule engine.
 
 Pay Pension
 """""""""""
