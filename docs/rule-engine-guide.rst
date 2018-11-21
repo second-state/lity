@@ -149,6 +149,9 @@ For full source code of this example, refer the section Rule Examples.
 
 Rule Inheritance
 ~~~~~~~~~~~~~~~~
+Rules can also be inherited with attributes.
+This only applies for when part and only supports single inheritance.
+Refer to section Rule Examples for details.
 
 Rule Examples
 -------------
