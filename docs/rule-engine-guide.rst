@@ -157,91 +157,8 @@ This section illustrates more use cases for Lity rule engine.
 Pay Pension
 """""""""""
 
-Let's start with a simple example, which pays Ether to old people.
-
-.. code:: ts
-
-   rule "payPension" when {
-     p: Person(age >= 65, eligible == true);
-     b: Budget(amount >= 10);
-   } then {
-     p.addr.transfer(10);
-     p.eligible = false;
-     b.amount -= 10;
-   }
-
-Above is a rule definition example which pay money to old people if the budget is still enough.
-The rule name, ``"payPension"`` is the identifier of the rule declaration, and it should not have name collision with other identifiers.
-``Person(age >= 65, eligible == true)`` means we want to match a person who is at least 65 years old and is eligible for receiving the pension. The ``p:`` syntax means to bind the matched person to identifier ``p``, so we can manipulate the person in then-block.
-
-If the rule engine successfully found a person and a budget satisfies above requirements, the code in the second part will be executed, and we should modify the eligiblity of the person to prevent rule engine fire the same rule for the same person again.
-
-.. code:: ts
-
-    contract AgePension {
-        struct Person {
-            int age;
-            bool eligible;
-            address addr;
-        }
-
-        struct Budget {
-            int amount;
-        }
-
-        mapping (address => uint256) addr2idx;
-        Person[] ps;
-        Budget budget;
-
-        constructor () public {
-            factInsert budget;
-            budget.amount = 100;
-        }
-
-        function addPerson(int age) public {
-            ps.push(Person(age, true, msg.sender));
-            addr2idx[msg.sender] = factInsert ps[ps.length-1];
-        }
-
-        function deletePerson() public {
-            factDelete addr2idx[msg.sender];
-        }
-
-        function () public payable { }
-    }
-
-Whenever a user add themselves to ``AgePension`` with ``addPerson``,
-they are also recorded to the set of fact by ``factInsert``.
-The operator ``factInsert`` will return an ``uint256`` as the storage location
-for the fact in the working memory.
-The user will be able to remove themselves from ``AgePension`` with
-``deletePerson`` by passing the storage location to ``factDelete`` operator.
-
-.. code:: ts
-
-   rule "payPension" when {
-     p: Person(age >= 65, eligible == true);
-     b: Budget(amount >= 10);
-   } then {
-     p.addr.transfer(10);
-     p.eligible = false;
-     b.amount -= 10;
-   }
-
-Next, we add a ``rule "payPension"`` that gives everyone more than age 65
-one ether if they haven't received age pension yet.
-
-.. code:: ts
-
-    contract AgePension {
-        function pay() public {
-            fireAllRules;
-        }
-    }
-
-The age pension is paid when ``fireAllRules`` is executed.
-
-Complete contract source:
+This example has already been described in section Rules.
+The complete contract is below.
 
 .. code:: ts
 
@@ -279,7 +196,26 @@ Complete contract source:
         }
 
         function () public payable { }
+
+        rule "payPension" when {
+            p: Person(age >= 65, eligible == true);
+            b: Budget(amount >= 10);
+        } then {
+            p.addr.transfer(10);
+            p.eligible = false;
+            b.amount -= 10;
+        }
     }
+
+A user must use ``factInsert`` add himself(an instance of ``Person``) in order to make the rule engine aware of this data. (written in function ``addPerson``)
+The operator ``factInsert`` returns an ``uint256``.
+This is where the fact resides in the storage, and this address is recorded in mapping ``addr2idx``.
+The user will be able to remove himself from the engine by ``factDelete`` with the fact storage address. (written in function ``deletePerson``)
+
+The rule ``payPension`` decribes that gives everyone more than age 65. (already explained in section Rules)
+
+The age pension is paid when ``fireAllRules`` is executed. (written in function ``pay``)
+``fireAllRules`` triggers the rules to find matched rules and apply then part for the corresponding facts.
 
 Fibonacci numbers
 """""""""""""""""
