@@ -341,11 +341,11 @@ First, we define our fact types:
 Here we model the problem in a way similiar to entity-relationship model. ``Cat`` and ``CatLocation`` has an one-to-one relationship.
 Food represents a cat food on the number line, ``location`` represents its location, ``energy`` represents how much energy it can provide to Cat. Each unit of energy provides power for the cat to move one unit forward.
 
-Now we can define 2 rules to solve the problem (Note that the order of definition is important!)
+Now we can define 2 rules to solve the problem.
 
 .. code:: ts
 
-    rule "catEatFood"
+    rule "catEatFood" salience 10
     when {
         c1: Cat();
         cl1: CatLocation(id == c1.id);
@@ -364,7 +364,7 @@ The second rule:
 
 .. code:: ts
 
-    rule "catMoves"
+    rule "catMoves" salience 0
     when {
         c1: Cat(energy > 0);
         cl1: CatLocation(id == c1.id);
@@ -377,7 +377,7 @@ The second rule:
 
 This rule states that if the cat have positive energy, it can move one unit forward.
 
-The order of rules is important because we want the cat eat the food whenever its location overlaps with food's location. If the order is reversed, the cat will keep moving forward and ignore the food, which is not what we want.
+``salience`` is set so that the cat eat the food whenever its location overlaps with food's location.
 
 
 Complete source code of the contract:
@@ -401,7 +401,7 @@ Complete source code of the contract:
 
         // Note that rules appear first have higher priority,
         // so cats won't go through a food without eating it.
-        rule "catEatFood"
+        rule "catEatFood" salience 10
         when {
             c1: Cat();
             cl1: CatLocation(id == c1.id);
@@ -413,7 +413,7 @@ Complete source code of the contract:
             update f1;
         }
 
-        rule "catMoves"
+        rule "catMoves" salience 0
         when {
             c1: Cat(energy > 0);
             cl1: CatLocation(id == c1.id);
