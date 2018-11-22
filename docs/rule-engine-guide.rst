@@ -365,6 +365,48 @@ If you tried to ``fireAllRules``, the above rule may keep firing (until ``p.age`
      update p;
    }
 
+Example of rule inheritance
+""""""""""""""""""""""""""""""""""""""
+Sometimes constraints of a rule is based on constraints of another rule.
+In this case, this rule can ``extends`` another rule.
+
+For example, a department store wants to give elder customers 10 percent discount and their cars free parking.
+The discount rule is described as below.
+
+.. code:: ts
+
+    rule "Give 10% discount to customers older than 60"
+    when {
+        $customer : Customer( age > 60 );
+    } then {
+        $customer.discount = 10;
+    }
+
+The free parking rule can ``extends`` the constraint of elder customers(older then 60).
+Then this rule can be written as below.
+
+.. code:: ts
+
+    rule "Give free parking to customers older than 60"
+        extends "Give 10% discount to customers older than 60"
+    when {
+        $car : Car ( ownerID == $customer.id );
+    } then {
+        $car.freeParking = true ;
+    }
+
+The rule above(with ``extends``) is equivalent to the rule written without ``extends``.
+
+.. code:: ts
+
+    rule "Give free parking to customers older than 60"
+    when {
+        $customer : Customer( age > 60 );
+        $car : Car ( ownerID == $customer.id );
+    } then {
+        $car.freeParking = true ;
+    }
+
 Cats
 """"
 
