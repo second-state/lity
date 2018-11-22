@@ -313,6 +313,58 @@ Complete source of the contract:
   }
 
 
+
+Examples of salience
+""""""""""""""""""""""""""""""""""""""
+
+If you want some rules to be processed first than other rules (i.e higher priority), ``salience`` keyword can be used. The bigger the number specified, the higher the priority it have.
+
+.. code:: ts
+
+   rule "test1" salience 20 when {
+     p: Person(val >= 10);
+   } then {
+     p.addr.send(1);
+     p.val--;
+     update p;
+   }
+
+   rule "test2" salience 30 when {
+     p: Person(val >= 20);
+   } then {
+     p.addr.send(2);
+     p.val--;
+     update p;
+   }
+
+In the above example, the second rule will have higher priority.
+
+Examples of no_Loop and lock_on_active
+""""""""""""""""""""""""""""""""""""""
+Sometimes you may want to update a fact but the activation of the same rule by the same set of fact is not desired.
+
+.. code:: ts
+
+   rule "test" when {
+     p: Person(age >= 20);
+   } then {
+     p.age++;
+     p.addr.send(1);
+     update p;
+   }
+
+If you tried to ``fireAllRules``, the above rule may keep firing (until ``p.age`` overflows). To make it fire only once for each ``fireAllRules``, we can use ``no_loop`` keyword.
+
+.. code:: ts
+
+   rule "test" no_loop true when {
+     p: Person(age >= 20);
+   } then {
+     p.age++;
+     p.addr.send(1);
+     update p;
+   }
+
 Cats
 """"
 
@@ -465,57 +517,6 @@ Complete source code of the contract:
 
         function () public payable { }
     }
-
-Examples of salience
-""""""""""""""""""""""""""""""""""""""
-
-If you want some rules to be processed first than other rules (i.e higher priority), ``salience`` keyword can be used. The bigger the number specified, the higher the priority it have.
-
-.. code:: ts
-
-   rule "test1" salience 20 when {
-     p: Person(val >= 10);
-   } then {
-     p.addr.send(1);
-     p.val--;
-     update p;
-   }
-
-   rule "test2" salience 30 when {
-     p: Person(val >= 20);
-   } then {
-     p.addr.send(2);
-     p.val--;
-     update p;
-   }
-
-In the above example, the second rule will have higher priority.
-
-Examples of no_Loop and lock_on_active
-""""""""""""""""""""""""""""""""""""""
-Sometimes you may want to update a fact but the activation of the same rule by the same set of fact is not desired.
-
-.. code:: ts
-
-   rule "test" when {
-     p: Person(age >= 20);
-   } then {
-     p.age++;
-     p.addr.send(1);
-     update p;
-   }
-
-If you tried to ``fireAllRules``, the above rule may keep firing (until ``p.age`` overflows). To make it fire only once for each ``fireAllRules``, we can use ``no_loop`` keyword.
-
-.. code:: ts
-
-   rule "test" no_loop true when {
-     p: Person(age >= 20);
-   } then {
-     p.age++;
-     p.addr.send(1);
-     update p;
-   }
 
 Specifications
 -----
