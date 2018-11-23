@@ -14,7 +14,7 @@ Our rule engine's syntax and semantics are directly borrowed from Drools, so it 
 Specifically, chapter `Rule Engines and Production Rule Systems (PRS) <https://docs.jboss.org/drools/release/7.1.0.Final/drools-docs/html_single/#_rule_engines_and_production_rule_systems_prs>`_ introduces the basic concept.
 
 Rule Engine Overview
-----------------------
+--------------------
 
 Facts and Working Memory
 """"""""""""""""""""""""
@@ -57,6 +57,7 @@ Rule Attributes
 salience
 ********
 default: 0
+
 type: integer literal
 
 Salience specifies the priority of rules in the Activation queue.
@@ -70,6 +71,7 @@ Due to Solidity parser issue, current salience value cannot be negative, but thi
 no_loop
 *******
 default: false
+
 type: bool literal
 
 ``no_loop`` forbids a rule to activate itself with the same set of facts.
@@ -78,22 +80,23 @@ This is for the purpose of preventing infinite loop.
 lock_on_active
 **************
 default: false
+
 type: bool literal
 
 ``lock_on_active`` forbids a rule to be activated more than once with the same set of facts.
 This is stronger than ``no_loop`` because it also prevent the reactivation of the rule even if it is caused by other rule's then-part.
 
 Filter Statements(when)
-~~~~~~~~~~~~~~~~~
-When part is composed of patterns(which are explained later).
+~~~~~~~~~~~~~~~~~~~~~~~
+When part is composed of patterns (which are explained later).
 When part specifies conditions which set of facts should be activated.
 If all pattern conditions are met, then part shall be executed for this set of facts.
 
 Pattern
-**************
-A pattern describe a fact(struct) with a set of conditions.
+*******
+A pattern describe a fact (struct) with a set of conditions.
 It start with pattern binding, which specifies fact identifier refered in this rule scope.
-After binding, pattern type specifies the type(struct name) of the fact.
+After binding, pattern type specifies the type (struct name) of the fact.
 Then, a set of constraints is descibe conditions of this fact.
 Constraints must be boolean expressions.
 See the example below or refer rule grammar for details.
@@ -105,7 +108,7 @@ See the example below or refer rule grammar for details.
 Above pattern describe that a fact ``p`` with Person type, and its constraints are its ``age`` must be greater or equal to ``65`` and its ``eligible`` must be ``true``.
 
 Action Statements(then)
-~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 Then part is composed of normal statements.
 However, there is a special operator, ``update`` (explained later), which might be useful in this part.
 
@@ -113,7 +116,7 @@ Due to Solidity compiler issue, variable declaration statement is not supported 
 But this shall be resolved in the future.
 
 The update operator
-****************
+*******************
 ``update object`` will inform the rule engine that this object may be modified and rules may need to be reevaluated.
 In current implementation, all rules and facts are reevaluated even for the objects that was not updated.
 So conditions should be taken care when ``update`` is used in any rule.
@@ -210,7 +213,7 @@ The complete contract is below.
         }
     }
 
-A user must use ``factInsert`` add himself(an instance of ``Person``) in order to make the rule engine aware of this data. (written in function ``addPerson``)
+A user must use ``factInsert`` add himself (an instance of ``Person``) in order to make the rule engine aware of this data. (written in function ``addPerson``)
 The operator ``factInsert`` returns an ``uint256``.
 This is where the fact resides in the storage, and this address is recorded in mapping ``addr2idx``.
 The user will be able to remove himself from the engine by ``factDelete`` with the fact storage address. (written in function ``deletePerson``)
@@ -315,7 +318,7 @@ Complete source of the contract:
 
 
 Examples of salience
-""""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""
 
 If you want some rules to be processed first than other rules (i.e higher priority), ``salience`` keyword can be used. The bigger the number specified, the higher the priority it have.
 
@@ -366,7 +369,7 @@ If you tried to ``fireAllRules``, the above rule may keep firing (until ``p.age`
    }
 
 Example of rule inheritance
-""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""
 Sometimes constraints of a rule is based on constraints of another rule.
 In this case, this rule can ``extends`` another rule.
 
@@ -382,7 +385,7 @@ The discount rule is described as below.
         $customer.discount = 10;
     }
 
-The free parking rule can ``extends`` the constraint of elder customers(older then 60).
+The free parking rule can ``extends`` the constraint of elder customers (older then 60).
 Then this rule can be written as below.
 
 .. code:: ts
@@ -395,7 +398,7 @@ Then this rule can be written as below.
         $car.freeParking = true ;
     }
 
-The rule above(with ``extends``) is equivalent to the rule written without ``extends``.
+The rule above (with ``extends``) is equivalent to the rule written without ``extends``.
 
 .. code:: ts
 
@@ -561,7 +564,7 @@ Complete source code of the contract:
     }
 
 Specifications
------
+--------------
 Rule Engine Operators
 """""""""""""""""""""
 
