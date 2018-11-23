@@ -1,21 +1,19 @@
 ERC contract checker guide
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Please make sure that lityc has been installed on your system. If not, please follow :doc:`Getting started <getting-started>`.
+
 .. _erc-contract-checker-guide:
 
 ERC20 Contract Standard Checker
 ===============================
-
-Make sure you are in the folder where lityc is installed.
-
-For example your location should be "~/lity/build" if you followed `this tutorial <http://lity.readthedocs.io/en/latest/download.html>`_.
 
 Enable contract standard checker with specific ERC
 --------------------------------------------------
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC20 <contract file>
+  $ lityc --contract-standard ERC20 <contract file>
 
 
 Examples
@@ -44,7 +42,7 @@ Examples
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC20 erc20_interface.sol
+  $ lityc --contract-standard ERC20 erc20_interface.sol
 
   erc20_standard.sol:3:1: Info: ERC20Interface is compatible to ERC20.
   contract ERC20Interface {
@@ -75,7 +73,7 @@ Examples
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC20 wrong_mutability.sol
+  $ lityc --contract-standard ERC20 wrong_mutability.sol
 
   wrong_mutability.sol:3:1: Info: Missing 'totalSupply' with type signature 'function () view external returns (uint256)'. ERC20Interface is not compatible to ERC20.
   contract ERC20Interface {
@@ -85,16 +83,12 @@ Examples
 ERC223 Contract Standard Checker
 ================================
 
-Make sure you are in the folder where lityc is installed.
-
-For example your location should be "~/lity/build" if you followed `this tutorial <http://lity.readthedocs.io/en/latest/download.html>`_.
-
 Enable contract standard checker with specific ERC
 --------------------------------------------------
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC223 <contract file>
+  $ lityc --contract-standard ERC223 <contract file>
 
 
 Examples
@@ -119,7 +113,7 @@ Examples
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC223 erc223_interface.sol
+  $ lityc --contract-standard ERC223 erc223_interface.sol
 
   erc223_standard.sol:3:1: Info: ERC223Interface is compatible to ERC223.
   contract ERC223Interface {
@@ -253,7 +247,7 @@ Examples
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC223 erc223_token.sol
+  $ lityc --contract-standard ERC223 erc223_token.sol
 
   erc223_token.sol:6:1: Info: Missing 'totalSupply' with type signature 'function () view external returns (uint256)'. SafeMath is not compatible to ERC223.
   library SafeMath {
@@ -272,16 +266,12 @@ Examples
 ERC721 Contract Standard Checker
 ================================
 
-Make sure you are in the folder where lityc is installed.
-
-For example your location should be "~/lity/build" if you followed `this tutorial <http://lity.readthedocs.io/en/latest/download.html>`_.
-
 Enable contract standard checker with specific ERC
 --------------------------------------------------
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC721 <contract file>
+  $ lityc --contract-standard ERC721 <contract file>
 
 
 Examples
@@ -314,7 +304,7 @@ Examples
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC721 erc721_interface.sol
+  $ lityc --contract-standard ERC721 erc721_interface.sol
   erc721_interface.sol:3:1: Info: ERC721Interface is compatible to ERC721.
   contract ERC721Interface {
   ^ (Relevant source part starts here and spans across multiple lines).
@@ -349,7 +339,7 @@ Examples
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC721 wrong_modification_level.sol
+  $ lityc --contract-standard ERC721 wrong_modification_level.sol
 
   wrong_modification_level.sol:3:1: Info: Missing 'transferFrom' with type signature 'function (address,address,uint256) payable external'. ERC721Interface is not compatible to ERC721.
   contract ERC721Interface {
@@ -359,16 +349,12 @@ Examples
 ERC827 Contract Standard Checker
 ================================
 
-Make sure you are in the folder where lityc is installed.
-
-For example your location should be "~/lity/build" if you followed `this tutorial <http://lity.readthedocs.io/en/latest/download.html>`_.
-
 Enable contract standard checker with specific ERC
 --------------------------------------------------
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC827 <contract file>
+  $ lityc --contract-standard ERC827 <contract file>
 
 
 Examples
@@ -399,7 +385,7 @@ Examples
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC827 erc827_standard_no_inheritance.sol
+  $ lityc --contract-standard ERC827 erc827_standard_no_inheritance.sol
 
   erc827_standard_no_inheritance.sol:3:1: Info: ERC827Interface is compatible to ERC827.
   contract ERC827Interface {
@@ -432,7 +418,7 @@ Examples
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC827 erc827_standard.sol
+  $ lityc --contract-standard ERC827 erc827_standard.sol
 
   erc827_standard.sol:3:1: Info: Missing 'transferAndCall' with type signature 'function (address,uint256,bytes memory) payable external returns (bool)'. ERC827Base is not compatible to ERC827.
   contract ERC827Base {
@@ -445,16 +431,12 @@ Examples
 ERC884 Contract Standard Checker
 ================================
 
-Make sure you are in the folder where lityc is installed.
-
-For example your location should be "~/lity/build" if you followed `this tutorial <http://lity.readthedocs.io/en/latest/download.html>`_.
-
 Enable contract standard checker with specific ERC
 --------------------------------------------------
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC884 <contract file>
+  $ lityc --contract-standard ERC884 <contract file>
 
 
 Examples
@@ -501,7 +483,7 @@ Examples
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC884 erc884_standard.sol
+  $ lityc --contract-standard ERC884 erc884_standard.sol
 
   erc884_standard.sol:3:1: Info: Missing 'VerifiedAddressAdded' with type signature 'function (address,bytes32,address)'. C20 is not compatible to ERC884.
   contract C20 {
@@ -539,7 +521,7 @@ Examples
 
 .. code:: bash
 
-  $ ./lityc/lityc --contract-standard ERC884 missing_function.sol
+  $ lityc --contract-standard ERC884 missing_function.sol
 
   missing_function.sol:3:1: Info: Missing 'VerifiedAddressAdded' with type signature 'function (address,bytes32,address)'. ERC884Interface is not compatible to ERC884.
   contract ERC884Interface {
