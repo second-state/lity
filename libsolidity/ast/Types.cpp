@@ -123,6 +123,22 @@ bool fitsPrecisionBase2(bigint const& _mantissa, uint32_t _expBase2)
 	return fitsPrecisionBaseX(_mantissa, 1.0, _expBase2);
 }
 
+/// Checks whether _value fits into IntegerType _type.
+bool fitsIntegerType(bigint const& _value, IntegerType const& _type)
+{
+	return (_type.minValue() <= _value) && (_value <= _type.maxValue());
+}
+
+/// Checks whether _value fits into _bits bits when having 1 bit as the sign bit
+/// if _signed is true.
+bool fitsIntoBits(bigint const& _value, unsigned _bits, bool _signed)
+{
+	return fitsIntegerType(_value, IntegerType(
+		_bits,
+		_signed ? IntegerType::Modifier::Signed : IntegerType::Modifier::Unsigned
+	));
+}
+
 }
 
 void StorageOffsets::computeOffsets(TypePointers const& _types)
@@ -862,7 +878,6 @@ tuple<bool, rational> RationalNumberType::isValidLiteral(Literal const& _literal
 			break;
 	}
 
-
 	return make_tuple(true, value);
 }
 
@@ -870,27 +885,24 @@ bool RationalNumberType::isImplicitlyConvertibleTo(Type const& _convertTo) const
 {
 	if (_convertTo.category() == Category::Integer)
 	{
-		if (m_value == rational(0))
-			return true;
-		if (isFractional())
+		if (isFractional()) // need explicit conversion (truncation)
 			return false;
 		IntegerType const& targetType = dynamic_cast<IntegerType const&>(_convertTo);
-		unsigned forSignBit = (targetType.isSigned() ? 1 : 0);
-		if (m_value > rational(0))
-		{
-			if (m_value.numerator() <= (u256(-1) >> (256 - targetType.numBits() + forSignBit)))
-				return true;
-		}
-		else if (targetType.isSigned() && -m_value.numerator() <= (u256(1) << (targetType.numBits() - forSignBit)))
-			return true;
-		return false;
+		return fitsIntegerType(m_value.numerator(), targetType);
 	}
 	else if (_convertTo.category() == Category::FixedPoint)
 	{
-		if (auto fixed = fixedPointType())
-			return fixed->isImplicitlyConvertibleTo(_convertTo);
-		else
+		FixedPointType const& targetType = dynamic_cast<FixedPointType const&>(_convertTo);
+		// Store a negative number into an unsigned.
+		if (isNegative() && !targetType.isSigned())
 			return false;
+		if (!isFractional())
+			return (targetType.minIntegerValue() <= m_value) && (m_value <= targetType.maxIntegerValue());
+		rational value = m_value * pow(bigint(10), targetType.fractionalDigits());
+		// Need explicit conversion since truncation will occur.
+		if (value.denominator() != 1)
+			return false;
+		return fitsIntoBits(value.numerator(), targetType.numBits(), targetType.isSigned());
 	}
 	else if (_convertTo.category() == Category::FixedBytes)
 	{
@@ -909,8 +921,38 @@ bool RationalNumberType::isImplicitlyConvertibleTo(Type const& _convertTo) const
 
 bool RationalNumberType::isExplicitlyConvertibleTo(Type const& _convertTo) const
 {
-	TypePointer mobType = mobileType();
-	return mobType && mobType->isExplicitlyConvertibleTo(_convertTo);
+	switch (_convertTo.category())
+	{
+	case Category::Integer:
+	{
+		IntegerType const& targetType = dynamic_cast<IntegerType const&>(_convertTo);
+		rational value = m_value;
+		// Round away from zero.
+		value += rational(isNegative() ? -1 : 1, 2);
+		return fitsIntoBits(
+			value.numerator() / value.denominator(),
+			targetType.numBits(),
+			targetType.isSigned()
+		);
+	}
+	case Category::FixedPoint:
+	{
+		FixedPointType const& targetType = dynamic_cast<FixedPointType const&>(_convertTo);
+		rational value = m_value * pow(bigint(10), targetType.fractionalDigits());
+		// Round away from zero.
+		value += rational(isNegative() ? -1 : 1, 2);
+		return fitsIntoBits(
+			value.numerator() / value.denominator(),
+			targetType.numBits(),
+			targetType.isSigned()
+		);
+	}
+	default:
+	{
+		TypePointer mobType = mobileType();
+		return mobType && mobType->isExplicitlyConvertibleTo(_convertTo);
+	}
+	}
 }
 
 TypePointer RationalNumberType::unaryOperatorResult(Token::Value _operator) const
