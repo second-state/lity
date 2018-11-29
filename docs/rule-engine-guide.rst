@@ -410,6 +410,71 @@ The rule above (with ``extends``) is equivalent to the rule written without ``ex
         $car.freeParking = true ;
     }
 
+Tax caculation
+""""""""""""""
+In this example, we illustrate how to caculate tax by rule engine.
+In most countries, tax rates are divides into brackets.
+That is, certain income range is taxed for corresponding rates.
+Often, more income indicates higher tax rates.
+
+Take `this region <https://www.ntbt.gov.tw/etwmain/web/ETW118W/CON/2074/5702201758651492080>`_ for example
+(For simplicity, we ignore deductions and exemptions for real tax rules. Thus, actual tax rates would be lower.),
+the corresponding rate table is below.
+
+=====================  ==============
+Net income             Tax rate
+=====================  ==============
+        0 ~   540,000   5%
+  540,000 ~ 1,210,000  12%
+1,210,001 ~ 2,420,000  20%
+2,420,001 ~ 4,530,000  30%
+4,530,001 ~ ∞          40%
+=====================  ==============
+
+For the first tax bracket, net income from 0 to 540000 is taxed for 5%.
+This is represented as below.
+
+.. code:: ts
+
+    rule "first bracket" when{
+        p: Person(salary > 0)
+    } then {
+        p.tax += min(540000, p.salary) * 5 / 100;
+    }
+
+Similarly, net income from 540001 to 1210000 is taxed for 12% in the second tax bracket.
+Note that income 540000 has already been taxed in the first tax bracket, so the amount taxed here should minus 540000.
+
+.. code:: ts
+
+    rule "second bracket" when{
+        p: Person(salary > 540000)
+    } then {
+        p.tax += (min(1210000, p.salary) - 540000) * 12 / 100;
+    }
+
+In the same way, rest brackets are represented as below.
+
+.. code:: ts
+
+    rule "third bracket" when{
+        p: Person(salary > 1210000)
+    } then {
+        p.tax += (min(2420000, p.salary) - 1210000) * 20 / 100;
+    }
+
+    rule "fourth bracket" when{
+        p: Person(salary > 2420000)
+    } then {
+        p.tax += (min(4530000, p.salary) - 2420000) * 30 / 100;
+    }
+
+    rule "fifth bracket" when{
+        p: Person(salary > 4530000)
+    } then {
+        p.tax += (p.salary - 4530000) * 40 / 100;
+    }
+
 Cats
 """"
 
