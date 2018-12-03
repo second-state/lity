@@ -410,6 +410,131 @@ The rule above (with ``extends``) is equivalent to the rule written without ``ex
         $car.freeParking = true ;
     }
 
+Insurance rating
+""""""""""""""""
+
+Insurance claim
+"""""""""""""""
+
+Consider a travel insurance that provides claim for fight delay.
+See the table below.
+
+===========  ==============================================
+Delay hours  Compensation
+===========  ==============================================
+4 or more    5000
+6 or more    5000 or accountable expense no more than 15000
+===========  ==============================================
+
+The first rule (4 hours or more) is represented as below.
+
+.. code:: ts
+
+    rule "four hour fix amount" when{
+        p: Person()
+        f: Flight(delay >= 4, id == p.flightID)
+    } then {
+        p.claimAmount = max(5000, p.claimAmount);
+    }
+
+For the second rule (6 hours or more), 5000 dollar compensation is implied in the first rule, so we only need to consider the limited expense here.
+
+.. code:: ts
+
+    rule "six hour limited amount" when{
+        p: Person()
+        f: Flight(delay >= 6, id == p.flightID)
+    } then {
+        p.claimAmount = max(min(p.delayExpense, 15000), p.claimAmount);
+    }
+
+Cashier
+"""""""
+
+In the simplest way, cashier sum up all item prices for the amount.
+Consider restaurants for example, a hamburger costs 50 dollars and a drink costs 30 dollars, and these sum up to 80 dollars.
+This summation rule could be simply represented as below.
+
+.. code:: ts
+
+    rule "Burger"
+    salience 10
+    lock_on_active
+    when{
+        b: Burger();
+        bl: Bill();
+    } then {
+        bl.amount += 50;
+    }
+
+    rule "Drink"
+    salience 10
+    lock_on_active
+    when{
+        d: Drink();
+        bl: Bill();
+    } then {
+        bl.amount += 30;
+    }
+
+However, many restaurants offer meal combo discount.
+For example, a drink with a hamburger is discounted for 10 dollars.
+With rule engine, this discount rule can be automatically applied as below.
+
+.. code:: ts
+
+    rule "Combo" when{
+        b: Burger(combo==-1);
+        d: Drink(combo==-1);
+        bl: Bill();
+    } then {
+        b.combo = bl.nCombo;
+        d.combo = bl.nCombo;
+        bl.nCombo++;
+        bl.amount -= 10;
+        update b;
+        update d;
+    }
+
+``nCombo`` of the bill is the number of combos, and ``combo`` of a burger/drink denotes the combo number (``-1`` denotes no combo) that burger/drink belongs to.
+Each burger or drink belongs to at most one combo to prevent duplicated discounts.
+
+Credit card cash back
+"""""""""""""""""""""
+Many credit cards offer conditional cash back.
+For this example, cash back rates is determined by the total bill amount (of that month).
+See the rate table below.
+
+==========  ==============
+Amount      Cash back rate
+==========  ==============
+<5000       0.5%
+5000~9999   1.0%
+>9999       1.5%
+==========  ==============
+
+This cash back rule can be represeted as below.
+
+.. code:: ts
+
+    rule "poor cash back rate" when{
+        b: Bill(amount < 5000);
+    } then {
+        b.cashBack = b.amount * 5 / 1000;
+    }
+
+    rule "sad cash back rate" when{
+        b: Bill(amount>=5000, amount < 10000);
+    } then {
+        b.cashBack = b.amount * 10 / 1000;
+    }
+
+    rule "acceptable cash back rate" when{
+        b: Bill(amount>=10000);
+    } then {
+        b.cashBack = b.amount * 15 / 1000;
+    }
+
 Tax caculation
 """"""""""""""
 In this example, we illustrate how to caculate tax by rule engine.
