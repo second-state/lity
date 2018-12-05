@@ -66,6 +66,12 @@ to better understand the concept of fixed point numbers.
 Conversions between Literals and Fixed Point Types
 ``````````````````````````````````````````````````
 
+Decimal literals can be converted to the target fixed point type
+only if it fits into ``N`` bits.
+
+Implcit Conversion
+''''''''''''''''''
+
 Decimal literals can be converted to fixed point types
 implicitly if no :ref:`truncation <types-fixed-point-numbers-truncations>`
 occurred.
@@ -75,7 +81,10 @@ occurred.
     ufixed8x2 a = 1.1; // rational 11/10 to ufixed8x2, ok
     fixed8x1 sa = 1.1; // rational 11/10 to fixed8x1, ok
 
-    ufixed8x2 b = 9.9; // rational 99/10 to ufixed8x2 [0.00, 2.56], fail
+    ufixed8x2 b = 9.9; // rational 99/10 to ufixed8x2 [0.00, 2.55], fail
+
+Explcit Conversion
+''''''''''''''''''
 
 When :ref:`truncation <types-fixed-point-numbers-truncations>` will occur,
 explicit conversion is required.
@@ -83,6 +92,21 @@ explicit conversion is required.
 .. code::
 
     ufixed16x2 pi = ufixed16x2(3.1415926535); // truncated to 3.14
+
+Not Convertible
+'''''''''''''''
+
+A ``TypeError`` is raised when the literal does not fit into ``N`` bits
+even if using explcit conversion.
+
+.. code::
+
+    // store 2.56 into ufixed8x1 [0.0, 25.5] results in TypeError
+    ufixed8x1 a = 25.6;
+    ufixed8x1 b = ufixed8x1(25.6);
+
+Conversions between Different Fixed Point Types
+```````````````````````````````````````````````
 
 Explicit conversion is also required between different fixed point types
 if it might cause :ref:`truncation <types-fixed-point-numbers-truncations>`.
@@ -98,8 +122,10 @@ if it might cause :ref:`truncation <types-fixed-point-numbers-truncations>`.
 
 .. code::
 
-    ufixed8x1 a = ufixed8x1(-1.0); // undefined
-    ufixed8x1 b = ufixed8x1(-0.1); // undefined
+    fixed8x1 a = -1.0;
+    fixed8x1 b = -0.1;
+    ufixed8x1 ua = ufixed8x1(a); // undefined
+    ufixed8x1 ub = ufixed8x1(b); // undefined
 
 .. _types-fixed-point-numbers-truncations:
 
