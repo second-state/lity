@@ -1,3 +1,11 @@
+### Lity 1.2.6 (2018-12-07)
+
+Language Features:
+ * Support fixed point numbers.
+
+Documentation:
+ * More details about fixed point numbers.
+
 ### Lity 1.2.5 (2018-11-20)
 
 Language Features:
