@@ -8,7 +8,7 @@ Fixed Point Numbers
 -------------------
 
 .. WARNING::
-   Lity hasn't released a version that supports fixed point numbers yet.
+   Lity supports fixed point numbers after lity v1.2.6.
 
 Keywords are ``fixedMxN`` for signed fixed point numbers, and ``ufixedMxN``
 for unsigned fixed point numbers.
@@ -132,8 +132,11 @@ if it might cause :ref:`truncation <types-fixed-point-numbers-truncations>`.
 Truncations
 ```````````
 
+If a fixed point number has more than ``N`` digits after its decimal point,
+all digits after the ``N``-th digit are truncated.
+
 .. TODO::
-   Undocumented yet. (T_T)
+   Add some examples here.
 
 ABI Types
 `````````
