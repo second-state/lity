@@ -17,7 +17,7 @@ A common use case is to serve as oracles to provide trusted states.
 isValidator Grammar
 -------------------
 
-.. code:: ts
+.. code::
 
   isValidator(<address>) returns (bool returnValue);
 

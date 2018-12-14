@@ -39,7 +39,7 @@ A rule statement consists of four parts:
 
 A contract with a rule definition looks like this:
 
-.. code:: ts
+.. code-block:: Lity
 
     contract C {
         rule "ruleName"
@@ -101,7 +101,7 @@ Then, a set of constraints is descibe conditions of this fact.
 Constraints must be boolean expressions.
 See the example below or refer rule grammar for details.
 
-.. code:: ts
+.. code-block:: Lity
 
     p: Person(age >= 65, eligible == true);
 
@@ -126,7 +126,7 @@ A simple Example
 Let's start with a simple example to explain how a rule works.
 This example pays Ether to old people.
 
-.. code:: ts
+.. code-block:: Lity
 
    rule "payPension" when {
      p: Person(age >= 65, eligible == true);
@@ -166,7 +166,7 @@ Pay Pension
 This example has already been described in section Rules.
 The complete contract is below.
 
-.. code:: ts
+.. code-block:: Lity
 
     contract AgePension {
         struct Person {
@@ -230,7 +230,7 @@ Here we demostrate how to use rule engine to calculate fibonacci numbers.
 
 First, we define a struct to represent a fibonacci number:
 
-.. code:: ts
+.. code-block:: Lity
 
   struct E {
       int256 index;
@@ -242,7 +242,7 @@ The struct has two members. ``index`` records the index of this fibonacci number
 
 We can now define a rule representing fibonacci number's recurrence relation: :math:`f_n = f_{n-1} + f_{n-2}`.
 
-.. code:: ts
+.. code-block:: Lity
 
     rule "buildFibonacci" when {
         x1: E(value != -1, i1: index);
@@ -257,7 +257,7 @@ Note that the ``update x3;`` inside rule's RHS is essential; the update statemen
 
 Let's insert initial terms and unknown fibonacci numbers into working memory
 
-.. code:: ts
+.. code-block:: Lity
 
    // es is a storage array storing `E`
    es.push(E(0, 0));
@@ -273,7 +273,7 @@ Working memory now contains :math:`f_0`, :math:`f_1`, ... , :math:`f_{10}`. And 
 
 Complete source of the contract:
 
-.. code:: ts
+.. code-block:: Lity
 
   contract C {
       struct E {
@@ -322,7 +322,7 @@ Examples of salience
 
 If you want some rules to be processed first than other rules (i.e higher priority), ``salience`` keyword can be used. The bigger the number specified, the higher the priority it have.
 
-.. code:: ts
+.. code-block:: Lity
 
    rule "test1" salience 20 when {
      p: Person(val >= 10);
@@ -346,7 +346,7 @@ Examples of no_Loop and lock_on_active
 """"""""""""""""""""""""""""""""""""""
 Sometimes you may want to update a fact but the activation of the same rule by the same set of fact is not desired.
 
-.. code:: ts
+.. code-block:: Lity
 
    rule "test" when {
      p: Person(age >= 20);
@@ -358,7 +358,7 @@ Sometimes you may want to update a fact but the activation of the same rule by t
 
 If you tried to ``fireAllRules``, the above rule may keep firing (until ``p.age`` overflows). To make it fire only once for each ``fireAllRules``, we can use ``no_loop`` keyword.
 
-.. code:: ts
+.. code-block:: Lity
 
    rule "test" no_loop true when {
      p: Person(age >= 20);
@@ -376,7 +376,7 @@ In this case, this rule can ``extends`` another rule.
 For example, a department store wants to give elder customers 10 percent discount and their cars free parking.
 The discount rule is described as below.
 
-.. code:: ts
+.. code-block:: Lity
 
     rule "Give 10% discount to customers older than 60"
     when {
@@ -388,7 +388,7 @@ The discount rule is described as below.
 The free parking rule can ``extends`` the constraint of elder customers (older then 60).
 Then this rule can be written as below.
 
-.. code:: ts
+.. code-block:: Lity
 
     rule "Give free parking to customers older than 60"
         extends "Give 10% discount to customers older than 60"
@@ -400,7 +400,7 @@ Then this rule can be written as below.
 
 The rule above (with ``extends``) is equivalent to the rule written without ``extends``.
 
-.. code:: ts
+.. code-block:: Lity
 
     rule "Give free parking to customers older than 60"
     when {
@@ -428,7 +428,7 @@ Delay hours  Compensation
 
 The first rule (4 hours or more) is represented as below.
 
-.. code:: ts
+.. code-block:: Lity
 
     rule "four hour fix amount" when{
         p: Person()
@@ -439,7 +439,7 @@ The first rule (4 hours or more) is represented as below.
 
 For the second rule (6 hours or more), 5000 dollar compensation is implied in the first rule, so we only need to consider the limited expense here.
 
-.. code:: ts
+.. code-block:: Lity
 
     rule "six hour limited amount" when{
         p: Person()
@@ -455,7 +455,7 @@ In the simplest way, cashier sum up all item prices for the amount.
 Consider restaurants for example, a hamburger costs 50 dollars and a drink costs 30 dollars, and these sum up to 80 dollars.
 This summation rule could be simply represented as below.
 
-.. code:: ts
+.. code-block:: Lity
 
     rule "Burger"
     salience 10
@@ -481,7 +481,7 @@ However, many restaurants offer meal combo discount.
 For example, a drink with a hamburger is discounted for 10 dollars.
 With rule engine, this discount rule can be automatically applied as below.
 
-.. code:: ts
+.. code-block:: Lity
 
     rule "Combo" when{
         b: Burger(combo==-1);
@@ -515,7 +515,7 @@ Amount      Cash back rate
 
 This cash back rule can be represeted as below.
 
-.. code:: ts
+.. code-block:: Lity
 
     rule "poor cash back rate" when{
         b: Bill(amount < 5000);
@@ -559,7 +559,7 @@ Net income             Tax rate
 For the first tax bracket, net income from 0 to 540000 is taxed for 5%.
 This is represented as below.
 
-.. code:: ts
+.. code-block:: Lity
 
     rule "first bracket" when{
         p: Person(salary > 0)
@@ -570,7 +570,7 @@ This is represented as below.
 Similarly, net income from 540001 to 1210000 is taxed for 12% in the second tax bracket.
 Note that income 540000 has already been taxed in the first tax bracket, so the amount taxed here should minus 540000.
 
-.. code:: ts
+.. code-block:: Lity
 
     rule "second bracket" when{
         p: Person(salary > 540000)
@@ -580,7 +580,7 @@ Note that income 540000 has already been taxed in the first tax bracket, so the 
 
 In the same way, rest brackets are represented as below.
 
-.. code:: ts
+.. code-block:: Lity
 
     rule "third bracket" when{
         p: Person(salary > 1210000)
@@ -609,7 +609,7 @@ Whenever the cat's location equal to cat food's location, the cat will immediate
 
 First, we define our fact types:
 
-.. code:: ts
+.. code-block:: Lity
 
     struct Cat {
         uint256 id;
@@ -630,7 +630,7 @@ Food represents a cat food on the number line, ``location`` represents its locat
 
 Now we can define 2 rules to solve the problem.
 
-.. code:: ts
+.. code-block:: Lity
 
     rule "catEatFood" salience 10
     when {
@@ -649,7 +649,7 @@ If we successfully found a cat whose location equal to the food's location, we l
 
 The second rule:
 
-.. code:: ts
+.. code-block:: Lity
 
     rule "catMoves" salience 0
     when {
@@ -669,7 +669,7 @@ This rule states that if the cat have positive energy, it can move one unit forw
 
 Complete source code of the contract:
 
-.. code:: ts
+.. code-block:: Lity
 
     contract C {
         struct Cat {

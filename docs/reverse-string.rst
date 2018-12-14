@@ -10,7 +10,7 @@ Compiler StringReverse Contract
 
 There is a simple contract that leverage ENI to reverse a string.
 
-.. code::
+.. code-block:: Lity
 
   pragma lity ^1.2.4;
   contract StringReverse {

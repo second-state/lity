@@ -10,7 +10,7 @@ Schedule Transaction is not fully supported by Lity yet.
 Draft Grammar
 -------------
 
-.. code:: ts
+.. code-block:: Lity
 
   schedule(<External Function Call>, <Timestamp>);
 
@@ -26,7 +26,7 @@ Draft Grammar
 Examples
 --------
 
-.. code:: ts
+.. code-block:: Lity
 
   // pragma lity ^1.3.0;
 

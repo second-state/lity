@@ -76,7 +76,7 @@ Decimal literals can be converted to fixed point types
 implicitly if no :ref:`truncation <types-fixed-point-numbers-truncations>`
 occurred.
 
-.. code::
+.. code-block:: Lity
 
     ufixed8x2 a = 1.1; // rational 11/10 to ufixed8x2, ok
     fixed8x1 sa = 1.1; // rational 11/10 to fixed8x1, ok
@@ -89,7 +89,7 @@ Explcit Conversion
 When :ref:`truncation <types-fixed-point-numbers-truncations>` will occur,
 explicit conversion is required.
 
-.. code::
+.. code-block:: Lity
 
     ufixed16x2 pi = ufixed16x2(3.1415926535); // truncated to 3.14
 
@@ -99,7 +99,7 @@ Not Convertible
 A ``TypeError`` is raised when the literal does not fit into ``N`` bits
 even if using explcit conversion.
 
-.. code::
+.. code-block:: Lity
 
     // store 2.56 into ufixed8x1 [0.0, 25.5] results in TypeError
     ufixed8x1 a = 25.6;
@@ -111,7 +111,7 @@ Conversions between Different Fixed Point Types
 Explicit conversion is also required between different fixed point types
 if it might cause :ref:`truncation <types-fixed-point-numbers-truncations>`.
 
-.. code::
+.. code-block:: Lity
 
     ufixed16x2 pi2 = 3.14;
     ufixed16x4 pie = ufixed16x4(pi2); // still 3.14 but need explicit conversion
@@ -120,7 +120,7 @@ if it might cause :ref:`truncation <types-fixed-point-numbers-truncations>`.
    Conversions that causes overflow or underflow of fixed point types
    is currently undefined.
 
-.. code::
+.. code-block:: Lity
 
     fixed8x1 a = -1.0;
     fixed8x1 b = -0.1;

@@ -15,27 +15,27 @@ Installation
 
 Execute a python virtualenv
 
-.. code::
+.. code:: bash
 
   virtualenv -p python3 env
   source env/bin/activate
 
 Download Oyente
 
-.. code::
+.. code:: bash
 
   git clone https://github.com/CyberMiles/oyente.git
   cd oyente
 
 Install Oyente requirements
 
-.. code::
+.. code:: bash
 
   pip install -r requirements.txt
 
 Install Oyente
 
-.. code::
+.. code:: bash
 
   pip install .
 

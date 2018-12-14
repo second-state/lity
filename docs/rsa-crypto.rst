@@ -10,7 +10,7 @@ Compiler RSACrypto Contract
 
 There is a simple contract that leverage ENI to do RSA encrypt / decrypt.
 
-.. code::
+.. code-block:: Lity
 
   pragma lity ^1.2.4;
 
