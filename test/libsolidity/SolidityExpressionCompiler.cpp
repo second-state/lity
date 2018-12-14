@@ -372,7 +372,7 @@ BOOST_AUTO_TEST_CASE(unary_operators)
 	bytes expectation({byte(Instruction::PUSH1), 0x2,
 					   byte(Instruction::DUP2),
 					   byte(Instruction::PUSH1), 0x0,
-					   byte(Instruction::SUB),
+					   byte(Instruction::SSUB),
 					   byte(Instruction::NOT),
 					   byte(Instruction::EQ),
 					   byte(Instruction::ISZERO)});
