@@ -383,8 +383,20 @@ bool ExpressionCompiler::visit(UnaryOperation const& _unaryOperation)
 		// unary add, so basically no-op
 		break;
 	case Token::Sub: // -
-		m_context << u256(0) << Instruction::SUB;
+	{
+		Type const& type = *_unaryOperation.annotation().type;
+		auto const* intType = dynamic_cast<IntegerType const*>(&type);
+		auto const* fixedType = dynamic_cast<FixedPointType const*>(&type);
+		solAssert(intType || fixedType,
+			"Unary operator " +
+			string(Token::toString(_unaryOperation.getOperator())) +
+			" not implemented for type " +
+			type.toString() +
+			".");
+		bool const c_isSigned = intType ? intType->isSigned() : fixedType->isSigned();
+		m_context << u256(0) << (c_isSigned ? Instruction::SSUB : Instruction::SUB);
 		break;
+	}
 	case Token::FactInsert:
 		RuleEngineCompiler(m_context).appendFactInsert(_unaryOperation.subExpression().annotation().type);
 		break;
