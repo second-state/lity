@@ -21,7 +21,7 @@ Examples
 
 - ERC20 Interface (erc20_interface.sol)
 
-.. code:: ts
+.. code-block:: Lity
 
   pragma lity ^1.2.4;
 
@@ -52,7 +52,7 @@ Examples
 
 - ERC20 Interface with wrong mutability (wrong_mutability.sol)
 
-.. code:: ts
+.. code-block:: Lity
 
   pragma lity ^1.2.4;
 
@@ -96,7 +96,7 @@ Examples
 
 - ERC223 Interface (erc223_interface.sol)
 
-.. code:: ts
+.. code-block:: Lity
 
   pragma lity ^1.2.4;
 
@@ -123,7 +123,7 @@ Examples
 
 - ERC223 Token example (erc223_token.sol)
 
-.. code:: ts
+.. code-block:: Lity
 
   pragma lity ^1.2.4;
 
@@ -279,7 +279,7 @@ Examples
 
 - ERC721 Interface (erc721_interface.sol)
 
-.. code:: ts
+.. code-block:: Lity
 
   pragma lity ^1.2.4;
 
@@ -314,7 +314,7 @@ Examples
 
 - ERC721 Interface with wrong modification level (wrong_modification_level.sol)
 
-.. code:: ts
+.. code-block:: Lity
 
   pragma lity ^1.2.4;
 
@@ -362,7 +362,7 @@ Examples
 
 - ERC827 Interface (erc827_standard_no_inheritance.sol)
 
-.. code:: ts
+.. code-block:: Lity
 
   pragma lity ^1.2.4;
 
@@ -394,7 +394,7 @@ Examples
 
 - ERC827 Interface inheritance (erc827_inheritance.sol)
 
-.. code:: ts
+.. code-block:: Lity
 
   pragma lity ^1.2.4;
 
@@ -444,7 +444,7 @@ Examples
 
 - ERC884 Interface (erc884_interface.sol)
 
-.. code:: ts
+.. code-block:: Lity
 
   pragma lity ^1.2.4;
 
@@ -496,7 +496,7 @@ Examples
 
 - ERC884 Interface with missing function (missing_function.sol)
 
-.. code:: ts
+.. code-block:: Lity
 
   pragma lity ^1.2.4;
 

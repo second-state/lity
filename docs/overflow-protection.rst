@@ -41,14 +41,14 @@ This example shows how Lity and CyberMiles Virtual Machine helps users to avoid 
 Run a CyberMiles Local Node
 ```````````````````````````
 
-Follow the instructions here to have a `running CyberMiles local node to deploy a contract <https://www.litylang.org/getting_started/>`_. 
+Follow the instructions here to have a `running CyberMiles local node to deploy a contract <https://www.litylang.org/getting_started/>`_.
 
 Compile BEC Contract
 ````````````````````
 
 There is an overflow issue at this statement :code:`uint256 amount = uint256(cnt) * _value;` of the function :code:`batchTransfer` .
 
-.. code::
+.. code-block:: Lity
 
   pragma lity ^1.2.4;
 

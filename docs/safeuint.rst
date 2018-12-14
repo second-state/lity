@@ -13,7 +13,7 @@ Lity provides a new type `safeuint` which extends from `uint256`, `uint`. `safeu
 
 Because of the security issue, `safeuint` is not allowed implicit conversion to the other types. If you want to convert, tying to use explicit conversion like the example below:
 
-.. code:: bash
+.. code-block:: Lity
 
   safeuint a = 2000; // OK: safeuint = 2000
   safeuint b = a * 12345; // OK: safeuint * uint
@@ -25,7 +25,7 @@ In addition, `safeuint` will automatically check overflow during runtime on thos
 Example 1
 ---------
 
-.. code::
+.. code-block:: Lity
 
   pragma lity ^1.2.3;
 
@@ -121,7 +121,7 @@ Example 2
 
 Here is another ``safeuint`` example to multiply two numbers.
 
-.. code::
+.. code-block:: Lity
 
   pragma lity ^1.2.3;
 
@@ -133,7 +133,7 @@ Here is another ``safeuint`` example to multiply two numbers.
 
 Then compile and deploy it:
 
-.. code::
+.. code-block:: Lity
 
   $ lityc --abi --bin safeuint.sol
 

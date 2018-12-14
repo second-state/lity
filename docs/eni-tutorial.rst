@@ -39,7 +39,7 @@ Use ENI in Your Contract
 
 Create a contract file called `Reverse.lity`.
 
-.. code::
+.. code-block:: Lity
 
   pragma lity ^1.2.4;
 
