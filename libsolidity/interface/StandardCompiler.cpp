@@ -336,6 +336,11 @@ Json::Value StandardCompiler::compileInternal(Json::Value const& _input)
 	unsigned const optimizeRuns = optimizerSettings.get("runs", Json::Value(200u)).asUInt();
 	m_compilerStack.setOptimiserSettings(optimize, optimizeRuns);
 
+	if (settings.isMember("contractStandard")) {
+		string const contractStandard = settings["contractStandard"].asString();
+		m_compilerStack.setContractStandard(contractStandard);
+	}
+
 	map<string, h160> libraries;
 	Json::Value jsonLibraries = settings.get("libraries", Json::Value(Json::objectValue));
 	if (!jsonLibraries.isObject())
@@ -395,7 +400,7 @@ Json::Value StandardCompiler::compileInternal(Json::Value const& _input)
 
 			errors.append(formatErrorWithException(
 				*error,
-				err.type() == Error::Type::Warning,
+				err.type() == Error::Type::Warning || err.type() == Error::Type::Info,
 				err.typeName(),
 				"general",
 				"",
