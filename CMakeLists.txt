@@ -8,7 +8,7 @@ include(EthPolicy)
 eth_policy()
 
 # project name and version should be set after cmake_policy CMP0048
-set(LITY_PROJECT_VERSION "1.2.4")
+set(LITY_PROJECT_VERSION "1.2.6")
 set(SOLC_PROJECT_VERSION "0.4.25")
 project(lity VERSION ${LITY_PROJECT_VERSION})
 
