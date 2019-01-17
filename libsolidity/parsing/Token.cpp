@@ -70,7 +70,7 @@ void ElementaryTypeNameToken::assertDetails(Token::Value _baseType, unsigned con
 	else if (_baseType == Token::UFixedMxN || _baseType == Token::FixedMxN)
 	{
 		solAssert(
-			_first >= 8 && _first <= 256 && _first % 8 == 0 && _second <= 80,
+			_first >= 8 && _first <= 256 && _first % 8 == 0 && 0 < _second,
 			"No elementary type " + string(Token::toString(_baseType)) + to_string(_first) + "x" + to_string(_second) + "."
 		);
 	}
@@ -158,7 +158,7 @@ tuple<Token::Value, unsigned int, unsigned int> Token::fromIdentifierOrKeyword(s
 				int n = parseSize(positionX + 1, _literal.end());
 				if (
 					8 <= m && m <= 256 && m % 8 == 0 &&
-					0 <= n && n <= 80
+					0 < n
 				) {
 					if (keyword == Token::UFixed)
 						return make_tuple(Token::UFixedMxN, m, n);
