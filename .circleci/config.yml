@@ -1,0 +1,368 @@
+defaults:
+  # The default for tags is to not run, so we have to explicitly match a filter.
+  - build_on_tags: &build_on_tags
+      filters:
+        tags:
+          only: /.*/
+  - setup_prerelease_commit_hash: &setup_prerelease_commit_hash
+      name: Store commit hash and prerelease
+      command: |
+        if [ "$CIRCLE_BRANCH" = release -o -n "$CIRCLE_TAG" ]; then echo -n > prerelease.txt; else date -u +"nightly.%Y.%-m.%-d" > prerelease.txt; fi
+        echo -n "$CIRCLE_SHA1" > commit_hash.txt
+  - run_build: &run_build
+      name: Build
+      command: |
+        mkdir -p build
+        cd build
+        [ -n "$COVERAGE" -a "$CIRCLE_BRANCH" != release -a -z "$CIRCLE_TAG" ] && CMAKE_OPTIONS="$CMAKE_OPTIONS -DCOVERAGE=ON"
+        cmake .. -DCMAKE_BUILD_TYPE=Release $CMAKE_OPTIONS
+        make -j4
+  - run_tests: &run_tests
+      name: Tests
+      command: scripts/tests.sh --junit_report test_results
+  - solc_artifact: &solc_artifact
+      path: build/solc/solc
+      destination: solc
+  - all_artifacts: &all_artifacts
+      root: build
+      paths:
+        - solc/solc
+        - test/soltest
+        - test/tools/solfuzzer
+
+version: 2
+jobs:
+  build_emscripten:
+    docker:
+      - image: trzeci/emscripten:sdk-tag-1.38.22-64bit
+    environment:
+      TERM: xterm
+    steps:
+      - checkout
+      - restore_cache:
+          name: Restore Boost build
+          key: &boost-cache-key emscripten-boost-{{ checksum "scripts/travis-emscripten/install_deps.sh" }}{{ checksum "scripts/build_emscripten.sh" }}{{ checksum "scripts/travis-emscripten/build_emscripten.sh" }}
+      - run:
+          name: Bootstrap Boost
+          command: |
+            scripts/travis-emscripten/install_deps.sh
+      - run:
+          name: Build
+          command: |
+            scripts/travis-emscripten/build_emscripten.sh
+      - save_cache:
+          name: Save Boost build
+          key: *boost-cache-key
+          paths:
+            - boost_1_68_0
+      - store_artifacts:
+          path: build/libsolc/soljson.js
+          destination: soljson.js
+      - run: mkdir -p workspace
+      - run: cp build/libsolc/soljson.js workspace/soljson.js
+      - run: scripts/get_version.sh > workspace/version.txt
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - soljson.js
+            - version.txt
+  test_emscripten_solcjs:
+    docker:
+      - image: circleci/node:10
+    environment:
+      TERM: xterm
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Install external tests deps
+          command: |
+            node --version
+            npm --version
+      - run:
+          name: Test solcjs
+          command: |
+            test/solcjsTests.sh /tmp/workspace/soljson.js $(cat /tmp/workspace/version.txt)
+  test_emscripten_external:
+    docker:
+      - image: circleci/node:10
+    environment:
+      TERM: xterm
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Install external tests deps
+          command: |
+            node --version
+            npm --version
+      - run:
+          name: External tests
+          command: |
+            test/externalTests.sh /tmp/workspace/soljson.js || test/externalTests.sh /tmp/workspace/soljson.js
+  build_x86_linux:
+    docker:
+      - image: buildpack-deps:bionic
+    environment:
+      TERM: xterm
+      COVERAGE: "ON"
+    steps:
+      - checkout
+      - run:
+          name: Install build dependencies
+          command: |
+            apt-get -qq update
+            apt-get -qy install cmake libboost-regex-dev libboost-filesystem-dev libboost-test-dev libboost-system-dev libboost-program-options-dev libz3-dev
+            ./scripts/install_obsolete_jsoncpp_1_7_4.sh
+      - run: *setup_prerelease_commit_hash
+      - run: *run_build
+      - store_artifacts: *solc_artifact
+      - persist_to_workspace:
+          root: build
+          paths:
+            - "*"
+
+  build_x86_archlinux:
+    docker:
+      - image: archlinux/base
+    environment:
+      TERM: xterm
+    steps:
+      - run:
+          name: Install build dependencies
+          command: |
+            pacman --noconfirm -Syu --noprogressbar --needed base-devel boost cmake z3 cvc4 git openssh tar
+      - checkout
+      - run: *setup_prerelease_commit_hash
+      - run: *run_build
+      - store_artifacts: *solc_artifact
+      - persist_to_workspace:
+          root: build
+          paths:
+            - solc/solc
+            - test/soltest
+            - test/tools/solfuzzer
+
+  build_x86_clang7:
+    docker:
+      - image: buildpack-deps:cosmic
+    environment:
+      TERM: xterm
+      CC: /usr/bin/clang-7
+      CXX: /usr/bin/clang++-7
+      CMAKE_OPTIONS: -DLLL=ON
+    steps:
+      - checkout
+      - run:
+          name: Install build dependencies
+          command: |
+            apt-get -qq update
+            apt-get -qy install clang-7 cmake libboost-regex-dev libboost-filesystem-dev libboost-test-dev libboost-system-dev libboost-program-options-dev libz3-dev
+            ./scripts/install_obsolete_jsoncpp_1_7_4.sh
+      - run: *setup_prerelease_commit_hash
+      - run: *run_build
+      - store_artifacts: *solc_artifact
+      - persist_to_workspace:
+          root: build
+          paths:
+            - "*"
+
+  build_x86_mac:
+    macos:
+      xcode: "10.0.0"
+    environment:
+      TERM: xterm
+      CMAKE_OPTIONS: -DLLL=ON
+    steps:
+      - checkout
+      - run:
+          name: Install build dependencies
+          command: |
+            brew update
+            brew upgrade
+            brew unlink python
+            brew install z3
+            brew install boost
+            brew install cmake
+            brew install wget
+            ./scripts/install_obsolete_jsoncpp_1_7_4.sh
+      - run: *setup_prerelease_commit_hash
+      - run: *run_build
+      - store_artifacts: *solc_artifact
+      - persist_to_workspace: *all_artifacts
+
+  test_check_spelling:
+    docker:
+      - image: circleci/python:3.6
+    environment:
+      TERM: xterm
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
+      - run:
+          name: Install dependencies
+          command: |
+            pip install --user codespell
+      - run:
+          name: Check spelling
+          command: ~/.local/bin/codespell -S "*.enc,.git" -I ./scripts/codespell_whitelist.txt
+
+  test_check_style:
+    docker:
+      - image: buildpack-deps:bionic
+    steps:
+      - checkout
+      - run:
+          name: Check for trailing whitespace
+          command: ./scripts/check_style.sh
+
+  test_buglist:
+    docker:
+      - image: circleci/node
+    environment:
+      TERM: xterm
+    steps:
+      - checkout
+      - run:
+          name: JS deps
+          command: |
+            npm install download
+            npm install JSONPath
+            npm install mktemp
+      - run:
+          name: Test buglist
+          command: ./test/buglistTests.js
+
+  test_x86_linux:
+    docker:
+      - image: buildpack-deps:bionic
+    environment:
+      TERM: xterm
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
+      - run:
+          name: Install dependencies
+          command: |
+            apt-get -qq update
+            apt-get -qy install libz3-dev libleveldb1v5 python-pip
+            pip install codecov
+      - run: mkdir -p test_results
+      - run:
+          name: Test type checker
+          command: build/test/soltest -t 'syntaxTest*' -- --no-ipc --testpath test
+      - run:
+          name: Coverage of type checker
+          command: codecov --flags syntax --gcov-root build
+      - run: *run_tests
+      - run:
+          name: Coverage of all
+          command: codecov --flags all --gcov-root build
+      - store_test_results:
+          path: test_results/
+      - store_artifacts:
+          path: test_results/
+          destination: test_results/
+
+  test_x86_archlinux:
+    docker:
+      - image: archlinux/base
+    environment:
+      TERM: xterm
+    steps:
+      - run:
+          name: Install dependencies
+          command: |
+            pacman --noconfirm -Syu --noprogressbar --needed boost z3 cvc4 git openssh tar
+      - checkout
+      - attach_workspace:
+          at: build
+      - run: mkdir -p test_results
+      - run: build/test/soltest --logger=JUNIT,test_suite,test_results/result.xml -- --no-ipc --testpath test
+      - store_test_results:
+          path: test_results/
+      - store_artifacts:
+          path: test_results/
+          destination: test_results/
+
+  test_x86_mac:
+    macos:
+      xcode: "10.0.0"
+    environment:
+      TERM: xterm
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
+      - run:
+          name: Install dependencies
+          command: |
+            brew update
+            brew upgrade
+            brew unlink python
+            brew install z3
+      - run: mkdir -p test_results
+      - run: *run_tests
+      - store_test_results:
+          path: test_results/
+      - store_artifacts:
+          path: test_results/
+          destination: test_results/
+
+  docs:
+    docker:
+      - image: buildpack-deps:bionic
+    environment:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - checkout
+      - run:
+          name: Install build dependencies
+          command: |
+            apt-get -qq update
+            apt-get -qy install python-sphinx python-pip
+      - run: *setup_prerelease_commit_hash
+      - run:
+          name: Build documentation
+          command: ./scripts/docs.sh
+      - store_artifacts:
+          path: docs/_build/html/
+          destination: docs-html
+
+workflows:
+  version: 2
+  build_all:
+    jobs:
+      - test_check_spelling: *build_on_tags
+      - test_check_style: *build_on_tags
+      - test_buglist: *build_on_tags
+      - build_emscripten: *build_on_tags
+      - test_emscripten_solcjs:
+          <<: *build_on_tags
+          requires:
+            - build_emscripten
+      - test_emscripten_external:
+          <<: *build_on_tags
+          requires:
+            - build_emscripten
+      - build_x86_linux: *build_on_tags
+      - build_x86_clang7: *build_on_tags
+      - build_x86_mac: *build_on_tags
+      - test_x86_linux:
+          <<: *build_on_tags
+          requires:
+            - build_x86_linux
+      - test_x86_mac:
+          <<: *build_on_tags
+          requires:
+            - build_x86_mac
+      - docs: *build_on_tags
+      - build_x86_archlinux: *build_on_tags
+      - test_x86_archlinux:
+          <<: *build_on_tags
+          requires:
+            - build_x86_archlinux

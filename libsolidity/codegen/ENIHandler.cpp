@@ -8,7 +8,7 @@
 #include <libsolidity/ast/ASTAnnotations.h>
 #include <libsolidity/ast/ASTEnums.h>
 
-#include <libevmasm/SourceLocation.h>
+#include <liblangutil/SourceLocation.h>
 #include <libevmasm/Instruction.h>
 
 #include <libdevcore/FixedHash.h>
@@ -49,7 +49,7 @@ std::string toString(bytes& pBytes) {
 }
 
 /// Convert the type of literal to byte representation. This will produce ENI type section.
-byte literalTypeToString(Token::Value pType) {
+uint8_t literalTypeToString(Token pType) {
 	switch (pType) {
 		case Token::StringLiteral:
 			return 4;
@@ -64,7 +64,7 @@ byte literalTypeToString(Token::Value pType) {
 }
 
 /// Convert the type of identifier to byte representation. This will produce ENI type section.
-byte identifierTypeToString(TypePointer pType) {
+uint8_t identifierTypeToString(TypePointer pType) {
 	if (pType->category() == Type::Category::Array) {
 		auto arrayType = dynamic_cast<ArrayType const*>(pType.get());
 		if (arrayType->isString())
@@ -281,7 +281,7 @@ void ENIHandler::handleLiteral(LiteralInfo& pLiteralInfo) {
 	}
 }
 
-void ENIHandler::appendLiteral(Token::Value pType, std::string pValue) {
+void ENIHandler::appendLiteral(Token pType, std::string pValue) {
 	if (m_FunctionName == "" && m_Parameters.size() == 0) {
 		/// First parameter of ENI function is its function name.
 		m_FunctionName = pValue;

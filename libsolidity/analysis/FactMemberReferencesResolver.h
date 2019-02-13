@@ -11,12 +11,16 @@
 #include <libsolidity/ast/ASTVisitor.h>
 #include <libsolidity/ast/ASTAnnotations.h>
 
+namespace langutil
+{
+class ErrorReporter;
+}
+
 namespace dev
 {
 namespace solidity
 {
 
-class ErrorReporter;
 class NameAndTypeResolver;
 
 /**
@@ -30,7 +34,7 @@ public:
 
 	/// @returns true if no errors during resolving and throws exceptions on fatal errors.
 	bool resolve(ASTNode & _root);
-	
+
 	bool visit(FactDeclaration& _node) override;
 	bool visit(FieldExpression& _node) override { m_stack.push_back(&_node); return true; }
 	bool visit(Conditional& _node) override { m_stack.push_back(&_node); return true; }

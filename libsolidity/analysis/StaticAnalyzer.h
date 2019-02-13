@@ -28,10 +28,17 @@
 #include <libsolidity/ast/ASTForward.h>
 #include <libsolidity/ast/ASTVisitor.h>
 
+namespace langutil
+{
+class ErrorReporter;
+}
+
 namespace dev
 {
 namespace solidity
 {
+
+class ConstructorUsesAssembly;
 
 
 /**
@@ -44,7 +51,8 @@ class StaticAnalyzer: private ASTConstVisitor
 {
 public:
 	/// @param _errorReporter provides the error logging functionality.
-	explicit StaticAnalyzer(ErrorReporter& _errorReporter): m_errorReporter(_errorReporter) {}
+	explicit StaticAnalyzer(langutil::ErrorReporter& _errorReporter);
+	~StaticAnalyzer();
 
 	/// Performs static analysis on the given source unit and all of its sub-nodes.
 	/// @returns true iff all checks passed. Note even if all checks passed, errors() can still contain warnings
@@ -52,36 +60,37 @@ public:
 
 private:
 
-	virtual bool visit(ContractDefinition const& _contract) override;
-	virtual void endVisit(ContractDefinition const& _contract) override;
+	bool visit(ContractDefinition const& _contract) override;
+	void endVisit(ContractDefinition const& _contract) override;
 
-	virtual bool visit(FunctionDefinition const& _function) override;
-	virtual void endVisit(FunctionDefinition const& _function) override;
+	bool visit(FunctionDefinition const& _function) override;
+	void endVisit(FunctionDefinition const& _function) override;
 
-	virtual bool visit(ExpressionStatement const& _statement) override;
-	virtual bool visit(VariableDeclaration const& _variable) override;
-	virtual bool visit(Identifier const& _identifier) override;
-	virtual bool visit(Return const& _return) override;
-	virtual bool visit(MemberAccess const& _memberAccess) override;
-	virtual bool visit(InlineAssembly const& _inlineAssembly) override;
-	virtual bool visit(BinaryOperation const& _operation) override;
-	virtual bool visit(FunctionCall const& _functionCall) override;
+	bool visit(ExpressionStatement const& _statement) override;
+	bool visit(VariableDeclaration const& _variable) override;
+	bool visit(Identifier const& _identifier) override;
+	bool visit(Return const& _return) override;
+	bool visit(MemberAccess const& _memberAccess) override;
+	bool visit(InlineAssembly const& _inlineAssembly) override;
+	bool visit(BinaryOperation const& _operation) override;
+	bool visit(FunctionCall const& _functionCall) override;
 
 	/// @returns the size of this type in storage, including all sub-types.
 	static bigint structureSizeEstimate(Type const& _type, std::set<StructDefinition const*>& _structsSeen);
 
-	ErrorReporter& m_errorReporter;
+	langutil::ErrorReporter& m_errorReporter;
 
 	/// Flag that indicates whether the current contract definition is a library.
 	bool m_library = false;
-
-	/// Flag that indicates whether a public function does not contain the "payable" modifier.
-	bool m_nonPayablePublic = false;
 
 	/// Number of uses of each (named) local variable in a function, counter is initialized with zero.
 	/// Pairs of AST ids and pointers are used as keys to ensure a deterministic order
 	/// when traversing.
 	std::map<std::pair<size_t, VariableDeclaration const*>, int> m_localVarUseCount;
+
+	/// Cache that holds information about whether a contract's constructor
+	/// uses inline assembly.
+	std::unique_ptr<ConstructorUsesAssembly> m_constructorUsesAssembly;
 
 	FunctionDefinition const* m_currentFunction = nullptr;
 

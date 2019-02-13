@@ -30,7 +30,11 @@ set -e
 
 REPO_ROOT="$(dirname "$0")"/..
 
+WORKDIR=`mktemp -d`
 IPC_ENABLED=true
+ALETH_PID=
+CMDLINE_PID=
+
 if [[ "$OSTYPE" == "darwin"* ]]
 then
     SMT_FLAGS="--no-smt"
@@ -40,6 +44,49 @@ then
         IPC_FLAGS="--no-ipc"
     fi
 fi
+
+safe_kill() {
+    local PID=${1}
+    local NAME=${2:-${1}}
+    local n=1
+
+    # only proceed if $PID does exist
+    kill -0 $PID 2>/dev/null || return
+
+    echo "Sending SIGTERM to ${NAME} (${PID}) ..."
+    kill $PID
+
+    # wait until process terminated gracefully
+    while kill -0 $PID 2>/dev/null && [[ $n -le 4 ]]; do
+        echo "Waiting ($n) ..."
+        sleep 1
+        n=$[n + 1]
+    done
+
+    # process still alive? then hard-kill
+    if kill -0 $PID 2>/dev/null; then
+        echo "Sending SIGKILL to ${NAME} (${PID}) ..."
+        kill -9 $PID
+    fi
+}
+
+cleanup() {
+	# ensure failing commands don't cause termination during cleanup (especially within safe_kill)
+	set +e
+
+    if [[ "$IPC_ENABLED" = true ]] && [[ -n "${ALETH_PID}" ]]
+    then
+        safe_kill $ALETH_PID $ALETH_PATH
+    fi
+    if [[ -n "$CMDLINE_PID" ]]
+    then
+        safe_kill $CMDLINE_PID "Commandline tests"
+    fi
+
+    echo "Cleaning up working directory ${WORKDIR} ..."
+    rm -rf "$WORKDIR" || true
+}
+trap cleanup INT TERM
 
 if [ "$1" = --junit_report ]
 then
@@ -53,66 +100,75 @@ else
     log_directory=""
 fi
 
-function printError() { echo "$(tput setaf 1)$1$(tput sgr0)"; }
-function printTask() { echo "$(tput bold)$(tput setaf 2)$1$(tput sgr0)"; }
-
+if [ "$CIRCLECI" ]
+then
+    function printTask() { echo "$(tput bold)$(tput setaf 2)$1$(tput setaf 7)"; }
+    function printError() { echo "$(tput setaf 1)$1$(tput setaf 7)"; }
+else
+    function printTask() { echo "$(tput bold)$(tput setaf 2)$1$(tput sgr0)"; }
+    function printError() { echo "$(tput setaf 1)$1$(tput sgr0)"; }
+fi
 
 printTask "Running commandline tests..."
-"$REPO_ROOT/test/cmdlineTests.sh" &
-CMDLINE_PID=$!
 # Only run in parallel if this is run on CI infrastructure
-if [ -z "$CI" ]
+if [[ -n "$CI" ]]
 then
-    if ! wait $CMDLINE_PID
+    "$REPO_ROOT/test/cmdlineTests.sh" &
+    CMDLINE_PID=$!
+else
+    if ! $REPO_ROOT/test/cmdlineTests.sh
     then
         printError "Commandline tests FAILED"
         exit 1
     fi
 fi
 
-function download_eth()
+function download_aleth()
 {
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        ETH_PATH="$REPO_ROOT/eth"
+        ALETH_PATH="$REPO_ROOT/aleth"
     elif [ -z $CI ]; then
-        ETH_PATH="eth"
+        ALETH_PATH="aleth"
     else
         mkdir -p /tmp/test
-        if grep -i trusty /etc/lsb-release >/dev/null 2>&1
-        then
-            # built from 5ac09111bd0b6518365fe956e1bdb97a2db82af1 at 2018-04-05
-            ETH_BINARY=eth_2018-04-05_trusty
-            ETH_HASH="1e5e178b005e5b51f9d347df4452875ba9b53cc6"
-        else
-            # built from 5ac09111bd0b6518365fe956e1bdb97a2db82af1 at 2018-04-05
-            ETH_BINARY=eth_2018-04-05_artful
-            ETH_HASH="eb2d0df022753bb2b442ba73e565a9babf6828d6"
-        fi
-        wget -q -O /tmp/test/eth https://github.com/ethereum/cpp-ethereum/releases/download/solidityTester/$ETH_BINARY
-        test "$(shasum /tmp/test/eth)" = "$ETH_HASH  /tmp/test/eth"
+        # Any time the hash is updated here, the "Running compiler tests" section should also be updated.
+        ALETH_HASH="8ce2f00539d2fd8b5f093d854c6999424f7494ff"
+        ALETH_VERSION=1.5.0-alpha.7
+        wget -q -O /tmp/test/aleth.tar.gz https://github.com/ethereum/aleth/releases/download/v${ALETH_VERSION}/aleth-${ALETH_VERSION}-linux-x86_64.tar.gz
+        test "$(shasum /tmp/test/aleth.tar.gz)" = "$ALETH_HASH  /tmp/test/aleth.tar.gz"
+        tar -xf /tmp/test/aleth.tar.gz -C /tmp/test
+        ALETH_PATH="/tmp/test/bin/aleth"
         sync
-        chmod +x /tmp/test/eth
+        chmod +x $ALETH_PATH
         sync # Otherwise we might get a "text file busy" error
-        ETH_PATH="/tmp/test/eth"
     fi
 
 }
 
 # $1: data directory
 # echos the PID
-function run_eth()
+function run_aleth()
 {
-    $ETH_PATH --test -d "$1" >/dev/null 2>&1 &
+    $ALETH_PATH --db memorydb --test -d "${WORKDIR}" >/dev/null 2>&1 &
     echo $!
     # Wait until the IPC endpoint is available.
-    while [ ! -S "$1"/geth.ipc ] ; do sleep 1; done
+    while [ ! -S "${WORKDIR}/geth.ipc" ] ; do sleep 1; done
     sleep 2
+}
+
+function check_aleth() {
+    printTask "Running IPC tests with $ALETH_PATH..."
+    if ! hash $ALETH_PATH 2>/dev/null; then
+      printError "$ALETH_PATH not found"
+      exit 1
+    fi
 }
 
 if [ "$IPC_ENABLED" = true ];
 then
-    download_eth
-    ETH_PID=$(run_eth /tmp/test)
+    download_aleth
+    check_aleth
+    ALETH_PID=$(run_aleth)
 fi
 
 progress="--show-progress"
@@ -145,19 +201,15 @@ do
         log=--logger=JUNIT,test_suite,$log_directory/noopt_$vm.xml $testargs_no_opt
       fi
     fi
-    "$REPO_ROOT"/build/test/soltest $progress $log -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" $SMT_FLAGS $IPC_FLAGS  --ipcpath /tmp/test/geth.ipc
+    "$REPO_ROOT"/build/test/soltest $progress $log -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" $SMT_FLAGS $IPC_FLAGS  --ipcpath "${WORKDIR}/geth.ipc"
   done
 done
 
-if ! wait $CMDLINE_PID
+if [[ -n $CMDLINE_PID ]] && ! wait $CMDLINE_PID
 then
     printError "Commandline tests FAILED"
+    CMDLINE_PID=
     exit 1
 fi
 
-if [ "$IPC_ENABLED" = true ]
-then
-    pkill "$ETH_PID" || true
-    sleep 4
-    pgrep "$ETH_PID" && pkill -9 "$ETH_PID" || true
-fi
+cleanup

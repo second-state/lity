@@ -16,19 +16,19 @@
 */
 
 #include <libsolidity/analysis/PostTypeChecker.h>
-#include <libsolidity/ast/AST.h>
-#include <libsolidity/analysis/SemVerHandler.h>
-#include <libsolidity/interface/ErrorReporter.h>
-#include <libsolidity/interface/Version.h>
 
+#include <libsolidity/analysis/SemVerHandler.h>
+#include <libsolidity/ast/AST.h>
+#include <libsolidity/interface/Version.h>
+#include <liblangutil/ErrorReporter.h>
 #include <libdevcore/Algorithms.h>
 
 #include <boost/range/adaptor/map.hpp>
-
 #include <memory>
 
 using namespace std;
 using namespace dev;
+using namespace langutil;
 using namespace dev::solidity;
 
 
@@ -91,8 +91,11 @@ bool PostTypeChecker::visit(Identifier const& _identifier)
 
 VariableDeclaration const* PostTypeChecker::findCycle(VariableDeclaration const& _startingFrom)
 {
-	auto visitor = [&](VariableDeclaration const& _variable, CycleDetector<VariableDeclaration>& _cycleDetector)
+	auto visitor = [&](VariableDeclaration const& _variable, CycleDetector<VariableDeclaration>& _cycleDetector, size_t _depth)
 	{
+		if (_depth >= 256)
+			m_errorReporter.fatalDeclarationError(_variable.location(), "Variable definition exhausting cyclic dependency validator.");
+
 		// Iterating through the dependencies needs to be deterministic and thus cannot
 		// depend on the memory layout.
 		// Because of that, we sort by AST node id.

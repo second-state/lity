@@ -11,12 +11,16 @@
 #include <libsolidity/ast/ASTVisitor.h>
 #include <libsolidity/ast/ASTAnnotations.h>
 
+namespace langutil
+{
+class ErrorReporter;
+}
+
 namespace dev
 {
 namespace solidity
 {
 
-class ErrorReporter;
 class NameAndTypeResolver;
 
 /**

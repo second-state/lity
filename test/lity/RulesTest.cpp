@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE(pay)
 	BOOST_CHECK_EQUAL(balanceAt(account(2)), balance[2]);
 
 	// pay, only account(1) get paid
-	sendEther(m_contractAddress, 10000);
+	sendEther(m_contractAddress, u256(10000));
 	BOOST_REQUIRE(callContractFunction("pay()") == encodeArgs(true));
 	BOOST_CHECK_EQUAL(balanceAt(account(1)), balance[1] + 10);
 	BOOST_CHECK_EQUAL(balanceAt(account(2)), balance[2]);

@@ -17,18 +17,18 @@
 /**
  * @author Christian <chris@ethereum.org>
  * @date 2017
- * Routines that generate JULIA code related to ABI encoding, decoding and type conversions.
+ * Routines that generate Yul code related to ABI encoding, decoding and type conversions.
  */
 
 #pragma once
 
-#include <libsolidity/interface/EVMVersion.h>
-
 #include <libsolidity/ast/ASTForward.h>
+#include <liblangutil/EVMVersion.h>
 
-#include <vector>
 #include <functional>
 #include <map>
+#include <set>
+#include <vector>
 
 namespace dev {
 namespace solidity {
@@ -80,10 +80,30 @@ public:
 	/// stack slot, it takes exactly that number of values.
 	std::string tupleDecoder(TypePointers const& _types, bool _fromMemory = false);
 
-	/// @returns concatenation of all generated functions.
-	std::string requestedFunctions();
+	/// @returns concatenation of all generated functions and a set of the
+	/// externally used functions.
+	/// Clears the internal list, i.e. calling it again will result in an
+	/// empty return value.
+	std::pair<std::string, std::set<std::string>> requestedFunctions();
 
 private:
+	struct EncodingOptions
+	{
+		/// Pad/signextend value types and bytes/string to multiples of  32 bytes.
+		bool padded = true;
+		/// Store arrays and structs in place without "data pointer" and do not store the length.
+		bool dynamicInplace = false;
+		/// Only for external function types: The value is a pair of address / function id instead
+		/// of a memory pointer to the compression representation.
+		bool encodeFunctionFromStack = false;
+		/// Encode storage pointers as storage pointers (we are targeting a library call).
+		bool encodeAsLibraryTypes = false;
+
+		/// @returns a string to uniquely identify the encoding options for the encoding
+		/// function name. Skips everything that has its default value.
+		std::string toFunctionNameSuffix() const;
+	};
+
 	/// @returns the name of the cleanup function for the given type and
 	/// adds its implementation to the requested functions.
 	/// @param _revertOnFailure if true, causes revert on invalid data,
@@ -112,40 +132,39 @@ private:
 	std::string abiEncodingFunction(
 		Type const& _givenType,
 		Type const& _targetType,
-		bool _encodeAsLibraryTypes,
-		bool _fromStack
+		EncodingOptions const& _options
 	);
 	/// Part of @a abiEncodingFunction for array target type and given calldata array.
 	std::string abiEncodingFunctionCalldataArray(
 		Type const& _givenType,
 		Type const& _targetType,
-		bool _encodeAsLibraryTypes
+		EncodingOptions const& _options
 	);
 	/// Part of @a abiEncodingFunction for array target type and given memory array or
 	/// a given storage array with one item per slot.
 	std::string abiEncodingFunctionSimpleArray(
 		ArrayType const& _givenType,
 		ArrayType const& _targetType,
-		bool _encodeAsLibraryTypes
+		EncodingOptions const& _options
 	);
 	std::string abiEncodingFunctionMemoryByteArray(
 		ArrayType const& _givenType,
 		ArrayType const& _targetType,
-		bool _encodeAsLibraryTypes
+		EncodingOptions const& _options
 	);
 	/// Part of @a abiEncodingFunction for array target type and given storage array
 	/// where multiple items are packed into the same storage slot.
 	std::string abiEncodingFunctionCompactStorageArray(
 		ArrayType const& _givenType,
 		ArrayType const& _targetType,
-		bool _encodeAsLibraryTypes
+		EncodingOptions const& _options
 	);
 
 	/// Part of @a abiEncodingFunction for struct types.
 	std::string abiEncodingFunctionStruct(
 		StructType const& _givenType,
 		StructType const& _targetType,
-		bool _encodeAsLibraryTypes
+		EncodingOptions const& _options
 	);
 
 	// @returns the name of the ABI encoding function with the given type
@@ -154,14 +173,13 @@ private:
 	std::string abiEncodingFunctionStringLiteral(
 		Type const& _givenType,
 		Type const& _targetType,
-		bool _encodeAsLibraryTypes
+		EncodingOptions const& _options
 	);
 
 	std::string abiEncodingFunctionFunctionType(
 		FunctionType const& _from,
 		Type const& _to,
-		bool _encodeAsLibraryTypes,
-		bool _fromStack
+		EncodingOptions const& _options
 	);
 
 	/// @returns the name of the ABI decoding function for the given type
@@ -208,7 +226,7 @@ private:
 	std::string arrayLengthFunction(ArrayType const& _type);
 	/// @returns the name of a function that computes the number of bytes required
 	/// to store an array in memory given its length (internally encoded, not ABI encoded).
-	/// The function reverts for too large lengthes.
+	/// The function reverts for too large lengths.
 	std::string arrayAllocationSizeFunction(ArrayType const& _type);
 	/// @returns the name of a function that converts a storage slot number
 	/// or a memory pointer to the slot number / memory pointer for the data position of an array
@@ -229,12 +247,17 @@ private:
 	/// cases.
 	std::string createFunction(std::string const& _name, std::function<std::string()> const& _creator);
 
+	/// Helper function that uses @a _creator to create a function and add it to
+	/// @a m_requestedFunctions if it has not been created yet and returns @a _name in both
+	/// cases. Also adds it to the list of externally used functions.
+	std::string createExternallyUsedFunction(std::string const& _name, std::function<std::string()> const& _creator);
+
 	/// @returns the size of the static part of the encoding of the given types.
 	static size_t headSize(TypePointers const& _targetTypes);
 
 	/// Map from function name to code for a multi-use function.
 	std::map<std::string, std::string> m_requestedFunctions;
-
+	std::set<std::string> m_externallyUsedFunctions;
 	EVMVersion m_evmVersion;
 };
 

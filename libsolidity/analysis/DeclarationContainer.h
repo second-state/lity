@@ -22,11 +22,10 @@
 
 #pragma once
 
+#include <libsolidity/ast/ASTForward.h>
+#include <boost/noncopyable.hpp>
 #include <map>
 #include <set>
-#include <boost/noncopyable.hpp>
-
-#include <libsolidity/ast/ASTForward.h>
 
 namespace dev
 {
@@ -58,9 +57,12 @@ public:
 	/// @returns whether declaration is valid, and if not also returns previous declaration.
 	Declaration const* conflictingDeclaration(Declaration const& _declaration, ASTString const* _name = nullptr) const;
 
-	/// Activates a previously inactive (invisible) variable. To be used in C99 scpoing for
+	/// Activates a previously inactive (invisible) variable. To be used in C99 scoping for
 	/// VariableDeclarationStatements.
 	void activateVariable(ASTString const& _name);
+
+	/// @returns true if declaration is currently invisible.
+	bool isInvisible(ASTString const& _name) const;
 
 	/// @returns existing declaration names similar to @a _name.
 	/// Searches this and all parent containers.

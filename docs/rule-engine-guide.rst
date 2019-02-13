@@ -41,7 +41,7 @@ A contract with a rule definition looks like this:
 
 .. code-block:: Lity
 
-    contract C {
+    // contract C {
         rule "ruleName"
         // Rule attributes
         when {
@@ -49,7 +49,7 @@ A contract with a rule definition looks like this:
         } then {
             // Action Statements
         }
-    }
+    // }
 
 Rule Attributes
 ~~~~~~~~~~~~~~~
@@ -168,11 +168,12 @@ The complete contract is below.
 
 .. code-block:: Lity
 
+    pragma lity >=1.2.5 <2.0.0;
     contract AgePension {
         struct Person {
             int age;
             bool eligible;
-            address addr;
+            address payable addr;
         }
 
         struct Budget {
@@ -201,7 +202,7 @@ The complete contract is below.
             fireAllRules;
         }
 
-        function () public payable { }
+        function () external payable { }
 
         rule "payPension" when {
             p: Person(age >= 65, eligible == true);
@@ -275,6 +276,7 @@ Complete source of the contract:
 
 .. code-block:: Lity
 
+  pragma lity >=1.2.5 <2.0.0;
   contract C {
       struct E {
           int256 index;
@@ -312,7 +314,7 @@ Complete source of the contract:
           return es[x].value;
       }
 
-      function () public payable { }
+      function () external payable { }
   }
 
 
@@ -671,6 +673,7 @@ Complete source code of the contract:
 
 .. code-block:: Lity
 
+    pragma lity >=1.2.5 <2.0.0;
     contract C {
         struct Cat {
             uint256 id;
@@ -750,7 +753,7 @@ Complete source code of the contract:
             return true;
         }
 
-        function () public payable { }
+        function () external payable { }
     }
 
 Specifications
@@ -773,6 +776,7 @@ For example:
 
 .. code-block:: ts
 
+   pragma lity >=1.2.5 <2.0.0;
    contract C {
      struct fact { int x; }
      fact[] facts;

@@ -23,12 +23,13 @@
 
 #include "KnownState.h"
 #include <functional>
-#include <libdevcore/SHA3.h>
+#include <libdevcore/Keccak256.h>
 #include <libevmasm/AssemblyItem.h>
 
 using namespace std;
 using namespace dev;
 using namespace dev::eth;
+using namespace langutil;
 
 ostream& KnownState::stream(ostream& _out) const
 {
@@ -121,28 +122,33 @@ KnownState::StoreOperation KnownState::feedItem(AssemblyItem const& _item, bool 
 			vector<Id> arguments(info.args);
 			for (int i = 0; i < info.args; ++i)
 				arguments[i] = stackElement(m_stackHeight - i, _item.location());
-
-			if (_item.instruction() == Instruction::SSTORE)
+			switch (_item.instruction())
+			{
+			case Instruction::SSTORE:
 				op = storeInStorage(arguments[0], arguments[1], _item.location());
-			else if (_item.instruction() == Instruction::SLOAD)
+				break;
+			case Instruction::SLOAD:
 				setStackElement(
 					m_stackHeight + _item.deposit(),
 					loadFromStorage(arguments[0], _item.location())
 				);
-			else if (_item.instruction() == Instruction::MSTORE)
+				break;
+			case Instruction::MSTORE:
 				op = storeInMemory(arguments[0], arguments[1], _item.location());
-			else if (_item.instruction() == Instruction::MLOAD)
+				break;
+			case Instruction::MLOAD:
 				setStackElement(
 					m_stackHeight + _item.deposit(),
 					loadFromMemory(arguments[0], _item.location())
 				);
-			else if (_item.instruction() == Instruction::KECCAK256)
+				break;
+			case Instruction::KECCAK256:
 				setStackElement(
 					m_stackHeight + _item.deposit(),
 					applyKeccak256(arguments.at(0), arguments.at(1), _item.location())
 				);
-			else
-			{
+				break;
+			default:
 				bool invMem = SemanticInformation::invalidatesMemory(_item.instruction());
 				bool invStor = SemanticInformation::invalidatesStorage(_item.instruction());
 				// We could be a bit more fine-grained here (CALL only invalidates part of
@@ -298,7 +304,7 @@ KnownState::StoreOperation KnownState::storeInStorage(
 
 	AssemblyItem item(Instruction::SSTORE, _location);
 	Id id = m_expressionClasses->find(item, {_slot, _value}, true, m_sequenceNumber);
-	StoreOperation operation(StoreOperation::Storage, _slot, m_sequenceNumber, id);
+	StoreOperation operation{StoreOperation::Storage, _slot, m_sequenceNumber, id};
 	m_storageContent[_slot] = _value;
 	// increment a second time so that we get unique sequence numbers for writes
 	m_sequenceNumber++;
@@ -330,7 +336,7 @@ KnownState::StoreOperation KnownState::storeInMemory(Id _slot, Id _value, Source
 
 	AssemblyItem item(Instruction::MSTORE, _location);
 	Id id = m_expressionClasses->find(item, {_slot, _value}, true, m_sequenceNumber);
-	StoreOperation operation(StoreOperation(StoreOperation::Memory, _slot, m_sequenceNumber, id));
+	StoreOperation operation{StoreOperation::Memory, _slot, m_sequenceNumber, id};
 	m_memoryContent[_slot] = _value;
 	// increment a second time so that we get unique sequence numbers for writes
 	m_sequenceNumber++;

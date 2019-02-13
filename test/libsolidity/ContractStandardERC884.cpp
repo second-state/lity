@@ -36,7 +36,7 @@ namespace test
 class ERC884ContractFramework: public AnalysisFramework
 {
 protected:
-	virtual std::pair<SourceUnit const*, ErrorList>
+	virtual std::pair<SourceUnit const*, langutil::ErrorList>
 	parseAnalyseAndReturnError(
 		std::string const& _source,
 		bool _reportWarnings = false,
@@ -110,7 +110,7 @@ contract E {
 	event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
 	function balanceOf(address _owner) external view returns (uint256);
 	function ownerOf(uint256 _tokenId) external view returns (address);
-	function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) external payable;
+	function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes calldata data) external payable;
 	function safeTransferFrom(address _from, address _to, uint256 _tokenId) external payable;
 	function transferFrom(address _from, address _to, uint256 _tokenId) external; // missing payable
 	function approve(address _approved, uint256 _tokenId) external payable;

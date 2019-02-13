@@ -23,8 +23,8 @@
 #include <test/Options.h>
 
 #include <libsolidity/interface/AssemblyStack.h>
-#include <libsolidity/parsing/Scanner.h>
-#include <libsolidity/interface/Exceptions.h>
+#include <liblangutil/Scanner.h>
+#include <liblangutil/Exceptions.h>
 #include <libsolidity/ast/AST.h>
 #include <test/libsolidity/ErrorCheck.h>
 #include <libevmasm/Assembly.h>
@@ -36,6 +36,7 @@
 #include <memory>
 
 using namespace std;
+using namespace langutil;
 
 namespace dev
 {
@@ -123,7 +124,8 @@ void parsePrintCompare(string const& _source, bool _canWarn = false)
 		BOOST_REQUIRE(Error::containsOnlyWarnings(stack.errors()));
 	else
 		BOOST_REQUIRE(stack.errors().empty());
-	BOOST_CHECK_EQUAL(stack.print(), _source);
+	string expectation = "object \"object\" {\n    code " + boost::replace_all_copy(_source, "\n", "\n    ") + "\n}\n";
+	BOOST_CHECK_EQUAL(stack.print(), expectation);
 }
 
 }
@@ -178,9 +180,9 @@ BOOST_AUTO_TEST_CASE(simple_instructions)
 	BOOST_CHECK(successParse("{ dup1 dup1 mul dup1 sub pop }"));
 }
 
-BOOST_AUTO_TEST_CASE(suicide_selfdestruct)
+BOOST_AUTO_TEST_CASE(selfdestruct)
 {
-	BOOST_CHECK(successParse("{ 0x01 suicide 0x02 selfdestruct }"));
+	BOOST_CHECK(successParse("{ 0x02 selfdestruct }"));
 }
 
 BOOST_AUTO_TEST_CASE(keywords)
@@ -314,7 +316,7 @@ BOOST_AUTO_TEST_CASE(switch_no_cases)
 
 BOOST_AUTO_TEST_CASE(switch_duplicate_case)
 {
-	CHECK_PARSE_ERROR("{ switch 42 case 1 {} case 1 {} default {} }", DeclarationError, "Duplicate case defined");
+	CHECK_PARSE_ERROR("{ switch 42 case 1 {} case 1 {} default {} }", DeclarationError, "Duplicate case defined.");
 }
 
 BOOST_AUTO_TEST_CASE(switch_invalid_expression)
@@ -431,8 +433,7 @@ BOOST_AUTO_TEST_CASE(variable_access_cross_functions)
 
 BOOST_AUTO_TEST_CASE(invalid_tuple_assignment)
 {
-	/// The push(42) is added here to silence the unbalanced stack error, so that there's only one error reported.
-	CHECK_PARSE_ERROR("{ 42 let x, y := 1 }", DeclarationError, "Variable count mismatch.");
+	CHECK_PARSE_ERROR("{ let x, y := 1 }", DeclarationError, "Variable count mismatch: 2 variables and 1 values");
 }
 
 BOOST_AUTO_TEST_CASE(instruction_too_few_arguments)
@@ -461,7 +462,7 @@ BOOST_AUTO_TEST_CASE(recursion_depth)
 BOOST_AUTO_TEST_CASE(multiple_assignment)
 {
 	CHECK_PARSE_ERROR("{ let x function f() -> a, b {} 123, x := f() }", ParserError, "Label name / variable name must precede \",\" (multiple assignment).");
-	CHECK_PARSE_ERROR("{ let x function f() -> a, b {} x, 123 := f() }", ParserError, "Variable name expected in multiple assignemnt.");
+	CHECK_PARSE_ERROR("{ let x function f() -> a, b {} x, 123 := f() }", ParserError, "Variable name expected in multiple assignment.");
 
 	/// NOTE: Travis hiccups if not having a variable
 	char const* text = R"(
@@ -566,12 +567,14 @@ BOOST_AUTO_TEST_CASE(print_string_literals)
 BOOST_AUTO_TEST_CASE(print_string_literal_unicode)
 {
 	string source = "{ let x := \"\\u1bac\" }";
-	string parsed = "{\n    let x := \"\\xe1\\xae\\xac\"\n}";
+	string parsed = "object \"object\" {\n    code {\n        let x := \"\\xe1\\xae\\xac\"\n    }\n}\n";
 	AssemblyStack stack(dev::test::Options::get().evmVersion());
 	BOOST_REQUIRE(stack.parseAndAnalyze("", source));
 	BOOST_REQUIRE(stack.errors().empty());
 	BOOST_CHECK_EQUAL(stack.print(), parsed);
-	parsePrintCompare(parsed);
+
+	string parsedInner = "{\n    let x := \"\\xe1\\xae\\xac\"\n}";
+	parsePrintCompare(parsedInner);
 }
 
 BOOST_AUTO_TEST_CASE(print_if)
@@ -740,8 +743,6 @@ BOOST_AUTO_TEST_CASE(keccak256)
 {
 	BOOST_CHECK(successAssemble("{ 0 0 keccak256 pop }"));
 	BOOST_CHECK(successAssemble("{ pop(keccak256(0, 0)) }"));
-	BOOST_CHECK(successAssemble("{ 0 0 sha3 pop }"));
-	BOOST_CHECK(successAssemble("{ pop(sha3(0, 0)) }"));
 }
 
 BOOST_AUTO_TEST_CASE(returndatasize)

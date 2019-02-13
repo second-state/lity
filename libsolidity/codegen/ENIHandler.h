@@ -7,7 +7,7 @@
 #include <libsolidity/ast/ASTAnnotations.h>
 #include <libsolidity/ast/ASTEnums.h>
 
-#include <libevmasm/SourceLocation.h>
+#include <liblangutil/SourceLocation.h>
 #include <libevmasm/Instruction.h>
 
 #include <libdevcore/FixedHash.h>
@@ -37,11 +37,11 @@ private:
 	};
 
 	struct LiteralInfo {
-		Token::Value m_Type;
+		Token m_Type;
 		std::string m_Value;
 
 		LiteralInfo() : m_Type(), m_Value() {}
-		explicit LiteralInfo(Token::Value pType, std::string pValue)
+		explicit LiteralInfo(Token pType, std::string pValue)
 			: m_Type(pType), m_Value(pValue) {}
 	};
 
@@ -72,7 +72,7 @@ public:
 	virtual ~ENIHandler() {}
 
 	/// Appends ENI function parameters
-	void appendLiteral(Token::Value, std::string);
+	void appendLiteral(Token, std::string);
 	void appendIdentifier(TypePointer, Declaration const&, Expression const&);
 
 	/// Clear all ENI function parameters

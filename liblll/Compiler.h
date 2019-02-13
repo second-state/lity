@@ -23,14 +23,14 @@
 
 #include <libdevcore/Common.h>
 
-#include <libsolidity/interface/EVMVersion.h>
+#include <liblangutil/EVMVersion.h>
 
 #include <string>
 #include <vector>
 
 namespace dev
 {
-namespace eth
+namespace lll
 {
 
 using ReadCallback = std::function<std::string(std::string const&)>;

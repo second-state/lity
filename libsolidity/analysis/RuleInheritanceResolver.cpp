@@ -1,6 +1,6 @@
 #include <libsolidity/analysis/RuleInheritanceResolver.h>
 #include <libsolidity/analysis/NameAndTypeResolver.h>
-#include <libsolidity/interface/ErrorReporter.h>
+#include <liblangutil/ErrorReporter.h>
 
 #include <boost/algorithm/string.hpp>
 

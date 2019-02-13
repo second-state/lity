@@ -23,6 +23,11 @@
 #include <map>
 #include <memory>
 
+namespace langutil
+{
+class ErrorReporter;
+}
+
 namespace dev
 {
 namespace solidity
@@ -32,8 +37,6 @@ using FunctionSpecification = std::pair<std::string, std::shared_ptr<FunctionTyp
 using FunctionSpecifications = std::vector<FunctionSpecification>;
 using FunctionSignatureHash = std::pair<std::string, u256>;
 using FunctionSignatureHashes = std::vector<FunctionSignatureHash>;
-
-class ErrorReporter;
 
 class BasicContractStandard; // forward declaration
 
@@ -51,14 +54,14 @@ public:
 
 	/// @param _errorReporter provides the error logging functionality.
 	/// @param _contractStandardStr specifies which contract standard to be checked,
-	ContractStandardChecker(ErrorReporter& _errorReporter, boost::optional<std::string> _contractStandardStr = boost::none);
+	ContractStandardChecker(langutil::ErrorReporter& _errorReporter, boost::optional<std::string> _contractStandardStr = boost::none);
 
 	/// @returns true iff no errors are found.
 	/// Currently always return true since contract standard violation is not an error
 	bool checkContractStandard(ContractDefinition const& _contract);
 
 private:
-	ErrorReporter& m_errorReporter;
+	langutil::ErrorReporter& m_errorReporter;
 	std::vector<std::shared_ptr<BasicContractStandard>> m_contractStandards;
 	Mode m_mode = WarnAll;
 };
@@ -67,21 +70,21 @@ class BasicContractStandard: private boost::noncopyable, public std::enable_shar
 {
 public:
 	/// Check if a contract definition is compatible to this standard.
-	virtual bool checkCompatibility(ContractDefinition const& _contract, ErrorReporter& _reporter, ContractStandardChecker::Mode _mode) = 0;
+	virtual bool checkCompatibility(ContractDefinition const& _contract, langutil::ErrorReporter& _reporter, ContractStandardChecker::Mode _mode) = 0;
 	virtual std::string name() const = 0;
 protected:
 	bool checkFunctionExistence
 	(
 		ContractDefinition const& _contract,
 		FunctionSpecifications const& _requiredFunctions,
-		ErrorReporter& _reporter,
+		langutil::ErrorReporter& _reporter,
 		ContractStandardChecker::Mode const _mode
 	);
 	bool checkFunctionCallExistence
 	(
 		ContractDefinition const& _contract,
 		FunctionSignatureHashes const& _requiredFunctionCalls,
-		ErrorReporter& _reporter
+		langutil::ErrorReporter& _reporter
 	);
 private:
 	virtual bool visit(ContractDefinition const& _contract) override;
@@ -93,7 +96,7 @@ private:
 class ERC20ContractStandard: public BasicContractStandard
 {
 public:
-	virtual bool checkCompatibility(ContractDefinition const& _contract, ErrorReporter& _reporter, ContractStandardChecker::Mode _mode) override;
+	virtual bool checkCompatibility(ContractDefinition const& _contract, langutil::ErrorReporter& _reporter, ContractStandardChecker::Mode _mode) override;
 	virtual std::string name() const override;
 protected:
 	/// @returns the functions which must be defined in ERC20 standard.
@@ -104,7 +107,7 @@ protected:
 class ERC223ContractStandard: public BasicContractStandard
 {
 public:
-	virtual bool checkCompatibility(ContractDefinition const& _contract, ErrorReporter& _reporter, ContractStandardChecker::Mode _mode) override;
+	virtual bool checkCompatibility(ContractDefinition const& _contract, langutil::ErrorReporter& _reporter, ContractStandardChecker::Mode _mode) override;
 	virtual std::string name() const override;
 protected:
 	/// @returns the functions which must be defined in ERC223 standard.
@@ -117,7 +120,7 @@ protected:
 class ERC721ContractStandard: public BasicContractStandard
 {
 public:
-	virtual bool checkCompatibility(ContractDefinition const& _contract, ErrorReporter& _reporter, ContractStandardChecker::Mode _mode) override;
+	virtual bool checkCompatibility(ContractDefinition const& _contract, langutil::ErrorReporter& _reporter, ContractStandardChecker::Mode _mode) override;
 	virtual std::string name() const override;
 protected:
 	/// @returns the functions which must be defined in ERC721 standard.
@@ -128,7 +131,7 @@ protected:
 class ERC827ContractStandard: public ERC20ContractStandard
 {
 public:
-	virtual bool checkCompatibility(ContractDefinition const& _contract, ErrorReporter& _reporter, ContractStandardChecker::Mode _mode) override;
+	virtual bool checkCompatibility(ContractDefinition const& _contract, langutil::ErrorReporter& _reporter, ContractStandardChecker::Mode _mode) override;
 	virtual std::string name() const override;
 protected:
 	/// @returns the functions which must be defined in ERC827 standard.
@@ -139,7 +142,7 @@ protected:
 class ERC884ContractStandard: public ERC20ContractStandard
 {
 public:
-	virtual bool checkCompatibility(ContractDefinition const& _contract, ErrorReporter& _reporter, ContractStandardChecker::Mode _mode) override;
+	virtual bool checkCompatibility(ContractDefinition const& _contract, langutil::ErrorReporter& _reporter, ContractStandardChecker::Mode _mode) override;
 	virtual std::string name() const override;
 protected:
 	/// @returns the functions which must be defined in ERC884 standard.

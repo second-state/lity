@@ -45,7 +45,7 @@ class AnalysisFramework
 {
 
 protected:
-	virtual std::pair<SourceUnit const*, ErrorList>
+	virtual std::pair<SourceUnit const*, langutil::ErrorList>
 	parseAnalyseAndReturnError(
 		std::string const& _source,
 		bool _reportWarnings = false,
@@ -56,10 +56,10 @@ protected:
 
 	SourceUnit const* parseAndAnalyse(std::string const& _source);
 	bool success(std::string const& _source);
-	ErrorList expectError(std::string const& _source, bool _warning = false, bool _allowMultiple = false);
+	langutil::ErrorList expectError(std::string const& _source, bool _warning = false, bool _allowMultiple = false);
 
 	std::string formatErrors() const;
-	std::string formatError(Error const& _error) const;
+	std::string formatError(langutil::Error const& _error) const;
 
 	static ContractDefinition const* retrieveContractByName(SourceUnit const& _source, std::string const& _name);
 	static FunctionTypePointer retrieveFunctionBySignature(
@@ -68,7 +68,7 @@ protected:
 	);
 
 	// filter out the warnings in m_warningsToFilter or all warnings if _includeWarnings is false
-	ErrorList filterErrors(ErrorList const& _errorList, bool _includeWarnings) const;
+	langutil::ErrorList filterErrors(langutil::ErrorList const& _errorList, bool _includeWarnings) const;
 
 	std::vector<std::string> m_warningsToFilter = {"This is a pre-release compiler version"};
 	dev::solidity::CompilerStack m_compiler;
@@ -79,7 +79,7 @@ protected:
 #define CHECK_ALLOW_MULTI(text, expectations) \
 do \
 { \
-	ErrorList errors = expectError((text), true, true); \
+	langutil::ErrorList errors = expectError((text), true, true); \
 	auto message = searchErrors(errors, (expectations)); \
 	BOOST_CHECK_MESSAGE(message.empty(), message); \
 } while(0)
@@ -87,10 +87,10 @@ do \
 #define CHECK_ERROR_OR_WARNING(text, typ, substrings, warning, allowMulti) \
 do \
 { \
-	ErrorList errors = expectError((text), (warning), (allowMulti)); \
-	std::vector<std::pair<Error::Type, std::string>> expectations; \
+	langutil::ErrorList errors = expectError((text), (warning), (allowMulti)); \
+	std::vector<std::pair<langutil::Error::Type, std::string>> expectations; \
 	for (auto const& str: substrings) \
-		expectations.emplace_back((Error::Type::typ), str); \
+		expectations.emplace_back((langutil::Error::Type::typ), str); \
 	auto message = searchErrors(errors, expectations); \
 	BOOST_CHECK_MESSAGE(message.empty(), message); \
 } while(0)
@@ -103,7 +103,7 @@ CHECK_ERROR_OR_WARNING(text, type, std::vector<std::string>{(substring)}, false,
 // [checkError(text, type, substring)] asserts that the compilation down to typechecking
 // emits multiple errors of the same type [type] and with a messages containing [substrings].
 // Because of the limitations of the preprocessor, you cannot use {{T1, "abc"}, {T2, "def"}} as arguments,
-// but have to replace them by (std::vector<std::pair<Error::Type, std::string>>{"abc", "def"})
+// but have to replace them by (std::vector<std::pair<langutil::Error::Type, std::string>>{"abc", "def"})
 // (note the parentheses)
 #define CHECK_ERROR_ALLOW_MULTI(text, type, substrings) \
 CHECK_ERROR_OR_WARNING(text, type, substrings, false, true)

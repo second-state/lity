@@ -31,7 +31,7 @@ namespace sp = boost::spirit;
 
 namespace dev
 {
-namespace eth
+namespace lll
 {
 
 struct CompilerState;
@@ -41,13 +41,13 @@ class CodeFragment
 public:
 	using ReadCallback = std::function<std::string(std::string const&)>;
 
-	CodeFragment() {}
+	CodeFragment() = default;
 	CodeFragment(sp::utree const& _t, CompilerState& _s, ReadCallback const& _readFile, bool _allowASM = false);
 
 	static CodeFragment compile(std::string const& _src, CompilerState& _s, ReadCallback const& _readFile);
 
 	/// Consolidates data and compiles code.
-	Assembly& assembly(CompilerState const& _cs) { finalise(_cs); return m_asm; }
+	eth::Assembly& assembly(CompilerState const& _cs) { finalise(_cs); return m_asm; }
 
 private:
 	void finalise(CompilerState const& _cs);
@@ -61,7 +61,7 @@ private:
 	void constructOperation(sp::utree const& _t, CompilerState& _s);
 
 	bool m_finalised = false;
-	Assembly m_asm;
+	eth::Assembly m_asm;
 	ReadCallback m_readFile;
 };
 

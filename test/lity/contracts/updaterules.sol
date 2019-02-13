@@ -1,7 +1,8 @@
+pragma lity >=1.2.5 <2.0.0;
 contract C {
     struct Person {
         uint age;
-        address addr;
+        address payable addr;
     }
 
     rule "updateTest" when {
@@ -23,5 +24,5 @@ contract C {
         fireAllRules;
         return true;
     }
-    function () public payable { }
+    function () external payable { }
 }

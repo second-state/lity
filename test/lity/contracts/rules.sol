@@ -3,7 +3,7 @@ contract C {
     struct Person {
         uint age;
         bool eligible;
-        address addr;
+        address payable addr;
     }
 
     rule "ageGT10newbie" when {
@@ -38,6 +38,6 @@ contract C {
         fireAllRules;
         return true;
     }
-    function () public payable { }
+    function () external payable { }
 }
 // ----

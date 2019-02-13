@@ -23,12 +23,10 @@
 #pragma once
 
 #include <libsolidity/codegen/CompilerContext.h>
-#include <libsolidity/interface/EVMVersion.h>
-
+#include <liblangutil/EVMVersion.h>
 #include <libevmasm/Assembly.h>
-
-#include <ostream>
 #include <functional>
+#include <ostream>
 
 namespace dev {
 namespace solidity {
@@ -47,17 +45,15 @@ public:
 	/// @arg _metadata contains the to be injected metadata CBOR
 	void compileContract(
 		ContractDefinition const& _contract,
-		std::map<ContractDefinition const*, eth::Assembly const*> const& _contracts,
+		std::map<ContractDefinition const*, std::shared_ptr<Compiler const>> const& _otherCompilers,
 		bytes const& _metadata
-	);
-	/// Compiles a contract that uses DELEGATECALL to call into a pre-deployed version of the given
-	/// contract at runtime, but contains the full creation-time code.
-	void compileClone(
-		ContractDefinition const& _contract,
-		std::map<ContractDefinition const*, eth::Assembly const*> const& _contracts
 	);
 	/// @returns Entire assembly.
 	eth::Assembly const& assembly() const { return m_context.assembly(); }
+	/// @returns Entire assembly as a shared pointer to non-const.
+	std::shared_ptr<eth::Assembly> assemblyPtr() const { return m_context.assemblyPtr(); }
+	/// @returns Runtime assembly.
+	std::shared_ptr<eth::Assembly> runtimeAssemblyPtr() const;
 	/// @returns The entire assembled object (with constructor).
 	eth::LinkerObject assembledObject() const { return m_context.assembledObject(); }
 	/// @returns Only the runtime object (without constructor).

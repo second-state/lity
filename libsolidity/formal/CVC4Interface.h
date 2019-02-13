@@ -18,10 +18,20 @@
 #pragma once
 
 #include <libsolidity/formal/SolverInterface.h>
-
 #include <boost/noncopyable.hpp>
 
+#if defined(__GLIBC__)
+// The CVC4 headers includes the deprecated system headers <ext/hash_map>
+// and <ext/hash_set>. These headers cause a warning that will break the
+// build, unless _GLIBCXX_PERMIT_BACKWARD_HASH is set.
+#define _GLIBCXX_PERMIT_BACKWARD_HASH
+#endif
+
 #include <cvc4/cvc4.h>
+
+#if defined(__GLIBC__)
+#undef _GLIBCXX_PERMIT_BACKWARD_HASH
+#endif
 
 namespace dev
 {
@@ -40,21 +50,19 @@ public:
 	void push() override;
 	void pop() override;
 
-	Expression newFunction(std::string _name, Sort _domain, Sort _codomain) override;
-	Expression newInteger(std::string _name) override;
-	Expression newBool(std::string _name) override;
+	void declareVariable(std::string const&, Sort const&) override;
 
 	void addAssertion(Expression const& _expr) override;
 	std::pair<CheckResult, std::vector<std::string>> check(std::vector<Expression> const& _expressionsToEvaluate) override;
 
 private:
 	CVC4::Expr toCVC4Expr(Expression const& _expr);
-	CVC4::Type cvc4Sort(smt::Sort _sort);
+	CVC4::Type cvc4Sort(smt::Sort const& _sort);
+	std::vector<CVC4::Type> cvc4Sort(std::vector<smt::SortPointer> const& _sorts);
 
 	CVC4::ExprManager m_context;
 	CVC4::SmtEngine m_solver;
-	std::map<std::string, CVC4::Expr> m_constants;
-	std::map<std::string, CVC4::Expr> m_functions;
+	std::map<std::string, CVC4::Expr> m_variables;
 };
 
 }

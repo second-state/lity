@@ -36,7 +36,7 @@ namespace test
 class IsValidatorFramework: public AnalysisFramework
 {
 protected:
-	virtual std::pair<SourceUnit const*, ErrorList>
+	virtual std::pair<SourceUnit const*, langutil::ErrorList>
 	parseAnalyseAndReturnError(
 		std::string const& _source,
 		bool _reportWarnings = false,

@@ -22,12 +22,14 @@
  */
 
 #include <libsolidity/analysis/DocStringAnalyser.h>
+
 #include <libsolidity/ast/AST.h>
-#include <libsolidity/interface/ErrorReporter.h>
 #include <libsolidity/parsing/DocStringParser.h>
+#include <liblangutil/ErrorReporter.h>
 
 using namespace std;
 using namespace dev;
+using namespace langutil;
 using namespace dev::solidity;
 
 bool DocStringAnalyser::analyseDocStrings(SourceUnit const& _sourceUnit)
@@ -48,7 +50,10 @@ bool DocStringAnalyser::visit(ContractDefinition const& _contract)
 
 bool DocStringAnalyser::visit(FunctionDefinition const& _function)
 {
-	handleCallable(_function, _function, _function.annotation());
+	if (_function.isConstructor())
+		handleConstructor(_function, _function, _function.annotation());
+	else
+		handleCallable(_function, _function, _function.annotation());
 	return true;
 }
 
@@ -66,15 +71,11 @@ bool DocStringAnalyser::visit(EventDefinition const& _event)
 	return true;
 }
 
-void DocStringAnalyser::handleCallable(
+void DocStringAnalyser::checkParameters(
 	CallableDeclaration const& _callable,
-	Documented const& _node,
 	DocumentedAnnotation& _annotation
 )
 {
-	static const set<string> validTags = set<string>{"author", "dev", "notice", "return", "param"};
-	parseDocStrings(_node, _annotation, validTags, "functions");
-
 	set<string> validParams;
 	for (auto const& p: _callable.parameters())
 		validParams.insert(p->name());
@@ -89,6 +90,29 @@ void DocStringAnalyser::handleCallable(
 				i->second.paramName +
 				"\" not found in the parameter list of the function."
 			);
+
+}
+
+void DocStringAnalyser::handleConstructor(
+	CallableDeclaration const& _callable,
+	Documented const& _node,
+	DocumentedAnnotation& _annotation
+)
+{
+	static const set<string> validTags = set<string>{"author", "dev", "notice", "param"};
+	parseDocStrings(_node, _annotation, validTags, "constructor");
+	checkParameters(_callable, _annotation);
+}
+
+void DocStringAnalyser::handleCallable(
+	CallableDeclaration const& _callable,
+	Documented const& _node,
+	DocumentedAnnotation& _annotation
+)
+{
+	static const set<string> validTags = set<string>{"author", "dev", "notice", "return", "param"};
+	parseDocStrings(_node, _annotation, validTags, "functions");
+	checkParameters(_callable, _annotation);
 }
 
 void DocStringAnalyser::parseDocStrings(

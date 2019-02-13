@@ -17,7 +17,7 @@
 
 #include <libsolidity/analysis/ContractStandardChecker.h>
 #include <libsolidity/ast/AST.h>
-#include <libsolidity/interface/ErrorReporter.h>
+#include <liblangutil/ErrorReporter.h>
 
 using namespace std;
 using namespace dev;
@@ -25,7 +25,7 @@ using namespace dev::solidity;
 
 ContractStandardChecker::ContractStandardChecker
 (
-	ErrorReporter& _errorReporter,
+	langutil::ErrorReporter& _errorReporter,
 	boost::optional<std::string> _contractStandardStr
 ): m_errorReporter(_errorReporter)
 {
@@ -82,7 +82,7 @@ bool BasicContractStandard::checkFunctionExistence
 (
 	ContractDefinition const& _contract,
 	FunctionSpecifications const& _requiredFunctions,
-	ErrorReporter& _reporter,
+	langutil::ErrorReporter& _reporter,
 	ContractStandardChecker::Mode const _mode
 )
 {
@@ -149,7 +149,7 @@ bool BasicContractStandard::checkFunctionCallExistence
 (
 	ContractDefinition const& _contract,
 	FunctionSignatureHashes const& _requiredFunctionCalls,
-	ErrorReporter& _reporter
+	langutil::ErrorReporter& _reporter
 )
 {
 	for(pair<string, u256> p: _requiredFunctionCalls)
@@ -199,7 +199,7 @@ FunctionSpecifications const& ERC20ContractStandard::requiredFunctions() const
 	return ret;
 }
 
-bool ERC20ContractStandard::checkCompatibility(ContractDefinition const& _contract, ErrorReporter& _reporter, ContractStandardChecker::Mode _mode)
+bool ERC20ContractStandard::checkCompatibility(ContractDefinition const& _contract, langutil::ErrorReporter& _reporter, ContractStandardChecker::Mode _mode)
 {
 	return checkFunctionExistence(_contract, requiredFunctions(), _reporter, _mode);
 }
@@ -229,7 +229,7 @@ FunctionSignatureHashes const& ERC223ContractStandard::requiredFunctionCalls() c
 	return ret;
 }
 
-bool ERC223ContractStandard::checkCompatibility(ContractDefinition const& _contract, ErrorReporter& _reporter, ContractStandardChecker::Mode _mode)
+bool ERC223ContractStandard::checkCompatibility(ContractDefinition const& _contract, langutil::ErrorReporter& _reporter, ContractStandardChecker::Mode _mode)
 {
 	return checkFunctionExistence(_contract, requiredFunctions(), _reporter, _mode) &&
 			checkFunctionCallExistence(_contract, requiredFunctionCalls(), _reporter);
@@ -258,7 +258,7 @@ FunctionSpecifications const& ERC721ContractStandard::requiredFunctions() const
 	return ret;
 }
 
-bool ERC721ContractStandard::checkCompatibility(ContractDefinition const& _contract, ErrorReporter& _reporter, ContractStandardChecker::Mode _mode)
+bool ERC721ContractStandard::checkCompatibility(ContractDefinition const& _contract, langutil::ErrorReporter& _reporter, ContractStandardChecker::Mode _mode)
 {
 	return checkFunctionExistence(_contract, requiredFunctions(), _reporter, _mode);
 }
@@ -280,7 +280,7 @@ FunctionSpecifications const& ERC827ContractStandard::requiredFunctions() const
 	return ret;
 }
 
-bool ERC827ContractStandard::checkCompatibility(ContractDefinition const& _contract, ErrorReporter& _reporter, ContractStandardChecker::Mode _mode)
+bool ERC827ContractStandard::checkCompatibility(ContractDefinition const& _contract, langutil::ErrorReporter& _reporter, ContractStandardChecker::Mode _mode)
 {
 	return checkFunctionExistence(_contract, requiredFunctions(), _reporter, _mode);
 }
@@ -318,7 +318,7 @@ FunctionSpecifications const& ERC884ContractStandard::requiredFunctions() const
 
 string ERC884ContractStandard::name() const { return "ERC884"; }
 
-bool ERC884ContractStandard::checkCompatibility(ContractDefinition const& _contract, ErrorReporter& _reporter, ContractStandardChecker::Mode _mode)
+bool ERC884ContractStandard::checkCompatibility(ContractDefinition const& _contract, langutil::ErrorReporter& _reporter, ContractStandardChecker::Mode _mode)
 {
 	return checkFunctionExistence(_contract, requiredFunctions(), _reporter, _mode);
 }

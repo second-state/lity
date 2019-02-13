@@ -1,4 +1,4 @@
-
+pragma lity >=1.2.5 <2.0.0;
 // if you changed this file, you should also consider update
 // the corresponding example in docs/rule-examples.rst
 
@@ -39,5 +39,5 @@ contract C {
         return es[x].value;
     }
 
-    function () public payable { }
+    function () external { }
 }

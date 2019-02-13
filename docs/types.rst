@@ -10,6 +10,7 @@ Fixed Point Numbers
 .. WARNING::
    Lity supports fixed point numbers after lity v1.2.6.
 
+
 Keywords are ``fixedMxN`` for signed fixed point numbers, and ``ufixedMxN``
 for unsigned fixed point numbers.
 ``M`` is the number of bits used by the type, and ``N`` is the number of

@@ -21,14 +21,66 @@
  */
 
 #include <libsolidity/analysis/StaticAnalyzer.h>
+
 #include <libsolidity/analysis/ConstantEvaluator.h>
 #include <libsolidity/ast/AST.h>
-#include <libsolidity/interface/ErrorReporter.h>
+#include <liblangutil/ErrorReporter.h>
 #include <memory>
 
 using namespace std;
 using namespace dev;
+using namespace langutil;
 using namespace dev::solidity;
+
+/**
+ * Helper class that determines whether a contract's constructor uses inline assembly.
+ */
+class dev::solidity::ConstructorUsesAssembly
+{
+public:
+	/// @returns true if and only if the contract's or any of its bases' constructors
+	/// use inline assembly.
+	bool check(ContractDefinition const& _contract)
+	{
+		for (auto const* base: _contract.annotation().linearizedBaseContracts)
+			if (checkInternal(*base))
+				return true;
+		return false;
+	}
+
+
+private:
+	class Checker: public ASTConstVisitor
+	{
+	public:
+		Checker(FunctionDefinition const& _f) { _f.accept(*this); }
+		bool visit(InlineAssembly const&) override { assemblySeen = true; return false; }
+		bool assemblySeen = false;
+	};
+
+	bool checkInternal(ContractDefinition const& _contract)
+	{
+		if (!m_usesAssembly.count(&_contract))
+		{
+			bool usesAssembly = false;
+			if (_contract.constructor())
+				usesAssembly = Checker{*_contract.constructor()}.assemblySeen;
+			m_usesAssembly[&_contract] = usesAssembly;
+		}
+		return m_usesAssembly[&_contract];
+	}
+
+	map<ContractDefinition const*, bool> m_usesAssembly;
+};
+
+StaticAnalyzer::StaticAnalyzer(ErrorReporter& _errorReporter):
+	m_errorReporter(_errorReporter)
+{
+}
+
+StaticAnalyzer::~StaticAnalyzer()
+{
+}
 
 bool StaticAnalyzer::analyze(SourceUnit const& _sourceUnit)
 {
@@ -51,44 +103,32 @@ void StaticAnalyzer::endVisit(ContractDefinition const&)
 
 bool StaticAnalyzer::visit(FunctionDefinition const& _function)
 {
-	const bool isInterface = m_currentContract->contractKind() == ContractDefinition::ContractKind::Interface;
-
-	if (_function.noVisibilitySpecified())
-		m_errorReporter.warning(
-			_function.location(),
-			"No visibility specified. Defaulting to \"" +
-			Declaration::visibilityToString(_function.visibility()) +
-			"\". " +
-			(isInterface ? "In interfaces it defaults to external." : "")
-		);
 	if (_function.isImplemented())
 		m_currentFunction = &_function;
 	else
 		solAssert(!m_currentFunction, "");
 	solAssert(m_localVarUseCount.empty(), "");
-	m_nonPayablePublic = _function.isPublic() && !_function.isPayable();
 	m_constructor = _function.isConstructor();
 	return true;
 }
 
 void StaticAnalyzer::endVisit(FunctionDefinition const&)
 {
-	m_currentFunction = nullptr;
-	m_nonPayablePublic = false;
-	m_constructor = false;
-	for (auto const& var: m_localVarUseCount)
-		if (var.second == 0)
-		{
-			if (var.first.second->isCallableParameter())
-				m_errorReporter.warning(
-					var.first.second->location(),
-					"Unused function parameter. Remove or comment out the variable name to silence this warning."
-				);
-			else
-				m_errorReporter.warning(var.first.second->location(), "Unused local variable.");
-		}
-
+	if (m_currentFunction && !m_currentFunction->body().statements().empty())
+		for (auto const& var: m_localVarUseCount)
+			if (var.second == 0)
+			{
+				if (var.first.second->isCallableParameter())
+					m_errorReporter.warning(
+						var.first.second->location(),
+						"Unused function parameter. Remove or comment out the variable name to silence this warning."
+					);
+				else
+					m_errorReporter.warning(var.first.second->location(), "Unused local variable.");
+			}
 	m_localVarUseCount.clear();
+	m_constructor = false;
+	m_currentFunction = nullptr;
 }
 
 bool StaticAnalyzer::visit(Identifier const& _identifier)
@@ -150,61 +190,39 @@ bool StaticAnalyzer::visit(ExpressionStatement const& _statement)
 
 bool StaticAnalyzer::visit(MemberAccess const& _memberAccess)
 {
-	bool const v050 = m_currentContract->sourceUnit().annotation().experimentalFeatures.count(ExperimentalFeature::V050);
-
 	if (MagicType const* type = dynamic_cast<MagicType const*>(_memberAccess.expression().annotation().type.get()))
 	{
 		if (type->kind() == MagicType::Kind::Message && _memberAccess.memberName() == "gas")
+			m_errorReporter.typeError(
+				_memberAccess.location(),
+				"\"msg.gas\" has been deprecated in favor of \"gasleft()\""
+			);
+		else if (type->kind() == MagicType::Kind::Block && _memberAccess.memberName() == "blockhash")
+			m_errorReporter.typeError(
+				_memberAccess.location(),
+				"\"block.blockhash()\" has been deprecated in favor of \"blockhash()\""
+			);
+		else if (type->kind() == MagicType::Kind::MetaType && _memberAccess.memberName() == "runtimeCode")
 		{
-			if (v050)
-				m_errorReporter.typeError(
-					_memberAccess.location(),
-					"\"msg.gas\" has been deprecated in favor of \"gasleft()\""
-				);
-			else
+			if (!m_constructorUsesAssembly)
+				m_constructorUsesAssembly = make_unique<ConstructorUsesAssembly>();
+			ContractType const& contract = dynamic_cast<ContractType const&>(*type->typeArgument());
+			if (m_constructorUsesAssembly->check(contract.contractDefinition()))
 				m_errorReporter.warning(
 					_memberAccess.location(),
-					"\"msg.gas\" has been deprecated in favor of \"gasleft()\""
-				);
-		}
-		if (type->kind() == MagicType::Kind::Block && _memberAccess.memberName() == "blockhash")
-		{
-			if (v050)
-				m_errorReporter.typeError(
-					_memberAccess.location(),
-					"\"block.blockhash()\" has been deprecated in favor of \"blockhash()\""
-				);
-			else
-				m_errorReporter.warning(
-					_memberAccess.location(),
-					"\"block.blockhash()\" has been deprecated in favor of \"blockhash()\""
+					"The constructor of the contract (or its base) uses inline assembly. "
+					"Because of that, it might be that the deployed bytecode is different from type(...).runtimeCode."
 				);
 		}
 	}
 
-	if (m_nonPayablePublic && !m_library)
-		if (MagicType const* type = dynamic_cast<MagicType const*>(_memberAccess.expression().annotation().type.get()))
-			if (type->kind() == MagicType::Kind::Message && _memberAccess.memberName() == "value")
-				m_errorReporter.warning(
-					_memberAccess.location(),
-					"\"msg.value\" used in non-payable function. Do you want to add the \"payable\" modifier to this function?"
-				);
-
 	if (_memberAccess.memberName() == "callcode")
 		if (auto const* type = dynamic_cast<FunctionType const*>(_memberAccess.annotation().type.get()))
 			if (type->kind() == FunctionType::Kind::BareCallCode)
-			{
-				if (v050)
-					m_errorReporter.typeError(
-						_memberAccess.location(),
-						"\"callcode\" has been deprecated in favour of \"delegatecall\"."
-					);
-				else
-					m_errorReporter.warning(
-						_memberAccess.location(),
-						"\"callcode\" has been deprecated in favour of \"delegatecall\"."
-					);
-			}
+				m_errorReporter.typeError(
+					_memberAccess.location(),
+					"\"callcode\" has been deprecated in favour of \"delegatecall\"."
+				);
 
 	if(_memberAccess.memberName() == "call")
 		if (auto const* type = dynamic_cast<FunctionType const*>(_memberAccess.annotation().type.get()))

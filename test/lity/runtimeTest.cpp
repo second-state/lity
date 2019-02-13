@@ -20,7 +20,7 @@
 #pragma GCC diagnostic pop
 
 #include <test/Options.h>
-#include <libsolidity/interface/Exceptions.h>
+#include <liblangutil/Exceptions.h>
 
 using namespace boost::unit_test;
 
