@@ -1379,7 +1379,7 @@ shared_ptr<FixedPointType const> RationalNumberType::fixedPointType() const
 		++fractionalDigits;
 	}
 
-	if (value > maxValue)
+	if (value > maxValue || value.denominator() != 1)
 		return shared_ptr<FixedPointType const>();
 	bigint totalPart = value.numerator();
 	if (isNegative())
