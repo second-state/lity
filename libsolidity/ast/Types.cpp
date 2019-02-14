@@ -1023,17 +1023,6 @@ BoolResult RationalNumberType::isExplicitlyConvertibleTo(Type const& _convertTo)
 
 	switch (_convertTo.category())
 	{
-	case Category::Integer:
-	{
-		IntegerType const& targetType = dynamic_cast<IntegerType const&>(_convertTo);
-		rational value = m_value;
-		value += rational(isNegative() ? -1 : 1, 2); // rounding
-		return fitsIntoBits(
-			value.numerator() / value.denominator(),
-			targetType.numBits(),
-			targetType.isSigned()
-		);
-	}
 	case Category::FixedBytes:
 	{
 		return false;
