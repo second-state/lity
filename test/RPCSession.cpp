@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <thread>
 #include <chrono>
+#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace dev;
@@ -295,7 +296,10 @@ void RPCSession::test_rewindToBlock(size_t _blockNr)
 void RPCSession::test_mineBlocks(int _number)
 {
 	u256 startBlock = fromBigEndian<u256>(fromHex(rpcCall("eth_blockNumber").asString()));
+	BOOST_TEST_MESSAGE("fromHex: " + boost::lexical_cast<std::string>(startBlock));
 	BOOST_REQUIRE(rpcCall("test_mineBlocks", { to_string(_number) }, true) == true);
+	BOOST_TEST_MESSAGE("mineBlocks: " + boost::lexical_cast<std::string>(_number));
+	BOOST_TEST_MESSAGE("eth_blockNumber: " + boost::lexical_cast<std::string>(fromBigEndian<u256>(fromHex(rpcCall("eth_blockNumber").asString()))));
 	BOOST_REQUIRE(fromBigEndian<u256>(fromHex(rpcCall("eth_blockNumber").asString())) == startBlock + _number);
 }
 
