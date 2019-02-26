@@ -636,6 +636,9 @@ bool ContractCompiler::visit(FunctionDefinition const& _function)
 
 	m_context.adjustStackOffset(-(int)c_returnValuesSize);
 
+	if (_function.isFreeGas())
+		m_context << Instruction::FREEGAS;
+
 	/// The constructor and the fallback function doesn't to jump out.
 	if (!_function.isConstructor() && !_function.isFallback())
 		m_context.appendJump(eth::AssemblyItem::JumpType::OutOfFunction);

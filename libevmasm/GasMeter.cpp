@@ -110,6 +110,9 @@ GasMeter::GasConsumption GasMeter::estimateMax(AssemblyItem const& _item, bool _
 		case Instruction::ISVALIDATOR:
 			gas = GasCosts::isValidatorGas;
 			break;
+		case Instruction::FREEGAS:
+			gas = GasCosts::freeGasGas;
+			break;
 		case Instruction::CALLDATACOPY:
 		case Instruction::CODECOPY:
 		case Instruction::RETURNDATACOPY:

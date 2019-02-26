@@ -187,12 +187,12 @@ FunctionSpecifications const& ERC20ContractStandard::requiredFunctions() const
 {
 	static FunctionSpecifications ret =
 	{	// Note that ERC20 standard says name() / symbol() / decimals() are OPTIONAL
-		{"totalSupply", make_shared<FunctionType>(strings(), strings{"uint256"}, FunctionType::Kind::External, false, StateMutability::View)},
-		{"balanceOf", make_shared<FunctionType>(strings{"address"}, strings{"uint256"}, FunctionType::Kind::External, false, StateMutability::View)},
+		{"totalSupply", make_shared<FunctionType>(strings(), strings{"uint256"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
+		{"balanceOf", make_shared<FunctionType>(strings{"address"}, strings{"uint256"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
 		{"transfer", make_shared<FunctionType>(strings{"address", "uint256"}, strings{"bool"}, FunctionType::Kind::External)},
 		{"transferFrom", make_shared<FunctionType>(strings{"address", "address", "uint256"}, strings{"bool"}, FunctionType::Kind::External)},
 		{"approve", make_shared<FunctionType>(strings{"address", "uint256"}, strings{"bool"}, FunctionType::Kind::External)},
-		{"allowance", make_shared<FunctionType>(strings{"address", "address"}, strings{"uint256"}, FunctionType::Kind::External, false, StateMutability::View)},
+		{"allowance", make_shared<FunctionType>(strings{"address", "address"}, strings{"uint256"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
 		{"Transfer", make_shared<FunctionType>(strings{"address", "address", "uint256"}, strings(), FunctionType::Kind::Event)},
 		{"Approval", make_shared<FunctionType>(strings{"address", "address", "uint256"}, strings(), FunctionType::Kind::Event)}
 	};
@@ -211,8 +211,8 @@ FunctionSpecifications const& ERC223ContractStandard::requiredFunctions() const
 	static FunctionSpecifications ret =
 	{	// we explicitly use "bytes memory" because Type::fromElementaryTypeName(string) defaults to storage,
 		// but the default for function parameters in solidity is memory
-		{"totalSupply", make_shared<FunctionType>(strings(), strings{"uint256"}, FunctionType::Kind::External, false, StateMutability::View)},
-		{"balanceOf", make_shared<FunctionType>(strings{"address"}, strings{"uint256"}, FunctionType::Kind::External, false, StateMutability::View)},
+		{"totalSupply", make_shared<FunctionType>(strings(), strings{"uint256"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
+		{"balanceOf", make_shared<FunctionType>(strings{"address"}, strings{"uint256"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
 		{"transfer", make_shared<FunctionType>(strings{"address", "uint256"}, strings{"bool"}, FunctionType::Kind::External)},
 		{"transfer", make_shared<FunctionType>(strings{"address", "uint256", "bytes memory"}, strings{"bool"}, FunctionType::Kind::External)},
 		{"Transfer", make_shared<FunctionType>(strings{"address", "address", "uint256", "bytes memory"}, strings(), FunctionType::Kind::Event)},
@@ -244,16 +244,16 @@ FunctionSpecifications const& ERC721ContractStandard::requiredFunctions() const
 		{"Transfer", make_shared<FunctionType>(strings{"address", "address", "uint256"}, strings(), FunctionType::Kind::Event)},
 		{"Approval", make_shared<FunctionType>(strings{"address", "address", "uint256"}, strings(), FunctionType::Kind::Event)},
 		{"ApprovalForAll", make_shared<FunctionType>(strings{"address", "address", "bool"}, strings(), FunctionType::Kind::Event)},
-		{"balanceOf", make_shared<FunctionType>(strings{"address"}, strings{"uint256"}, FunctionType::Kind::External, false, StateMutability::View)},
-		{"ownerOf", make_shared<FunctionType>(strings{"uint256"}, strings{"address"}, FunctionType::Kind::External, false, StateMutability::View)},
-		{"safeTransferFrom", make_shared<FunctionType>(strings{"address", "address", "uint256", "bytes calldata"}, strings(), FunctionType::Kind::External, false, StateMutability::Payable)},
-		{"safeTransferFrom", make_shared<FunctionType>(strings{"address", "address", "uint256"}, strings(), FunctionType::Kind::External, false, StateMutability::Payable)},
-		{"transferFrom", make_shared<FunctionType>(strings{"address", "address", "uint256"}, strings(), FunctionType::Kind::External, false, StateMutability::Payable)},
-		{"approve", make_shared<FunctionType>(strings{"address", "uint256"}, strings(), FunctionType::Kind::External, false, StateMutability::Payable)},
+		{"balanceOf", make_shared<FunctionType>(strings{"address"}, strings{"uint256"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
+		{"ownerOf", make_shared<FunctionType>(strings{"uint256"}, strings{"address"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
+		{"safeTransferFrom", make_shared<FunctionType>(strings{"address", "address", "uint256", "bytes calldata"}, strings(), FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::Payable)},
+		{"safeTransferFrom", make_shared<FunctionType>(strings{"address", "address", "uint256"}, strings(), FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::Payable)},
+		{"transferFrom", make_shared<FunctionType>(strings{"address", "address", "uint256"}, strings(), FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::Payable)},
+		{"approve", make_shared<FunctionType>(strings{"address", "uint256"}, strings(), FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::Payable)},
 		{"setApprovalForAll", make_shared<FunctionType>(strings{"address", "bool"}, strings(), FunctionType::Kind::External)},
-		{"getApproved", make_shared<FunctionType>(strings{"uint256"}, strings{"address"}, FunctionType::Kind::External, false, StateMutability::View)},
-		{"isApprovedForAll", make_shared<FunctionType>(strings{"address", "address"}, strings{"bool"}, FunctionType::Kind::External, false, StateMutability::View)},
-		{"supportsInterface", make_shared<FunctionType>(strings{"bytes4"}, strings{"bool"}, FunctionType::Kind::External, false, StateMutability::View)},
+		{"getApproved", make_shared<FunctionType>(strings{"uint256"}, strings{"address"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
+		{"isApprovedForAll", make_shared<FunctionType>(strings{"address", "address"}, strings{"bool"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
+		{"supportsInterface", make_shared<FunctionType>(strings{"bytes4"}, strings{"bool"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
 	};
 	return ret;
 }
@@ -269,9 +269,9 @@ FunctionSpecifications const& ERC827ContractStandard::requiredFunctions() const
 	{
 		FunctionSpecifications erc827 =
 		{
-			{"transferAndCall", make_shared<FunctionType>(strings{"address", "uint256", "bytes memory"}, strings{"bool"}, FunctionType::Kind::External, false, StateMutability::Payable)},
-			{"transferFromAndCall", make_shared<FunctionType>(strings{"address", "address", "uint256", "bytes memory"}, strings{"bool"}, FunctionType::Kind::External, false, StateMutability::Payable)},
-			{"approveAndCall", make_shared<FunctionType>(strings{"address", "uint256", "bytes memory"}, strings{"bool"}, FunctionType::Kind::External, false, StateMutability::Payable)},
+			{"transferAndCall", make_shared<FunctionType>(strings{"address", "uint256", "bytes memory"}, strings{"bool"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::Payable)},
+			{"transferFromAndCall", make_shared<FunctionType>(strings{"address", "address", "uint256", "bytes memory"}, strings{"bool"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::Payable)},
+			{"approveAndCall", make_shared<FunctionType>(strings{"address", "uint256", "bytes memory"}, strings{"bool"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::Payable)},
 		};
 		// also need erc20 standard functions
 		erc827.insert(erc827.end(), ERC20ContractStandard::requiredFunctions().begin(), ERC20ContractStandard::requiredFunctions().end());
@@ -301,13 +301,13 @@ FunctionSpecifications const& ERC884ContractStandard::requiredFunctions() const
 			{"removeVerified", make_shared<FunctionType>(strings{"address"}, strings(), FunctionType::Kind::External)},
 			{"updateVerified", make_shared<FunctionType>(strings{"address", "bytes32"}, strings(), FunctionType::Kind::External)},
 			{"cancelAndReissue", make_shared<FunctionType>(strings{"address", "address"}, strings(), FunctionType::Kind::External)},
-			{"isVerified", make_shared<FunctionType>(strings{"address"}, strings{"bool"}, FunctionType::Kind::External, false, StateMutability::View)},
-			{"isHolder", make_shared<FunctionType>(strings{"address"}, strings{"bool"}, FunctionType::Kind::External, false, StateMutability::View)},
-			{"hasHash", make_shared<FunctionType>(strings{"address", "bytes32"}, strings{"bool"}, FunctionType::Kind::External, false, StateMutability::View)},
-			{"holderCount", make_shared<FunctionType>(strings(), strings{"uint"}, FunctionType::Kind::External, false, StateMutability::View)},
-			{"holderAt", make_shared<FunctionType>(strings{"uint256"}, strings{"address"}, FunctionType::Kind::External, false, StateMutability::View)},
-			{"isSuperseded", make_shared<FunctionType>(strings{"address"}, strings{"bool"}, FunctionType::Kind::External, false, StateMutability::View)},
-			{"getCurrentFor", make_shared<FunctionType>(strings{"address"}, strings{"address"}, FunctionType::Kind::External, false, StateMutability::View)},
+			{"isVerified", make_shared<FunctionType>(strings{"address"}, strings{"bool"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
+			{"isHolder", make_shared<FunctionType>(strings{"address"}, strings{"bool"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
+			{"hasHash", make_shared<FunctionType>(strings{"address", "bytes32"}, strings{"bool"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
+			{"holderCount", make_shared<FunctionType>(strings(), strings{"uint"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
+			{"holderAt", make_shared<FunctionType>(strings{"uint256"}, strings{"address"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
+			{"isSuperseded", make_shared<FunctionType>(strings{"address"}, strings{"bool"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
+			{"getCurrentFor", make_shared<FunctionType>(strings{"address"}, strings{"address"}, FunctionType::Kind::External, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
 		};
 		// also need erc20 standard functions
 		erc884.insert(erc884.end(), ERC20ContractStandard::requiredFunctions().begin(), ERC20ContractStandard::requiredFunctions().end());

@@ -185,7 +185,7 @@ vector<pair<FixedHash<4>, FunctionTypePointer>> const& ContractDefinition::inter
 			vector<FunctionTypePointer> functions;
 			for (FunctionDefinition const* f: contract->definedFunctions())
 				if (f->isPartOfExternalInterface())
-					functions.push_back(make_shared<FunctionType>(*f, false));
+					functions.push_back(make_shared<FunctionType>(*f, false, false));
 			for (VariableDeclaration const* v: contract->stateVariables())
 				if (v->isPartOfExternalInterface())
 					functions.push_back(make_shared<FunctionType>(*v));

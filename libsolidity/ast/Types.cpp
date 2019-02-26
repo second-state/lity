@@ -627,9 +627,9 @@ MemberList::MemberMap IntegerType::nativeMembers(ContractDefinition const*) cons
 	if (isAddress())
 		return {
 			{"balance", make_shared<IntegerType>(256)},
-			{"call", make_shared<FunctionType>(strings(), strings{"bool"}, FunctionType::Kind::BareCall, true, StateMutability::Payable)},
-			{"callcode", make_shared<FunctionType>(strings(), strings{"bool"}, FunctionType::Kind::BareCallCode, true, StateMutability::Payable)},
-			{"delegatecall", make_shared<FunctionType>(strings(), strings{"bool"}, FunctionType::Kind::BareDelegateCall, true)},
+			{"call", make_shared<FunctionType>(strings(), strings{"bool"}, FunctionType::Kind::BareCall, FunctionType::SpecialModifier::Default, true, StateMutability::Payable)},
+			{"callcode", make_shared<FunctionType>(strings(), strings{"bool"}, FunctionType::Kind::BareCallCode, FunctionType::SpecialModifier::Default, true, StateMutability::Payable)},
+			{"delegatecall", make_shared<FunctionType>(strings(), strings{"bool"}, FunctionType::Kind::BareDelegateCall, FunctionType::SpecialModifier::Default, true)},
 			{"send", make_shared<FunctionType>(strings{"uint"}, strings{"bool"}, FunctionType::Kind::Send)},
 			{"transfer", make_shared<FunctionType>(strings{"uint"}, strings(), FunctionType::Kind::Transfer)}
 		};
@@ -2367,8 +2367,9 @@ TypePointer TupleType::closestTemporaryType(TypePointer const& _targetType) cons
 	return make_shared<TupleType>(tempComponents);
 }
 
-FunctionType::FunctionType(FunctionDefinition const& _function, bool _isInternal):
+FunctionType::FunctionType(FunctionDefinition const& _function, bool _isInternal, bool _isFreeGas):
 	m_kind(_isInternal ? Kind::Internal : Kind::External),
+	m_specialModifier(_isFreeGas ? SpecialModifier::FreeGas : SpecialModifier::Default),
 	m_stateMutability(_function.stateMutability()),
 	m_declaration(&_function)
 {
@@ -2389,6 +2390,7 @@ FunctionType::FunctionType(FunctionDefinition const& _function, bool _isInternal
 
 FunctionType::FunctionType(VariableDeclaration const& _varDecl):
 	m_kind(Kind::External),
+	m_specialModifier(SpecialModifier::Default),
 	m_stateMutability(StateMutability::View),
 	m_declaration(&_varDecl)
 {
@@ -2445,6 +2447,7 @@ FunctionType::FunctionType(VariableDeclaration const& _varDecl):
 
 FunctionType::FunctionType(EventDefinition const& _event):
 	m_kind(Kind::Event),
+	m_specialModifier(SpecialModifier::Default),
 	m_stateMutability(StateMutability::NonPayable),
 	m_declaration(&_event)
 {
@@ -2455,8 +2458,10 @@ FunctionType::FunctionType(EventDefinition const& _event):
 	}
 }
 
+//XXX: UNKNOWN
 FunctionType::FunctionType(FunctionTypeName const& _typeName):
 	m_kind(_typeName.visibility() == VariableDeclaration::Visibility::External ? Kind::External : Kind::Internal),
+	m_specialModifier(SpecialModifier::Default),
 	m_stateMutability(_typeName.stateMutability())
 {
 	if (_typeName.isPayable())
@@ -2509,6 +2514,7 @@ FunctionTypePointer FunctionType::newExpressionType(ContractDefinition const& _c
 		parameterNames,
 		strings{""},
 		Kind::Creation,
+		SpecialModifier::Default,
 		false,
 		stateMutability
 	);
@@ -2586,6 +2592,11 @@ string FunctionType::richIdentifier() const
 	case Kind::IsValidator: id += "isvalidator"; break;
 	default: solAssert(false, "Unknown function location."); break;
 	}
+	switch (m_specialModifier)
+	{
+	case SpecialModifier::FreeGas: id += "_freegas"; break;
+	default: break;
+	}
 	id += "_" + stateMutabilityToString(m_stateMutability);
 	id += identifierList(m_parameterTypes) + "returns" + identifierList(m_returnParameterTypes);
 	if (m_gasSet)
@@ -2605,6 +2616,7 @@ bool FunctionType::operator==(Type const& _other) const
 	FunctionType const& other = dynamic_cast<FunctionType const&>(_other);
 	if (
 		m_kind != other.m_kind ||
+		m_specialModifier != other.m_specialModifier ||
 		m_stateMutability != other.stateMutability() ||
 		m_parameterTypes.size() != other.m_parameterTypes.size() ||
 		m_returnParameterTypes.size() != other.m_returnParameterTypes.size()
@@ -2671,6 +2683,8 @@ string FunctionType::toString(bool _short) const
 		name += " " + stateMutabilityToString(m_stateMutability);
 	if (m_kind == Kind::External)
 		name += " external";
+	if (m_specialModifier == SpecialModifier::FreeGas)
+		name += " freegas";
 	if (!m_returnParameterTypes.empty())
 	{
 		name += " returns (";
@@ -2779,6 +2793,7 @@ FunctionTypePointer FunctionType::interfaceFunctionType() const
 		m_parameterNames,
 		m_returnParameterNames,
 		m_kind,
+		m_specialModifier,
 		m_arbitraryParameters,
 		m_stateMutability,
 		m_declaration
@@ -2812,6 +2827,7 @@ MemberList::MemberMap FunctionType::nativeMembers(ContractDefinition const*) con
 						strings(),
 						strings(),
 						Kind::SetValue,
+						SpecialModifier::Default,
 						false,
 						StateMutability::NonPayable,
 						nullptr,
@@ -2829,6 +2845,7 @@ MemberList::MemberMap FunctionType::nativeMembers(ContractDefinition const*) con
 					strings(),
 					strings(),
 					Kind::SetGas,
+					SpecialModifier::Default,
 					false,
 					StateMutability::NonPayable,
 					nullptr,
@@ -2972,6 +2989,7 @@ TypePointer FunctionType::copyAndSetGasOrValue(bool _setGas, bool _setValue) con
 		m_parameterNames,
 		m_returnParameterNames,
 		m_kind,
+		m_specialModifier,
 		m_arbitraryParameters,
 		m_stateMutability,
 		m_declaration,
@@ -3012,6 +3030,7 @@ FunctionTypePointer FunctionType::asMemberFunction(bool _inLibrary, bool _bound)
 		m_parameterNames,
 		m_returnParameterNames,
 		kind,
+		m_specialModifier,
 		m_arbitraryParameters,
 		m_stateMutability,
 		m_declaration,
@@ -3234,7 +3253,7 @@ MemberList::MemberMap MagicType::nativeMembers(ContractDefinition const*) const
 		return MemberList::MemberMap({
 			{"coinbase", make_shared<IntegerType>(160, IntegerType::Modifier::Address)},
 			{"timestamp", make_shared<IntegerType>(256)},
-			{"blockhash", make_shared<FunctionType>(strings{"uint"}, strings{"bytes32"}, FunctionType::Kind::BlockHash, false, StateMutability::View)},
+			{"blockhash", make_shared<FunctionType>(strings{"uint"}, strings{"bytes32"}, FunctionType::Kind::BlockHash, FunctionType::SpecialModifier::Default, false, StateMutability::View)},
 			{"difficulty", make_shared<IntegerType>(256)},
 			{"number", make_shared<IntegerType>(256)},
 			{"gaslimit", make_shared<IntegerType>(256)}
@@ -3260,6 +3279,7 @@ MemberList::MemberMap MagicType::nativeMembers(ContractDefinition const*) const
 				strings{},
 				strings{},
 				FunctionType::Kind::ABIEncode,
+				FunctionType::SpecialModifier::Default,
 				true,
 				StateMutability::Pure
 			)},
@@ -3269,6 +3289,7 @@ MemberList::MemberMap MagicType::nativeMembers(ContractDefinition const*) const
 				strings{},
 				strings{},
 				FunctionType::Kind::ABIEncodePacked,
+				FunctionType::SpecialModifier::Default,
 				true,
 				StateMutability::Pure
 			)},
@@ -3278,6 +3299,7 @@ MemberList::MemberMap MagicType::nativeMembers(ContractDefinition const*) const
 				strings{},
 				strings{},
 				FunctionType::Kind::ABIEncodeWithSelector,
+				FunctionType::SpecialModifier::Default,
 				true,
 				StateMutability::Pure
 			)},
@@ -3287,6 +3309,7 @@ MemberList::MemberMap MagicType::nativeMembers(ContractDefinition const*) const
 				strings{},
 				strings{},
 				FunctionType::Kind::ABIEncodeWithSignature,
+				FunctionType::SpecialModifier::Default,
 				true,
 				StateMutability::Pure
 			)}

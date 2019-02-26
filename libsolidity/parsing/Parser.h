@@ -61,6 +61,7 @@ private:
 		ASTPointer<ParameterList> parameters;
 		ASTPointer<ParameterList> returnParameters;
 		Declaration::Visibility visibility = Declaration::Visibility::Default;
+		Declaration::SpecialModifier specialModifier = Declaration::SpecialModifier::Default;
 		StateMutability stateMutability = StateMutability::NonPayable;
 		std::vector<ASTPointer<ModifierInvocation>> modifiers;
 	};

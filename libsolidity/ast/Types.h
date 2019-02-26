@@ -884,6 +884,12 @@ private:
 class FunctionType: public Type
 {
 public:
+	/// What this function has specific functionality.
+	enum class SpecialModifier
+	{
+		Default,
+		FreeGas
+	};
 	/// How this function is invoked on the EVM.
 	enum class Kind
 	{
@@ -931,7 +937,7 @@ public:
 	virtual Category category() const override { return Category::Function; }
 
 	/// Creates the type of a function.
-	explicit FunctionType(FunctionDefinition const& _function, bool _isInternal = true);
+	explicit FunctionType(FunctionDefinition const& _function, bool _isInternal = true, bool _isFreeGas = false);
 	/// Creates the accessor function type of a state variable.
 	explicit FunctionType(VariableDeclaration const& _varDecl);
 	/// Creates the function type of an event.
@@ -943,6 +949,7 @@ public:
 		strings const& _parameterTypes,
 		strings const& _returnParameterTypes,
 		Kind _kind = Kind::Internal,
+		SpecialModifier _specialModifier = SpecialModifier::Default,
 		bool _arbitraryParameters = false,
 		StateMutability _stateMutability = StateMutability::NonPayable
 	): FunctionType(
@@ -951,6 +958,7 @@ public:
 		strings(),
 		strings(),
 		_kind,
+		_specialModifier,
 		_arbitraryParameters,
 		_stateMutability
 	)
@@ -967,6 +975,7 @@ public:
 		strings _parameterNames = strings(),
 		strings _returnParameterNames = strings(),
 		Kind _kind = Kind::Internal,
+		SpecialModifier _specialModifier = SpecialModifier::Default,
 		bool _arbitraryParameters = false,
 		StateMutability _stateMutability = StateMutability::NonPayable,
 		Declaration const* _declaration = nullptr,
@@ -979,6 +988,7 @@ public:
 		m_parameterNames(_parameterNames),
 		m_returnParameterNames(_returnParameterNames),
 		m_kind(_kind),
+		m_specialModifier(_specialModifier),
 		m_stateMutability(_stateMutability),
 		m_arbitraryParameters(_arbitraryParameters),
 		m_gasSet(_gasSet),
@@ -1039,6 +1049,7 @@ public:
 	/// @returns true if the ABI is used for this call (only meaningful for external calls)
 	bool isBareCall() const;
 	Kind const& kind() const { return m_kind; }
+	SpecialModifier const& specialModifier() const { return m_specialModifier; }
 	StateMutability stateMutability() const { return m_stateMutability; }
 	/// @returns the external signature of this function type given the function name
 	std::string externalSignature() const;
@@ -1055,6 +1066,7 @@ public:
 	/// Currently, this will only return true for internal functions like keccak and ecrecover.
 	bool isPure() const;
 	bool isPayable() const { return m_stateMutability == StateMutability::Payable; }
+	bool isFreeGas() const { return m_specialModifier == SpecialModifier::FreeGas; }
 	/// @return A shared pointer of an ASTString.
 	/// Can contain a nullptr in which case indicates absence of documentation
 	ASTPointer<ASTString> documentation() const;
@@ -1103,6 +1115,7 @@ private:
 	std::vector<std::string> m_parameterNames;
 	std::vector<std::string> m_returnParameterNames;
 	Kind const m_kind;
+	SpecialModifier const m_specialModifier;
 	StateMutability m_stateMutability = StateMutability::NonPayable;
 	/// true if the function takes an arbitrary number of arguments of arbitrary types
 	bool const m_arbitraryParameters = false;

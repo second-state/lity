@@ -381,6 +381,11 @@ Parser::FunctionHeaderParserResult Parser::parseFunctionHeader(
 			else
 				result.modifiers.push_back(parseModifierInvocation());
 		}
+		else if (Token::isFreeGas(token))
+		{
+			result.specialModifier = Declaration::SpecialModifier::FreeGas;
+			m_scanner->next();
+		}
 		else if (Token::isVisibilitySpecifier(token))
 		{
 			if (result.visibility != Declaration::Visibility::Default)
@@ -462,6 +467,7 @@ ASTPointer<ASTNode> Parser::parseFunctionDefinitionOrFunctionTypeStateVariable(A
 		return nodeFactory.createNode<FunctionDefinition>(
 			header.name,
 			header.visibility,
+			header.specialModifier,
 			header.stateMutability,
 			header.isConstructor,
 			docstring,
@@ -478,6 +484,7 @@ ASTPointer<ASTNode> Parser::parseFunctionDefinitionOrFunctionTypeStateVariable(A
 			header.parameters,
 			header.returnParameters,
 			header.visibility,
+			header.specialModifier,
 			header.stateMutability
 		);
 		type = parseTypeNameSuffix(type, nodeFactory);
@@ -815,6 +822,7 @@ ASTPointer<FunctionTypeName> Parser::parseFunctionType()
 		header.parameters,
 		header.returnParameters,
 		header.visibility,
+		header.specialModifier,
 		header.stateMutability
 	);
 }

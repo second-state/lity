@@ -1,3 +1,11 @@
+### Lity 1.2.7 (2019-02-27)
+
+Features:
+ * Add support for `contract-standard` option in JSON compiler.
+
+Language Features:
+ * General: Add a new modifier ``freegas``, which allows developers to use contract balance to pay the transaction fee for the users.
+
 ### Lity 1.2.6 (2018-12-07)
 
 Language Features:

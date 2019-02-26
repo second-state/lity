@@ -2002,6 +2002,7 @@ void TypeChecker::endVisit(NewExpression const& _newExpression)
 			strings(),
 			strings(),
 			FunctionType::Kind::ObjectCreation,
+			FunctionType::SpecialModifier::Default,
 			false,
 			StateMutability::Pure
 		);
@@ -2269,6 +2270,7 @@ bool TypeChecker::visit(Identifier const& _identifier)
 
 			for (Declaration const* declaration: annotation.overloadedDeclarations)
 			{
+				// TODO: Check if we need to send Special Modifier here.
 				FunctionTypePointer functionType = declaration->functionType(true);
 				solAssert(!!functionType, "Requested type not present.");
 				if (functionType->canTakeArguments(*annotation.argumentTypes))

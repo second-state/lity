@@ -73,7 +73,7 @@ public:
 	void appendConstStateVariableAccessor(const VariableDeclaration& _varDecl);
 
 private:
-    friend class RuleEngineCompiler;
+	friend class RuleEngineCompiler;
 	virtual bool visit(Conditional const& _condition) override;
 	virtual bool visit(Assignment const& _assignment) override;
 	virtual bool visit(TupleExpression const& _tuple) override;

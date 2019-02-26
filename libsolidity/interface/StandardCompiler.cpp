@@ -117,7 +117,7 @@ bool hashMatchesContent(string const& _hash, string const& _content)
 	{
 		return dev::h256(_hash) == dev::keccak256(_content);
 	}
-	catch (dev::BadHexCharacter)
+	catch (dev::BadHexCharacter&)
 	{
 		return false;
 	}
@@ -371,7 +371,7 @@ Json::Value StandardCompiler::compileInternal(Json::Value const& _input)
 				// @TODO use libraries only for the given source
 				libraries[library] = h160(address);
 			}
-			catch (dev::BadHexCharacter)
+			catch (dev::BadHexCharacter&)
 			{
 				return formatFatalError(
 					"JSONError",

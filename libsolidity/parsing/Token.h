@@ -190,6 +190,7 @@ namespace solidity
 	K(LockOnActive, "lock_on_active", 0)                               \
 	K(Salience, "salience", 0)                                         \
 	K(Extends, "extends", 0)                                           \
+	K(FreeGas, "freegas", 0)                                           \
 	\
 	/* Ether subdenominations */                                       \
 	K(SubWei, "wei", 0)                                                \
@@ -299,6 +300,7 @@ public:
 	static bool isUnaryOp(Value op) { return (Not <= op && op <= Delete) || op == Add || op == Sub; }
 	static bool isCountOp(Value op) { return op == Inc || op == Dec; }
 	static bool isShiftOp(Value op) { return (SHL <= op) && (op <= SHR); }
+	static bool isFreeGas(Value op) { return op == FreeGas; }
 	static bool isVisibilitySpecifier(Value op) { return isVariableVisibilitySpecifier(op) || op == External; }
 	static bool isVariableVisibilitySpecifier(Value op) { return op == Public || op == Private || op == Internal; }
 	static bool isLocationSpecifier(Value op) { return op == Memory || op == Storage; }

@@ -508,9 +508,9 @@ BOOST_AUTO_TEST_CASE(blockhash)
 		}
 	)";
 
-	auto blockhashFun = make_shared<FunctionType>(strings{"uint256"}, strings{"bytes32"}, 
-		FunctionType::Kind::BlockHash, false, StateMutability::View);
-	
+	auto blockhashFun = make_shared<FunctionType>(strings{"uint256"}, strings{"bytes32"},
+		FunctionType::Kind::BlockHash, FunctionType::SpecialModifier::Default, false, StateMutability::View);
+
 	bytes code = compileFirstExpression(sourceCode, {}, {}, {make_shared<MagicVariableDeclaration>("blockhash", blockhashFun)});
 
 	bytes expectation({byte(Instruction::PUSH1), 0x03,

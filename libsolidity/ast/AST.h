@@ -174,6 +174,20 @@ class Declaration: public ASTNode, public Scopable
 public:
 	/// Visibility ordered from restricted to unrestricted.
 	enum class Visibility { Default, Private, Internal, Public, External };
+	/// Special modifier contains any external feature for customization.
+	///   FREEGAS: Ask contracts to pay the transaction fee by themself.
+	enum class SpecialModifier { Default, FreeGas };
+
+	static std::string specialmodifierToString(Declaration::SpecialModifier _specialModifier)
+	{
+		switch(_specialModifier)
+		{
+			case Declaration::SpecialModifier::FreeGas:
+				return "freegas";
+			default:
+				solAssert(false, "Invalid special modifier.");
+		}
+	}
 
 	static std::string visibilityToString(Declaration::Visibility _visibility)
 	{
@@ -196,13 +210,15 @@ public:
 	Declaration(
 		SourceLocation const& _location,
 		ASTPointer<ASTString> const& _name,
-		Visibility _visibility = Visibility::Default
+		Visibility _visibility = Visibility::Default,
+		SpecialModifier _specialModifier = SpecialModifier::Default
 	):
-		ASTNode(_location), m_name(_name), m_visibility(_visibility) {}
+		ASTNode(_location), m_name(_name), m_visibility(_visibility), m_specialModifier(_specialModifier) {}
 
 	/// @returns the declared name.
 	ASTString const& name() const { return *m_name; }
 	bool noVisibilitySpecified() const { return m_visibility == Visibility::Default; }
+	bool noSpecialModifierSpecified() const { return m_specialModifier == SpecialModifier::Default; }
 	Visibility visibility() const { return m_visibility == Visibility::Default ? defaultVisibility() : m_visibility; }
 	bool isPublic() const { return visibility() >= Visibility::Public; }
 	virtual bool isVisibleInContract() const { return visibility() != Visibility::External; }
@@ -230,6 +246,7 @@ protected:
 private:
 	ASTPointer<ASTString> m_name;
 	Visibility m_visibility;
+	SpecialModifier m_specialModifier;
 };
 
 /**
@@ -595,6 +612,7 @@ public:
 		SourceLocation const& _location,
 		ASTPointer<ASTString> const& _name,
 		Declaration::Visibility _visibility,
+		Declaration::SpecialModifier _specialModifier,
 		StateMutability _stateMutability,
 		bool _isConstructor,
 		ASTPointer<ASTString> const& _documentation,
@@ -606,6 +624,7 @@ public:
 		CallableDeclaration(_location, _name, _visibility, _parameters, _returnParameters),
 		Documented(_documentation),
 		ImplementationOptional(_body != nullptr),
+		m_specialModifier(_specialModifier),
 		m_stateMutability(_stateMutability),
 		m_isConstructor(_isConstructor),
 		m_functionModifiers(_modifiers),
@@ -620,6 +639,7 @@ public:
 	bool isOldStyleConstructor() const { return m_isConstructor && !name().empty(); }
 	bool isFallback() const { return !m_isConstructor && name().empty(); }
 	bool isPayable() const { return m_stateMutability == StateMutability::Payable; }
+	bool isFreeGas() const { return m_specialModifier == SpecialModifier::FreeGas; }
 	std::vector<ASTPointer<ModifierInvocation>> const& modifiers() const { return m_functionModifiers; }
 	std::vector<ASTPointer<VariableDeclaration>> const& returnParameters() const { return m_returnParameters->parameters(); }
 	Block const& body() const { solAssert(m_body, ""); return *m_body; }
@@ -646,6 +666,7 @@ public:
 	virtual FunctionDefinitionAnnotation& annotation() const override;
 
 private:
+	SpecialModifier m_specialModifier;
 	StateMutability m_stateMutability;
 	bool m_isConstructor;
 	std::vector<ASTPointer<ModifierInvocation>> m_functionModifiers;
@@ -915,10 +936,11 @@ public:
 		ASTPointer<ParameterList> const& _parameterTypes,
 		ASTPointer<ParameterList> const& _returnTypes,
 		Declaration::Visibility _visibility,
+		Declaration::SpecialModifier _specialModifier,
 		StateMutability _stateMutability
 	):
 		TypeName(_location), m_parameterTypes(_parameterTypes), m_returnTypes(_returnTypes),
-		m_visibility(_visibility), m_stateMutability(_stateMutability)
+		m_visibility(_visibility), m_specialModifier(_specialModifier), m_stateMutability(_stateMutability)
 	{}
 	virtual void accept(ASTVisitor& _visitor) override;
 	virtual void accept(ASTConstVisitor& _visitor) const override;
@@ -932,6 +954,11 @@ public:
 	{
 		return m_visibility == Declaration::Visibility::Default ? Declaration::Visibility::Internal : m_visibility;
 	}
+
+	Declaration::SpecialModifier specialModifier() const
+	{
+		return m_specialModifier;
+	}
 	StateMutability stateMutability() const { return m_stateMutability; }
 	bool isPayable() const { return m_stateMutability == StateMutability::Payable; }
 
@@ -939,6 +966,7 @@ private:
 	ASTPointer<ParameterList> m_parameterTypes;
 	ASTPointer<ParameterList> m_returnTypes;
 	Declaration::Visibility m_visibility;
+	Declaration::SpecialModifier m_specialModifier;
 	StateMutability m_stateMutability;
 };
 
