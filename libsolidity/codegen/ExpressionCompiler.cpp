@@ -1076,6 +1076,9 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 		case FunctionType::Kind::GasLeft:
 			m_context << Instruction::GAS;
 			break;
+		case FunctionType::Kind::Rand:
+			m_context << Instruction::RAND;
+			break;
 		case FunctionType::Kind::IsValidator:
 			arguments.front()->accept(*this);
 			utils().convertType(*arguments.front()->annotation().type, *function.parameterTypes().front(), true);

@@ -2590,6 +2590,7 @@ string FunctionType::richIdentifier() const
 	case Kind::ABIEncodeWithSignature: id += "abiencodewithsignature"; break;
 	case Kind::ENI: id += "eni"; break;
 	case Kind::IsValidator: id += "isvalidator"; break;
+	case Kind::Rand: id += "rand"; break;
 	default: solAssert(false, "Unknown function location."); break;
 	}
 	switch (m_specialModifier)
@@ -2969,6 +2970,7 @@ bool FunctionType::isPure() const
 		m_kind == Kind::ABIEncodeWithSelector ||
 		m_kind == Kind::ABIEncodeWithSignature ||
 		m_kind == Kind::IsValidator ||
+		m_kind == Kind::Rand ||
 		m_kind == Kind::ENI;
 }
 

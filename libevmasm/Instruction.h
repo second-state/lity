@@ -202,6 +202,7 @@ enum class Instruction: uint8_t
 	ENI,
 	ISVALIDATOR = 0xf6,
 	FREEGAS = 0xf8,
+	RAND = 0xf9,
 	STATICCALL = 0xfa,	///< like CALL but disallow state modifications
 	CREATE2 = 0xfb,		///< create new account with associated code at address `sha3(sender + salt + sha3(init code)) % 2**160`
 

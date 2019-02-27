@@ -232,7 +232,7 @@ class LityLexer(RegexLexer):
             (r'push\b', Name.Function),
 
             # built-in functions and/or precompiles
-            (r'(addmod|ecrecover|keccak256|mulmod|ripemd160|sha256|sha3|eni|isValidator|schedule)\b',
+            (r'(addmod|ecrecover|keccak256|mulmod|ripemd160|sha256|sha3|eni|isValidator|freegas|rand|schedule)\b',
              Name.Function),
 
             # everything else is a var/function name

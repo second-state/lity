@@ -5,6 +5,7 @@ Features:
 
 Language Features:
  * General: Add a new modifier ``freegas``, which allows developers to use contract balance to pay the transaction fee for the users.
+ * General: Add a new built-in function ``rand`` to get an ``uint`` random number from the virtual machine.
 
 ### Lity 1.2.6 (2018-12-07)
 
