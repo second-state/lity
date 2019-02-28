@@ -30,7 +30,7 @@ Other documentations
    validator-only-contract
    integrate-cybermiles-remix-metamask
    oyente-integration
-   randomnumber
+   rand
    freegas
    schedule-tx
    types

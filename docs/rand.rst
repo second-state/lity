@@ -2,7 +2,7 @@
 Rand - Get random number on the chain
 ================================================================
 
-.. _randomnumber:
+.. _rand:
 
 
 .. WARNING::
