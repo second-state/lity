@@ -30,6 +30,8 @@ Other documentations
    validator-only-contract
    integrate-cybermiles-remix-metamask
    oyente-integration
+   randomnumber
+   freegas
    schedule-tx
    types
    vm-wrapper
