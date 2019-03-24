@@ -20,14 +20,16 @@ Because `freegas` will consume the contract balance for the transaction fee, Dap
 How Virtual Machine handles the freegas function
 ------------------------------------------------
 
-When ``freegas`` is triggered, VM will follow these rules to calculate
-transaction fee:
-    if Balance(Callee contract) >= transaction fee,
-        then Use Balance(Calle contract) to pay the fee
-            and refund all of the reserved balance
-    else
-        then Use origin tx gas to pay the fee
-            and refund the remaining balance
+The blockchain could pass ``gasPrice=0`` transactions to the VM to signal that the caller has requested a ``freegas`` function call. Learn more about `free transactions <https://travis.readthedocs.io/en/latest/transactions.html#free-transactions>` The VM now performs the following actions.
+
+* If ``gasLimit < 5000000``, it will just process it normally. The caller's gas fee will be 0.
+* If ``gasLimit > 5000000``, it will require the contract function to be ``freegas``
+    * The call consumes a max of ``(default gasPrice) * gasLimit`` amount of gas
+    * the TX fails if the function is not ``freegas`` 
+    * the TX fails if the contract does not have enough fund to cover gas
+    
+The gas fee for caller is ALWAYS 0 in this case.
+
 
 Example 1
 ---------
