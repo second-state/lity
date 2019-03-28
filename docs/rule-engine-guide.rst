@@ -380,9 +380,9 @@ The discount rule is described as below.
 
     rule "Give 10% discount to customers older than 60"
     when {
-        $customer : Customer( age > 60 );
+        customer : Customer( age > 60 );
     } then {
-        $customer.discount = 10;
+        customer.discount = 10;
     }
 
 The free parking rule can ``extends`` the constraint of elder customers (older then 60).
@@ -393,9 +393,9 @@ Then this rule can be written as below.
     rule "Give free parking to customers older than 60"
         extends "Give 10% discount to customers older than 60"
     when {
-        $car : Car ( ownerID == $customer.id );
+        car : Car ( ownerID == customer.id );
     } then {
-        $car.freeParking = true ;
+        car.freeParking = true ;
     }
 
 The rule above (with ``extends``) is equivalent to the rule written without ``extends``.
@@ -404,10 +404,10 @@ The rule above (with ``extends``) is equivalent to the rule written without ``ex
 
     rule "Give free parking to customers older than 60"
     when {
-        $customer : Customer( age > 60 );
-        $car : Car ( ownerID == $customer.id );
+        customer : Customer( age > 60 );
+        car : Car ( ownerID == customer.id );
     } then {
-        $car.freeParking = true ;
+        car.freeParking = true ;
     }
 
 Insurance rating
