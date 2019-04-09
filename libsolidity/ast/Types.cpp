@@ -2970,7 +2970,6 @@ bool FunctionType::isPure() const
 		m_kind == Kind::ABIEncodeWithSelector ||
 		m_kind == Kind::ABIEncodeWithSignature ||
 		m_kind == Kind::IsValidator ||
-		m_kind == Kind::Rand ||
 		m_kind == Kind::ENI;
 }
 

@@ -1,3 +1,8 @@
+### Lity 1.2.8 (unknown)
+
+Breaking Changes:
+ * Grneral: Make built-in function ``rand`` to be non-pure function.
+
 ### Lity 1.2.7 (2019-02-27)
 
 Features:

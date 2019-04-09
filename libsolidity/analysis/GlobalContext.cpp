@@ -53,7 +53,7 @@ m_magicVariables(vector<shared_ptr<MagicVariableDeclaration const>>{
 	make_shared<MagicVariableDeclaration>("msg", make_shared<MagicType>(MagicType::Kind::Message)),
 	make_shared<MagicVariableDeclaration>("mulmod", make_shared<FunctionType>(strings{"uint256", "uint256", "uint256"}, strings{"uint256"}, FunctionType::Kind::MulMod, FunctionType::SpecialModifier::Default, false, StateMutability::Pure)),
 	make_shared<MagicVariableDeclaration>("now", make_shared<IntegerType>(256)),
-	make_shared<MagicVariableDeclaration>("rand", make_shared<FunctionType>(strings(), strings{"uint256"}, FunctionType::Kind::Rand, FunctionType::SpecialModifier::Default, true, StateMutability::Pure)),
+	make_shared<MagicVariableDeclaration>("rand", make_shared<FunctionType>(strings(), strings{"uint256"}, FunctionType::Kind::Rand, FunctionType::SpecialModifier::Default, true, StateMutability::NonPayable)),
 	make_shared<MagicVariableDeclaration>("require", make_shared<FunctionType>(strings{"bool"}, strings{}, FunctionType::Kind::Require, FunctionType::SpecialModifier::Default, false, StateMutability::Pure)),
 	make_shared<MagicVariableDeclaration>("require", make_shared<FunctionType>(strings{"bool", "string memory"}, strings{}, FunctionType::Kind::Require, FunctionType::SpecialModifier::Default, false, StateMutability::Pure)),
 	make_shared<MagicVariableDeclaration>("revert", make_shared<FunctionType>(strings(), strings(), FunctionType::Kind::Revert, FunctionType::SpecialModifier::Default, false, StateMutability::Pure)),

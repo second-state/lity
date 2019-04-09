@@ -220,7 +220,7 @@ static const std::map<Instruction, InstructionInfo> c_instructionInfo =
 	{ Instruction::SFDIV,		{ "SFDIV",			0, 3, 1, false, Tier::Mid } },
 	{ Instruction::ENI,			{ "ENI",			0, 3, 1, true, Tier::Special } },
 	{ Instruction::ISVALIDATOR,			{ "ISVALIDATOR",			0, 1, 1, false, Tier::VeryLow } },
-	{ Instruction::RAND,			{ "RAND",			0, 0, 1, false, Tier::Low } },
+	{ Instruction::RAND,			{ "RAND",			0, 0, 1, true, Tier::Low } },
 	{ Instruction::FREEGAS,			{ "FREEGAS",			0, 0, 0, false, Tier::VeryLow } },
 	{ Instruction::ADDRESS,		{ "ADDRESS",		0, 0, 1, false, Tier::Base } },
 	{ Instruction::BALANCE,		{ "BALANCE",		0, 1, 1, false, Tier::Balance } },

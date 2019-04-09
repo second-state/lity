@@ -56,12 +56,12 @@ protected:
 
 BOOST_FIXTURE_TEST_SUITE(Rand, RandFramework)
 
-BOOST_AUTO_TEST_CASE(rand_normal)
+BOOST_AUTO_TEST_CASE(rand_should_be_non_pure)
 {
 	string text = R"(
 contract A { function f() public pure returns (uint) { return rand(); } }
 	)";
-	CHECK_SUCCESS(text);
+	CHECK_ERROR(text, TypeError, "Function declared as pure, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.");
 }
 
 BOOST_AUTO_TEST_CASE(rand_assign)
