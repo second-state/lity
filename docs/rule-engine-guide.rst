@@ -218,7 +218,7 @@ The operator ``factInsert`` returns an ``uint256``.
 This is where the fact resides in the storage, and this address is recorded in mapping ``addr2idx``.
 The user will be able to remove himself from the engine by ``factDelete`` with the fact storage address. (written in function ``deletePerson``)
 
-The rule ``payPension`` decribes that gives everyone more than age 65. (already explained in section Rules)
+The rule ``payPension`` describes that gives everyone more than age 65. (already explained in section Rules)
 
 The age pension is paid when ``fireAllRules`` is executed. (written in function ``pay``)
 ``fireAllRules`` triggers the rules to find matched rules and apply then part for the corresponding facts.
@@ -226,7 +226,7 @@ The age pension is paid when ``fireAllRules`` is executed. (written in function 
 Fibonacci numbers
 """""""""""""""""
 
-Here we demostrate how to use rule engine to calculate fibonacci numbers.
+Here we demonstrate how to use rule engine to calculate fibonacci numbers.
 
 First, we define a struct to represent a fibonacci number:
 
@@ -320,7 +320,7 @@ Complete source of the contract:
 Examples of salience
 """"""""""""""""""""
 
-If you want some rules to be processed first than other rules (i.e higher priority), ``salience`` keyword can be used. The bigger the number specified, the higher the priority it have.
+If you want some rules to be processed before other rules (i.e higher priority), ``salience`` keyword can be used. The bigger the number specified, the higher the priority it have.
 
 .. code-block:: Lity
 
@@ -373,7 +373,7 @@ Example of rule inheritance
 Sometimes constraints of a rule is based on constraints of another rule.
 In this case, this rule can ``extends`` another rule.
 
-For example, a department store wants to give elder customers 10 percent discount and their cars free parking.
+For example, a department store wants to give elder customers 10 percent discount and their car's free parking.
 The discount rule is described as below.
 
 .. code-block:: Lity
