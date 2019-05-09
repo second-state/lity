@@ -625,7 +625,7 @@ First, we define our fact types:
         bool eaten;
     }
 
-Here we model the problem in a way similiar to entity-relationship model. ``Cat`` and ``CatLocation`` has an one-to-one relationship.
+Here we model the problem in a way similar to entity-relationship model. ``Cat`` and ``CatLocation`` has an one-to-one relationship.
 Food represents a cat food on the number line, ``location`` represents its location, ``energy`` represents how much energy it can provide to Cat. Each unit of energy provides power for the cat to move one unit forward.
 
 Now we can define 2 rules to solve the problem.
