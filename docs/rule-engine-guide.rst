@@ -6,7 +6,7 @@ Rule Engine Guide
 Introduction
 ------------
 
-In industry, people often use `business rule engine <https://en.wikipedia.org/wiki/Business_rules_engine>`_ to maintain their business logics and knowledges. Rule engine can detect sepicific conditions and contradiction and execute predefined rules to fix them. Some examples of rule engines are `Jess <https://www.jessrules.com>`_ and `Drools <https://www.drools.org/>`_.
+In industry, people often use `business rule engine <https://en.wikipedia.org/wiki/Business_rules_engine>`_ to maintain their business logic and knowledge. Rule engine can detect specific conditions and contradiction and execute predefined rules to fix them. Some examples of rule engines are `Jess <https://www.jessrules.com>`_ and `Drools <https://www.drools.org/>`_.
 
 Despite the wide adoption, it is hard to run the rule engine in a publicly verifiable way (which means to run it on Blockchain). To eliminate the gap between traditional business rule engine and Blockchain technology, we decide to implement part of traditional rule engine features (to make it part of Lity). Rule engine related codes are directly compiled into EVM byte codes, so it can also be executed on Ethereum public chain.
 
