@@ -64,7 +64,7 @@ Salience specifies the priority of rules in the Activation queue.
 Higher salience indicates higher priority.
 Activation order of rules with the same salience would be arbitrary.
 
-In constrast to Drools, Lity does not support dynamic salience.
+In contrast to Drools, Lity does not support dynamic salience.
 
 Due to Solidity parser issue, current salience value cannot be negative, but this shall be resolved in the future.
 
@@ -95,9 +95,9 @@ If all pattern conditions are met, then part shall be executed for this set of f
 Pattern
 *******
 A pattern describe a fact (struct) with a set of conditions.
-It start with pattern binding, which specifies fact identifier refered in this rule scope.
+It start with pattern binding, which specifies fact identifier referred in this rule scope.
 After binding, pattern type specifies the type (struct name) of the fact.
-Then, a set of constraints is descibe conditions of this fact.
+Then, a set of constraints is describe conditions of this fact.
 Constraints must be boolean expressions.
 See the example below or refer rule grammar for details.
 
@@ -145,7 +145,7 @@ The ``p:`` syntax means to bind the qualified person to identifier ``p``, so we 
 ``b: Budget(amount >= 10)`` describes the budget must have enough amount. (``10`` in this case)
 
 If the rule engine found a person and a budget satisfies above requirements, the then part will be executed.
-In then part, we modify eligiblity of the person to prevent this rule being applied for the same person again.
+In then part, we modify eligibility of the person to prevent this rule being applied for the same person again.
 In addition, pension is sent to the person from the budget.
 
 For full source code of this example, refer the section Rule Examples.
