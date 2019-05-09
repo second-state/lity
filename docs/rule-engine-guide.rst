@@ -535,9 +535,9 @@ This cash back rule can be represeted as below.
         b.cashBack = b.amount * 15 / 1000;
     }
 
-Tax caculation
+Tax calculation
 """"""""""""""
-In this example, we illustrate how to caculate tax by rule engine.
+In this example, we illustrate how to calculate tax by rule engine.
 In most countries, tax rates are divides into brackets.
 That is, certain income range is taxed for corresponding rates.
 Often, more income indicates higher tax rates.
