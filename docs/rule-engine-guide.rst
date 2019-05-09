@@ -385,7 +385,7 @@ The discount rule is described as below.
         customer.discount = 10;
     }
 
-The free parking rule can ``extends`` the constraint of elder customers (older then 60).
+The free parking rule can ``extends`` the constraint of elder customers (older than 60).
 Then this rule can be written as below.
 
 .. code-block:: Lity
