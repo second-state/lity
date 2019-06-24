@@ -26,7 +26,6 @@
 #include <boost/version.hpp>
 #include <boost/noncopyable.hpp>
 
-
 #include <functional>
 
 namespace dev

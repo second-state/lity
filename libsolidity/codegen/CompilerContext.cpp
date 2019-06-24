@@ -33,6 +33,7 @@
 #include <libsolidity/inlineasm/AsmCodeGen.h>
 #include <libsolidity/inlineasm/AsmAnalysis.h>
 #include <libsolidity/inlineasm/AsmAnalysisInfo.h>
+#include <libyul/YulString.h>
 
 #include <boost/algorithm/string/replace.hpp>
 
@@ -128,6 +129,10 @@ void CompilerContext::addVariable(VariableDeclaration const& _declaration,
 								  unsigned _offsetToCurrent)
 {
 	solAssert(m_asm->deposit() >= 0 && unsigned(m_asm->deposit()) >= _offsetToCurrent, "");
+	unsigned sizeOnStack = _declaration.annotation().type->sizeOnStack();
+	// Variables should not have stack size other than [1, 2],
+	// but that might change when new types are introduced.
+	solAssert(sizeOnStack == 1 || sizeOnStack == 2, "");
 	m_localVariables[&_declaration].push_back(unsigned(m_asm->deposit()) - _offsetToCurrent);
 }
 
@@ -138,7 +143,7 @@ void CompilerContext::addFact(FactDeclaration const& _decl, unsigned _offsetToCu
 	m_localFacts[&_decl] = unsigned(m_asm->deposit()) - _offsetToCurrent;
 }
 
-void CompilerContext::removeVariable(VariableDeclaration const& _declaration)
+void CompilerContext::removeVariable(Declaration const& _declaration)
 {
 	solAssert(m_localVariables.count(&_declaration) && !m_localVariables[&_declaration].empty(), "");
 	m_localVariables[&_declaration].pop_back();
@@ -150,6 +155,24 @@ void CompilerContext::removeFact(FactDeclaration const& _decl)
 {
 	solAssert(m_localFacts.count(&_decl), "fact not added");
 	m_localFacts.erase(&_decl);
+
+void CompilerContext::removeVariablesAboveStackHeight(unsigned _stackHeight)
+{
+	vector<Declaration const*> toRemove;
+	for (auto _var: m_localVariables)
+	{
+		solAssert(!_var.second.empty(), "");
+		solAssert(_var.second.back() <= stackHeight(), "");
+		if (_var.second.back() >= _stackHeight)
+			toRemove.push_back(_var.first);
+	}
+	for (auto _var: toRemove)
+		removeVariable(*_var);
+}
+
+unsigned CompilerContext::numberOfLocalVariables() const
+{
+	return m_localVariables.size();
 }
 
 eth::Assembly const& CompilerContext::compiledContract(const ContractDefinition& _contract) const
@@ -321,32 +344,33 @@ void CompilerContext::resetVisitedNodes(ASTNode const* _node)
 void CompilerContext::appendInlineAssembly(
 	string const& _assembly,
 	vector<string> const& _localVariables,
+	set<string> const&,
 	bool _system
 )
 {
 	int startStackHeight = stackHeight();
 
-	julia::ExternalIdentifierAccess identifierAccess;
+	yul::ExternalIdentifierAccess identifierAccess;
 	identifierAccess.resolve = [&](
 		assembly::Identifier const& _identifier,
-		julia::IdentifierContext,
+		yul::IdentifierContext,
 		bool
 	)
 	{
-		auto it = std::find(_localVariables.begin(), _localVariables.end(), _identifier.name);
+		auto it = std::find(_localVariables.begin(), _localVariables.end(), _identifier.name.str());
 		return it == _localVariables.end() ? size_t(-1) : 1;
 	};
 	identifierAccess.generateCode = [&](
 		assembly::Identifier const& _identifier,
-		julia::IdentifierContext _context,
-		julia::AbstractAssembly& _assembly
+		yul::IdentifierContext _context,
+		yul::AbstractAssembly& _assembly
 	)
 	{
-		auto it = std::find(_localVariables.begin(), _localVariables.end(), _identifier.name);
+		auto it = std::find(_localVariables.begin(), _localVariables.end(), _identifier.name.str());
 		solAssert(it != _localVariables.end(), "");
 		int stackDepth = _localVariables.end() - it;
 		int stackDiff = _assembly.stackHeight() - startStackHeight + stackDepth;
-		if (_context == julia::IdentifierContext::LValue)
+		if (_context == yul::IdentifierContext::LValue)
 			stackDiff -= 1;
 		if (stackDiff < 1 || stackDiff > 16)
 			BOOST_THROW_EXCEPTION(
@@ -354,7 +378,7 @@ void CompilerContext::appendInlineAssembly(
 				errinfo_sourceLocation(_identifier.location) <<
 				errinfo_comment("Stack too deep (" + to_string(stackDiff) + "), try removing local variables.")
 			);
-		if (_context == julia::IdentifierContext::RValue)
+		if (_context == yul::IdentifierContext::RValue)
 			_assembly.appendInstruction(dupInstruction(stackDiff));
 		else
 		{
@@ -419,7 +443,7 @@ FunctionDefinition const& CompilerContext::resolveVirtualFunction(
 			if (
 				function->name() == name &&
 				!function->isConstructor() &&
-				FunctionType(*function).hasEqualArgumentTypes(functionType)
+				FunctionType(*function).hasEqualParameterTypes(functionType)
 			)
 				return *function;
 	solAssert(false, "Super function " + name + " not found.");
