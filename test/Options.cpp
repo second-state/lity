@@ -76,7 +76,7 @@ Options::Options()
 			testPath = path;
 
 	if (testPath.empty())
-		testPath = discoverTestPath();
+		testPath = dev::test::discoverTestPath();
 }
 
 void Options::validate() const

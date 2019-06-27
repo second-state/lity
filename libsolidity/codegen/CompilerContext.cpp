@@ -155,6 +155,7 @@ void CompilerContext::removeFact(FactDeclaration const& _decl)
 {
 	solAssert(m_localFacts.count(&_decl), "fact not added");
 	m_localFacts.erase(&_decl);
+}
 
 void CompilerContext::removeVariablesAboveStackHeight(unsigned _stackHeight)
 {

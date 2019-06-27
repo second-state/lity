@@ -23,7 +23,7 @@
 #include <boost/test/unit_test.hpp>
 #include <libdevcore/JSON.h>
 #include <libsolidity/interface/Version.h>
-#include <libsolc/libsolc.h>
+#include <liblityc/liblityc.h>
 
 #include <test/Metadata.h>
 #include <test/Options.h>
@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_SUITE(LibSolc)
 BOOST_AUTO_TEST_CASE(read_version)
 {
 	string output(solidity_version());
-	BOOST_CHECK(output.find(VersionString) == 0);
+	BOOST_CHECK(output.find(LityVersionString) == 0);
 }
 
 BOOST_AUTO_TEST_CASE(read_license)

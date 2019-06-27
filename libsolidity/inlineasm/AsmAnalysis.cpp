@@ -595,8 +595,8 @@ void AsmAnalyzer::warnOnInstructions(solidity::Instruction _instr, SourceLocatio
 	else if ((
 		_instr == solidity::Instruction::SHL ||
 		_instr == solidity::Instruction::SHR ||
-		_instr == solidity::Instruction::SAR ||
-		_instr == solidity::Instruction::CREATE2
+		_instr == solidity::Instruction::SAR
+		/*XXX: conflict with ENI // _instr == solidity::Instruction::CREATE2*/
 	) && !m_evmVersion.hasBitwiseShifting())
 		m_errorReporter.warning(
 			_location,

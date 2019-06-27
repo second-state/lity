@@ -404,7 +404,7 @@ void ViewPureChecker::endVisit(FireAllRulesStatement const& _fars)
 
 void ViewPureChecker::endVisit(UnaryOperation const& _op)
 {
-	Token::Value t = _op.getOperator();
+	Token t = _op.getOperator();
 	if (t == Token::FactInsert || t == Token::FactDelete)
 		reportMutability(StateMutability::NonPayable, _op.location());
 }

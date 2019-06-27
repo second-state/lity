@@ -132,7 +132,7 @@ bool SyntaxChecker::visit(PragmaDirective const& _pragma)
 	}
 	else if (_pragma.literals()[0] == "lity")
 	{
-		vector<Token::Value> tokens(_pragma.tokens().begin() + 1, _pragma.tokens().end());
+		vector<Token> tokens(_pragma.tokens().begin() + 1, _pragma.tokens().end());
 		vector<string> literals(_pragma.literals().begin() + 1, _pragma.literals().end());
 		SemVerMatchExpressionParser parser(tokens, literals);
 		auto matchExpression = parser.parse();

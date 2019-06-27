@@ -1023,7 +1023,11 @@ public:
 		_kind,
 		_specialModifier,
 		_arbitraryParameters,
-		_stateMutability
+		_stateMutability,
+		nullptr,
+		false,
+		false,
+		false
 	)
 	{
 	}

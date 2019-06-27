@@ -389,7 +389,7 @@ bool ExpressionCompiler::visit(UnaryOperation const& _unaryOperation)
 		auto const* fixedType = dynamic_cast<FixedPointType const*>(&type);
 		solAssert(intType || fixedType,
 			"Unary operator " +
-			string(Token::toString(_unaryOperation.getOperator())) +
+			string(TokenTraits::toString(_unaryOperation.getOperator())) +
 			" not implemented for type " +
 			type.toString() +
 			".");
@@ -1748,9 +1748,6 @@ void ExpressionCompiler::appendArithmeticOperatorCode(Token _operator, Type cons
 	if (c_isSafeUint)
 		appendSafeArithmeticCheckCode(_operator, _type);
 
-	IntegerType const& type = dynamic_cast<IntegerType const&>(_type);
-	bool const c_isSigned = type.isSigned();
-
 	switch (_operator)
 	{
 	case Token::Add:
@@ -1795,7 +1792,7 @@ void ExpressionCompiler::appendArithmeticOperatorCode(Token _operator, Type cons
 	}
 }
 
-void ExpressionCompiler::appendSafeArithmeticCheckCode(Token::Value _operator, Type const& _type)
+void ExpressionCompiler::appendSafeArithmeticCheckCode(Token _operator, Type const& _type)
 {
 	solAssert(dynamic_cast<IntegerType const*>(&_type), "Only integer supported for safe math.");
 

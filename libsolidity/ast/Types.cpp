@@ -547,10 +547,10 @@ MemberList::MemberMap AddressType::nativeMembers(ContractDefinition const*) cons
 {
 	MemberList::MemberMap members = {
 		{"balance", make_shared<IntegerType>(256)},
-		{"call", make_shared<FunctionType>(strings{"bytes memory"}, strings{"bool", "bytes memory"}, FunctionType::Kind::BareCall, false, StateMutability::Payable)},
-		{"callcode", make_shared<FunctionType>(strings{"bytes memory"}, strings{"bool", "bytes memory"}, FunctionType::Kind::BareCallCode, false, StateMutability::Payable)},
-		{"delegatecall", make_shared<FunctionType>(strings{"bytes memory"}, strings{"bool", "bytes memory"}, FunctionType::Kind::BareDelegateCall, false)},
-		{"staticcall", make_shared<FunctionType>(strings{"bytes memory"}, strings{"bool", "bytes memory"}, FunctionType::Kind::BareStaticCall, false, StateMutability::View)}
+		{"call", make_shared<FunctionType>(strings{"bytes memory"}, strings{"bool", "bytes memory"}, FunctionType::Kind::BareCall, FunctionType::SpecialModifier::Default, false, StateMutability::Payable)},
+		{"callcode", make_shared<FunctionType>(strings{"bytes memory"}, strings{"bool", "bytes memory"}, FunctionType::Kind::BareCallCode, FunctionType::SpecialModifier::Default, false, StateMutability::Payable)},
+		{"delegatecall", make_shared<FunctionType>(strings{"bytes memory"}, strings{"bool", "bytes memory"}, FunctionType::Kind::BareDelegateCall, FunctionType::SpecialModifier::Default, false)},
+		{"staticcall", make_shared<FunctionType>(strings{"bytes memory"}, strings{"bool", "bytes memory"}, FunctionType::Kind::BareStaticCall, FunctionType::SpecialModifier::Default, false, StateMutability::View)}
 	};
 	if (m_stateMutability == StateMutability::Payable)
 	{
@@ -1358,7 +1358,7 @@ shared_ptr<FixedPointType const> RationalNumberType::fixedPointType() const
 	unsigned emptyDigits = 0;
 	unsigned const maxDigits = 78; // The length of pow(2, 256).
 	rational value = abs(m_value); // We care about the sign later.
-	rational maxValue = negative ?
+	rational maxValue = isNegative() ?
 		rational(bigint(1) << 255, 1):
 		rational((bigint(1) << 256) - 1, 1);
 
@@ -1375,9 +1375,9 @@ shared_ptr<FixedPointType const> RationalNumberType::fixedPointType() const
 	if (value > maxValue)
 		return shared_ptr<FixedPointType const>();
 	// This means we round towards zero for positive and negative values.
-	bigint v = value.numerator() / value.denominator();
+	bigint totalPart = value.numerator();
 
-	if (negative && v != 0)
+	if (isNegative())
 		// modify value to satisfy bit requirements for negative numbers:
 		// add one bit for sign and decrement because negative numbers can be larger
 		totalPart = (totalPart << 1) - 1;
@@ -1587,12 +1587,19 @@ TypePointer ReferenceType::unaryOperatorResult(Token _operator) const
 {
 	if (_operator == Token::Delete)
 	{
-	case DataLocation::CallData:
-		return TypePointer();
-	case DataLocation::Memory:
-		return make_shared<TupleType>();
-	case DataLocation::Storage:
-		return m_isPointer ? TypePointer() : make_shared<TupleType>();
+		// delete can be used on everything except calldata references or storage pointers
+		// (storage references are ok)
+		switch (location())
+		{
+			case DataLocation::CallData:
+				return TypePointer();
+			case DataLocation::Memory:
+				return make_shared<TupleType>();
+			case DataLocation::Storage:
+				return m_isPointer ? TypePointer() : make_shared<TupleType>();
+			default:
+				solAssert(false, "");
+		}
 	}
 	else if (
 		_operator == Token::FactInsert &&
@@ -3479,6 +3486,7 @@ MemberList::MemberMap MagicType::nativeMembers(ContractDefinition const*) const
 				strings{},
 				strings{},
 				FunctionType::Kind::ABIDecode,
+				FunctionType::SpecialModifier::Default,
 				true,
 				StateMutability::Pure
 			)}

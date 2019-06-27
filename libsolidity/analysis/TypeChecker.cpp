@@ -1639,8 +1639,8 @@ bool TypeChecker::visit(UnaryOperation const& _operation)
 	// but the expression is not pure
 	_operation.annotation().isPure = !modifying &&
 									 _operation.subExpression().annotation().isPure &&
-									 op != Token::Value::FactInsert &&
-									 op != Token::Value::FactDelete;
+									 op != Token::FactInsert &&
+									 op != Token::FactDelete;
 	return false;
 }
 

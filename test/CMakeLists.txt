@@ -30,6 +30,7 @@ add_executable(rttest
     Metadata.cpp
     Options.cpp
     RPCSession.cpp
+    Common.cpp
     lity/SmokeTest.cpp
     lity/RulesTest.cpp
     lity/UpdateRulesTest.cpp
