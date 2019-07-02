@@ -36,4 +36,5 @@ Other documentations
    types
    vm-wrapper
    erc-contract-checker-guide
+   opcodes
 
