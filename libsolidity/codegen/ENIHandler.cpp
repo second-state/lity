@@ -68,7 +68,7 @@ byte identifierTypeToString(TypePointer pType) {
 	if (pType->category() == Type::Category::Array) {
 		auto arrayType = dynamic_cast<ArrayType const*>(pType.get());
 		if (arrayType->isString())
-			return 4;
+			return 0x6B;
 		else if (arrayType->isByteArray())
 			solUnimplementedAssert(false, "Unsupported type of bytes array");
 		else
@@ -193,19 +193,11 @@ void ENIHandler::handleIdentifier(IdentifierInfo& pIdentifierInfo) {
 		auto arrayType = dynamic_cast<ArrayType const*>(type.get());
 		if (arrayType->isString()) {
 			/// stack: <stringOffset>
-			*m_Context << Instruction::DUP1 << Instruction::MLOAD;
-			/// stack: <stringOffset> <stringSize>
-			*m_Context << u256(0x20) << Instruction::ADD;
-			/// stack: <stringOffset> <stringSize+32>
-			*m_Context << Instruction::SWAP1 << Instruction::DUP2;
-			/// stack: <stringSize+32> <stringOffset> <stringSize+32>
-			*m_Context << u256(0x1f) << Instruction::ADD << u256(0x20) << Instruction::SWAP1 << Instruction::DIV << u256(0x20) << Instruction::MUL;
-			/// stack: <stringSize+32> <stringOffset> (<stringSize+32>+31)/32*32
+			*m_Context << u256(0x1);
+			/// stack: <stringOffset> <pointerSize>
 			utils().allocateMemory();
-			/// stack: <stringSize+32> <stringOffset> <eniStringOffset>
-			*m_Context << Instruction::SWAP1;
-			/// stack: <stringSize+32> <eniStringOffset> <stringOffset>
-			utils().memoryCopy();
+			/// stack: <stringOffset> <eniPointerOffset>
+			*m_Context << Instruction::MSTORE;
 		} else if (arrayType->isByteArray())
 			solUnimplementedAssert(false, "Unsupported type of bytes array identifier");
 		else
