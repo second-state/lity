@@ -193,7 +193,7 @@ void ENIHandler::handleIdentifier(IdentifierInfo& pIdentifierInfo) {
 		auto arrayType = dynamic_cast<ArrayType const*>(type.get());
 		if (arrayType->isString()) {
 			/// stack: <stringOffset>
-			*m_Context << u256(0x1);
+			*m_Context << u256(0x20);
 			/// stack: <stringOffset> <pointerSize>
 			utils().allocateMemory();
 			/// stack: <stringOffset> <eniPointerOffset>
