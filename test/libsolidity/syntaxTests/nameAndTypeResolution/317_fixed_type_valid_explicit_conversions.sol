@@ -6,4 +6,5 @@ contract test {
     }
 }
 // ----
-// Warning: (20-182): Function state mutability can be restricted to pure
+// TypeError: (67-84): Explicit type conversion not allowed from "rational_const 1 / 3" to "ufixed256x80".
+// TypeError: (114-131): Explicit type conversion not allowed from "rational_const 1 / 3" to "ufixed248x80".

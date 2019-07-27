@@ -10,3 +10,4 @@ contract C {
     }
 }
 // ----
+// Warning: (132-141): The use of low level "call" should be avoided. Use direct call to abstract contract instead.

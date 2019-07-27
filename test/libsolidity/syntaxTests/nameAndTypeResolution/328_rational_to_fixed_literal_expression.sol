@@ -12,4 +12,5 @@ contract test {
 }
 // ----
 // Warning: (238-252): This declaration shadows an existing declaration.
-// Warning: (20-339): Function state mutability can be restricted to pure
+// TypeError: (201-228): Explicit type conversion not allowed from "rational_const 1889 / 200" to "ufixed256x80".
+// TypeError: (255-276): Explicit type conversion not allowed from "rational_const 6 / 5" to "ufixed256x80".

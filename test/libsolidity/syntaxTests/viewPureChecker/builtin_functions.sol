@@ -18,3 +18,5 @@ contract C {
     }
     function() payable external {}
 }
+// ----
+// Warning: (250-268): The use of low level "call" should be avoided. Use direct call to abstract contract instead.

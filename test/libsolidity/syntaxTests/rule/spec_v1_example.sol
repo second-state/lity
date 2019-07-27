@@ -2,7 +2,7 @@ contract C {
     struct Person {
         int age;
         bool eligible;
-        address addr;
+        address payable addr;
     }
 
     rule "myRule" when {
@@ -26,6 +26,6 @@ contract C {
         fireAllRules;
     }
 
-    function () public payable { }
+    function () external payable { }
 }
 // ----

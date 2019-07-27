@@ -20,6 +20,7 @@ contract C {
     }
 }
 // ----
+// Warning: (414-432): The use of low level "call" should be avoided. Use direct call to abstract contract instead.
 // TypeError: (52-77): Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.
 // TypeError: (132-153): Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.
 // TypeError: (201-228): Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.

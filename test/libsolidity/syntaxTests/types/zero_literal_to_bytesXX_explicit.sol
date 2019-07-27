@@ -28,3 +28,20 @@ contract C {
       b1; b2; b3; b4; b8; b16; b32;
     }
 }
+// ----
+// TypeError: (91-100): Explicit type conversion not allowed from "int_const 0" to "bytes2".
+// TypeError: (120-129): Explicit type conversion not allowed from "int_const 0" to "bytes3".
+// TypeError: (149-158): Explicit type conversion not allowed from "int_const 0" to "bytes4".
+// TypeError: (178-187): Explicit type conversion not allowed from "int_const 0" to "bytes8".
+// TypeError: (209-219): Explicit type conversion not allowed from "int_const 0" to "bytes16".
+// TypeError: (241-251): Explicit type conversion not allowed from "int_const 0" to "bytes32".
+// TypeError: (377-392): Explicit type conversion not allowed from "int_const 0" to "bytes2".
+// TypeError: (412-429): Explicit type conversion not allowed from "int_const 0" to "bytes3".
+// TypeError: (449-468): Explicit type conversion not allowed from "int_const 0" to "bytes4".
+// TypeError: (488-515): Explicit type conversion not allowed from "int_const 0" to "bytes8".
+// TypeError: (629-640): Explicit type conversion not allowed from "int_const 0" to "bytes2".
+// TypeError: (660-671): Explicit type conversion not allowed from "int_const 0" to "bytes3".
+// TypeError: (691-702): Explicit type conversion not allowed from "int_const 0" to "bytes4".
+// TypeError: (722-733): Explicit type conversion not allowed from "int_const 0" to "bytes8".
+// TypeError: (755-767): Explicit type conversion not allowed from "int_const 0" to "bytes16".
+// TypeError: (789-801): Explicit type conversion not allowed from "int_const 0" to "bytes32".
