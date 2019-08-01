@@ -85,6 +85,6 @@ contract C {
         return true;
     }
 
-    function () public payable { }
+    function () external payable { }
 }
 

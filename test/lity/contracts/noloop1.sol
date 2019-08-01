@@ -31,7 +31,7 @@ contract C {
         return x.value;
     }
 
-    function () public payable { }
+    function () external payable { }
 }
 
 // ----

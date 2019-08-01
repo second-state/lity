@@ -53,5 +53,5 @@ contract C {
     function pay() public {
         fireAllRules;
     }
-    function () public payable { }
+    function () external payable { }
 }

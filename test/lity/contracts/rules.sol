@@ -9,7 +9,7 @@ contract C {
     rule "ageGT10newbie" when {
         p: Person(age > 10, eligible);
     } then {
-        p.addr.transfer(10);
+        address(uint160(p.addr)).transfer(10);
         p.eligible = false;
     }
 
@@ -38,6 +38,6 @@ contract C {
         fireAllRules;
         return true;
     }
-    function () public payable { }
+    function () external payable { }
 }
 // ----

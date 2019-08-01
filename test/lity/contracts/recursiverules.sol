@@ -12,7 +12,7 @@ contract C {
         recursiveFire(p);
     }
 
-    function recursiveFire(Person p) internal {
+    function recursiveFire(Person storage p) internal {
         if (p.age > 30)
             fireAllRules;
     }
@@ -32,5 +32,5 @@ contract C {
         fireAllRules;
         return true;
     }
-    function () public payable { }
+    function () external payable { }
 }
