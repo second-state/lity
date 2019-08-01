@@ -400,6 +400,9 @@ BOOST_AUTO_TEST_CASE(returndatasize_as_variable)
 	CHECK_ALLOW_MULTI(text, expectations);
 }
 
+/*
+ * Lity does not support create2
+
 BOOST_AUTO_TEST_CASE(create2_as_variable)
 {
 	char const* text = R"(
@@ -414,6 +417,8 @@ BOOST_AUTO_TEST_CASE(create2_as_variable)
 		expectations.emplace_back(make_pair(Error::Type::Warning, std::string("\"create2\" instruction is only available for Constantinople-compatible VMs.")));
 	CHECK_ALLOW_MULTI(text, expectations);
 }
+
+*/
 
 BOOST_AUTO_TEST_CASE(extcodehash_as_variable)
 {
@@ -492,7 +497,7 @@ BOOST_AUTO_TEST_CASE(address_call_full_return_type)
 	)";
 
 	if (dev::test::Options::get().evmVersion().supportsReturndata())
-		CHECK_SUCCESS_NO_WARNINGS(sourceCode);
+		CHECK_SUCCESS(sourceCode);
 	else
 		CHECK_ERROR(sourceCode, TypeError, "Type inaccessible dynamic type is not implicitly convertible to expected type bytes memory.");
 }
@@ -509,7 +514,7 @@ BOOST_AUTO_TEST_CASE(address_delegatecall_full_return_type)
 	)";
 
 	if (dev::test::Options::get().evmVersion().supportsReturndata())
-		CHECK_SUCCESS_NO_WARNINGS(sourceCode);
+		CHECK_SUCCESS(sourceCode);
 	else
 		CHECK_ERROR(sourceCode, TypeError, "Type inaccessible dynamic type is not implicitly convertible to expected type bytes memory.");
 }
