@@ -33,7 +33,7 @@ bool ControlFlowAnalyzer::visit(FunctionDefinition const& _function)
 		auto const& functionFlow = m_cfg.functionFlow(_function);
 		checkUnassignedStorageReturnValues(_function, functionFlow.entry, functionFlow.exit);
 	}
-	return false;
+	return true;
 }
 
 set<VariableDeclaration const*> ControlFlowAnalyzer::variablesAssignedInNode(CFGNode const *node)
