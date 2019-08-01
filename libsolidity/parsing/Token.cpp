@@ -40,6 +40,7 @@
 // You should have received a copy of the GNU General Public License
 // along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <cstdint>
 #include <map>
 #include <libsolidity/parsing/Token.h>
 #include <boost/range/iterator_range.hpp>
@@ -70,7 +71,7 @@ void ElementaryTypeNameToken::assertDetails(Token _baseType, unsigned const& _fi
 	else if (_baseType == Token::UFixedMxN || _baseType == Token::FixedMxN)
 	{
 		solAssert(
-			_first >= 8 && _first <= 256 && _first % 8 == 0 && 0 < _second,
+			_first >= 8 && _first <= 256 && _first % 8 == 0 && _second <= std::numeric_limits<uint32_t>::max(),
 			"No elementary type " + string(TokenTraits::toString(_baseType)) + to_string(_first) + "x" + to_string(_second) + "."
 		);
 	}
@@ -187,7 +188,7 @@ tuple<Token, unsigned int, unsigned int> fromIdentifierOrKeyword(string const& _
 				int n = parseSize(positionX + 1, _literal.end());
 				if (
 					8 <= m && m <= 256 && m % 8 == 0 &&
-					0 < n
+					0 <= n && unsigned(n) <= std::numeric_limits<uint32_t>::max()
 				) {
 					if (keyword == Token::UFixed)
 						return make_tuple(Token::UFixedMxN, m, n);

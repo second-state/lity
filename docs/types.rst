@@ -15,7 +15,7 @@ for unsigned fixed point numbers.
 ``M`` is the number of bits used by the type, and ``N`` is the number of
 fractional points.
 ``M`` should be a number in ``[8, 256]`` which is divisible by 8, and ``N``
-is a positive integer that fits in an ``uint32``.
+is a non-negative integer that fits in an ``uint32``.
 
 ``ufixed`` and ``fixed`` are aliases to ``ufixed128x18`` and ``fixed128x18``
 respectively.
