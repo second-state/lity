@@ -703,6 +703,7 @@ void CompilerUtils::convertType(
 		}
 		break;
 	case Type::Category::FixedPoint:
+	case Type::Category::Address:
 	case Type::Category::Integer:
 	case Type::Category::Contract:
 	case Type::Category::RationalNumber:
