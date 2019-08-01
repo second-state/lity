@@ -29,7 +29,30 @@ using namespace dev::solidity;
 Error::Error(Type _type, SourceLocation const& _location, string const& _description):
 	m_type(_type)
 {
-	m_typeName = typeToCStr(m_type);
+	switch(m_type)
+	{
+	case Type::DeclarationError:
+		m_typeName = "DeclarationError";
+		break;
+	case Type::DocstringParsingError:
+		m_typeName = "DocstringParsingError";
+		break;
+	case Type::ParserError:
+		m_typeName = "ParserError";
+		break;
+	case Type::SyntaxError:
+		m_typeName = "SyntaxError";
+		break;
+	case Type::TypeError:
+		m_typeName = "TypeError";
+		break;
+	case Type::Warning:
+		m_typeName = "Warning";
+		break;
+	case Type::Info:
+		m_typeName = "Info";
+	}
+
 	if (!_location.isEmpty())
 		*this << errinfo_sourceLocation(_location);
 	if (!_description.empty())

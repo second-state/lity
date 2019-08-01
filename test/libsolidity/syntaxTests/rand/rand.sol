@@ -5,4 +5,4 @@ contract C {
 }
 // ----
 // TypeError: (65-71): Function declared as pure, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.
-// Warning: (127-133): Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.
+// TypeError: (127-133): Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.

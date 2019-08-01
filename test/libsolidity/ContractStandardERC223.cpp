@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(erc223_inheritance)
 {
 	string text = R"(
 contract ContractReceiver {
-    function tokenFallback(address _from, uint _value, bytes _data) public;
+    function tokenFallback(address _from, uint _value, bytes memory _data) public;
 }
 
 contract A { function totalSupply() public view returns (uint); }
@@ -79,7 +79,7 @@ contract C {
 }
 contract D is A {
     function transfer(address to, uint tokens) public returns (bool success);
-    function transfer(address to, uint tokens, bytes data) public returns (bool success) {
+    function transfer(address to, uint tokens, bytes memory data) public returns (bool success) {
 		ContractReceiver(to).tokenFallback(msg.sender, tokens, data);
 		success = true;
 	}
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(erc223_standard)
 {
 	string text = R"(
 contract ContractReceiver {
-    function tokenFallback(address _from, uint _value, bytes _data) public;
+    function tokenFallback(address _from, uint _value, bytes memory _data) public;
 }
 contract X {
     function totalSupply() public view returns (uint);
@@ -113,7 +113,7 @@ contract X {
 		cr.tokenFallback(msg.sender, tokens, "");
 		success = true;
 	}
-    function transfer(address to, uint tokens, bytes data) public returns (bool success);
+    function transfer(address to, uint tokens, bytes memory data) public returns (bool success);
     event Transfer(address indexed from, address indexed to, uint tokens, bytes data);
 }
 	)";
@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE(erc223_standard_missing_tokenFallback_call)
 {
 	string text = R"(
 contract ContractReceiver {
-    function tokenFallback(address _from, uint _value, bytes _data) public;
+    function tokenFallback(address _from, uint _value, bytes memory _data) public;
 }
 contract X {
 	int a;
@@ -138,7 +138,7 @@ contract X {
 		a = 0; // to suppress mutability warning
 		success = true;
 	}
-    function transfer(address to, uint tokens, bytes data) public returns (bool success);
+    function transfer(address to, uint tokens, bytes memory data) public returns (bool success);
     event Transfer(address indexed from, address indexed to, uint tokens, bytes data);
 }
 	)";
@@ -151,7 +151,7 @@ BOOST_AUTO_TEST_CASE(erc223_standard_external_tokenFallback_call)
 {
 	string text = R"(
 contract ContractReceiver {
-    function tokenFallback(address _from, uint _value, bytes _data) external;
+    function tokenFallback(address _from, uint _value, bytes calldata _data) external;
 }
 contract X {
     function totalSupply() public view returns (uint);
@@ -161,7 +161,7 @@ contract X {
 		cr.tokenFallback(msg.sender, tokens, "");
 		success = true;
 	}
-    function transfer(address to, uint tokens, bytes data) public returns (bool success);
+    function transfer(address to, uint tokens, bytes memory data) public returns (bool success);
     event Transfer(address indexed from, address indexed to, uint tokens, bytes data);
 }
 	)";
@@ -174,7 +174,7 @@ BOOST_AUTO_TEST_CASE(erc223_standard_wrong_receiver_function_name)
 {
 	string text = R"(
 contract ContractReceiver {
-    function tikenFallback(address _from, uint _value, bytes _data) public;
+    function tikenFallback(address _from, uint _value, bytes memory _data) public;
 	//       ^ should be tokenFallback
 }
 contract X {
@@ -185,7 +185,7 @@ contract X {
 		cr.tikenFallback(msg.sender, tokens, "");
 		success = true;
 	}
-    function transfer(address to, uint tokens, bytes data) public returns (bool success);
+    function transfer(address to, uint tokens, bytes memory data) public returns (bool success);
     event Transfer(address indexed from, address indexed to, uint tokens, bytes data);
 }
 	)";
@@ -198,7 +198,7 @@ BOOST_AUTO_TEST_CASE(erc223_standard_wrong_receiver_function_parameter)
 {
 	string text = R"(
 contract ContractReceiver {
-    function tokenFallback(address _from, uint32 _value, bytes _data) public;
+    function tokenFallback(address _from, uint32 _value, bytes memory _data) public;
 	//                                    ^ should be uint
 }
 contract X {
@@ -209,7 +209,7 @@ contract X {
 		cr.tokenFallback(msg.sender, uint32(tokens), "");
 		success = true;
 	}
-    function transfer(address to, uint tokens, bytes data) public returns (bool success);
+    function transfer(address to, uint tokens, bytes memory data) public returns (bool success);
     event Transfer(address indexed from, address indexed to, uint tokens, bytes data);
 }
 	)";
@@ -222,7 +222,7 @@ BOOST_AUTO_TEST_CASE(erc223_standard_inherited_receiver_function_call)
 {
 	string text = R"(
 contract ContractReceiver {
-    function tokenFallback(address _from, uint _value, bytes _data) public;
+    function tokenFallback(address _from, uint _value, bytes memory _data) public;
 }
 contract C {
 	function f(address a) public {
@@ -234,7 +234,7 @@ contract X is C {
     function totalSupply() public view returns (uint);
     function balanceOf(address tokenOwner) public view returns (uint balance);
     function transfer(address to, uint tokens) public returns (bool success);
-    function transfer(address to, uint tokens, bytes data) public returns (bool success);
+    function transfer(address to, uint tokens, bytes memory data) public returns (bool success);
     event Transfer(address indexed from, address indexed to, uint tokens, bytes data);
 }
 	)";
@@ -251,7 +251,7 @@ contract X {
     function totalSupply() public view returns (uint);
     function balanceOf(address tokenOwner) public view returns (uint balance);
     function transfer(address to, uint tokens) public returns (bool success);
-    function transfer(address to, uint tokens, bytes data) public returns (bool success);
+    function transfer(address to, uint tokens, bytes memory data) public returns (bool success);
     event Transfer(address indexed from, address indexed to, uint tokens);
 }
 	)";

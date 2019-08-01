@@ -44,7 +44,7 @@ m_magicVariables(vector<shared_ptr<MagicVariableDeclaration const>>{
 	make_shared<MagicVariableDeclaration>("eni", make_shared<FunctionType>(strings(), strings{"string memory"}, FunctionType::Kind::ENI, FunctionType::SpecialModifier::Default, true, StateMutability::Pure)),
 	make_shared<MagicVariableDeclaration>("isValidator", make_shared<FunctionType>(strings{"address"}, strings{"bool"}, FunctionType::Kind::IsValidator, FunctionType::SpecialModifier::Default, true, StateMutability::Pure)),
 	make_shared<MagicVariableDeclaration>("gasleft", make_shared<FunctionType>(strings(), strings{"uint256"}, FunctionType::Kind::GasLeft, FunctionType::SpecialModifier::Default, false, StateMutability::View)),
-	make_shared<MagicVariableDeclaration>("keccak256", make_shared<FunctionType>(strings(), strings{"bytes32"}, FunctionType::Kind::SHA3, FunctionType::SpecialModifier::Default, true, StateMutability::Pure)),
+	make_shared<MagicVariableDeclaration>("keccak256", make_shared<FunctionType>(strings{"bytes memory"}, strings{"bytes32"}, FunctionType::Kind::KECCAK256, FunctionType::SpecialModifier::Default, false, StateMutability::Pure)),
 	make_shared<MagicVariableDeclaration>("log0", make_shared<FunctionType>(strings{"bytes32"}, strings{}, FunctionType::Kind::Log0)),
 	make_shared<MagicVariableDeclaration>("log1", make_shared<FunctionType>(strings{"bytes32", "bytes32"}, strings{}, FunctionType::Kind::Log1)),
 	make_shared<MagicVariableDeclaration>("log2", make_shared<FunctionType>(strings{"bytes32", "bytes32", "bytes32"}, strings{}, FunctionType::Kind::Log2)),
@@ -58,11 +58,11 @@ m_magicVariables(vector<shared_ptr<MagicVariableDeclaration const>>{
 	make_shared<MagicVariableDeclaration>("require", make_shared<FunctionType>(strings{"bool", "string memory"}, strings{}, FunctionType::Kind::Require, FunctionType::SpecialModifier::Default, false, StateMutability::Pure)),
 	make_shared<MagicVariableDeclaration>("revert", make_shared<FunctionType>(strings(), strings(), FunctionType::Kind::Revert, FunctionType::SpecialModifier::Default, false, StateMutability::Pure)),
 	make_shared<MagicVariableDeclaration>("revert", make_shared<FunctionType>(strings{"string memory"}, strings(), FunctionType::Kind::Revert, FunctionType::SpecialModifier::Default, false, StateMutability::Pure)),
-	make_shared<MagicVariableDeclaration>("ripemd160", make_shared<FunctionType>(strings(), strings{"bytes20"}, FunctionType::Kind::RIPEMD160, FunctionType::SpecialModifier::Default, true, StateMutability::Pure)),
-	make_shared<MagicVariableDeclaration>("selfdestruct", make_shared<FunctionType>(strings{"address"}, strings{}, FunctionType::Kind::Selfdestruct)),
-	make_shared<MagicVariableDeclaration>("sha256", make_shared<FunctionType>(strings(), strings{"bytes32"}, FunctionType::Kind::SHA256, FunctionType::SpecialModifier::Default, true, StateMutability::Pure)),
-	make_shared<MagicVariableDeclaration>("sha3", make_shared<FunctionType>(strings(), strings{"bytes32"}, FunctionType::Kind::SHA3, FunctionType::SpecialModifier::Default, true, StateMutability::Pure)),
-	make_shared<MagicVariableDeclaration>("suicide", make_shared<FunctionType>(strings{"address"}, strings{}, FunctionType::Kind::Selfdestruct)),
+	make_shared<MagicVariableDeclaration>("ripemd160", make_shared<FunctionType>(strings{"bytes memory"}, strings{"bytes20"}, FunctionType::Kind::RIPEMD160, FunctionType::SpecialModifier::Default, false, StateMutability::Pure)),
+	make_shared<MagicVariableDeclaration>("selfdestruct", make_shared<FunctionType>(strings{"address payable"}, strings{}, FunctionType::Kind::Selfdestruct)),
+	make_shared<MagicVariableDeclaration>("sha256", make_shared<FunctionType>(strings{"bytes memory"}, strings{"bytes32"}, FunctionType::Kind::SHA256, FunctionType::SpecialModifier::Default, false, StateMutability::Pure)),
+	make_shared<MagicVariableDeclaration>("sha3", make_shared<FunctionType>(strings{"bytes memory"}, strings{"bytes32"}, FunctionType::Kind::KECCAK256, FunctionType::SpecialModifier::Default, true, StateMutability::Pure)),
+	make_shared<MagicVariableDeclaration>("suicide", make_shared<FunctionType>(strings{"address payable"}, strings{}, FunctionType::Kind::Selfdestruct)),
 	make_shared<MagicVariableDeclaration>("tx", make_shared<MagicType>(MagicType::Kind::Transaction))
 })
 {

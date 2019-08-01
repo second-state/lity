@@ -77,9 +77,9 @@ contract C20 {
   event Transfer(address indexed from, address indexed to, uint256 value);
 }
 contract X is C20 {
-  function transferAndCall(address _to, uint256 _value, bytes _data) public payable returns (bool);
-  function transferFromAndCall( address _from, address _to, uint256 _value, bytes _data) public payable returns (bool);
-  function approveAndCall(address _spender, uint256 _value, bytes _data) public payable returns (bool);
+  function transferAndCall(address _to, uint256 _value, bytes memory _data) public payable returns (bool);
+  function transferFromAndCall( address _from, address _to, uint256 _value, bytes memory _data) public payable returns (bool);
+  function approveAndCall(address _spender, uint256 _value, bytes memory _data) public payable returns (bool);
 }
 	)";
 	CHECK_INFO_ALLOW_MULTI(text, (std::vector<string>{
@@ -99,9 +99,9 @@ contract X {
   function approve(address spender, uint256 value) public returns (bool);
   event Approval(address indexed owner, address indexed spender, uint256 value);
   event Transfer(address indexed from, address indexed to, uint256 value);
-  function transferAndCall(address _to, uint256 _value, bytes _data) public payable returns (bool);
-  function transferFromAndCall( address _from, address _to, uint256 _value, bytes _data) public payable returns (bool);
-  function approveAndCall(address _spender, uint256 _value, bytes _data) public payable returns (bool);
+  function transferAndCall(address _to, uint256 _value, bytes memory _data) public payable returns (bool);
+  function transferFromAndCall( address _from, address _to, uint256 _value, bytes memory _data) public payable returns (bool);
+  function approveAndCall(address _spender, uint256 _value, bytes memory _data) public payable returns (bool);
 }
 	)";
 	CHECK_INFO_ALLOW_MULTI(text, (std::vector<string>{
@@ -122,9 +122,9 @@ contract C20 {
   event Transfer(address indexed from, address indexed to, uint256 value);
 }
 contract X is C20 {
-  function transferAndCall(address _to, uint256 _value, bytes _data) public payable returns (bool);
-  function transferFromAndCall( address _from, address _to, uint256 _value, bytes _data) public returns (bool); // should be payable
-  function approveAndCall(address _spender, uint256 _value, bytes _data) public payable returns (bool);
+  function transferAndCall(address _to, uint256 _value, bytes memory _data) public payable returns (bool);
+  function transferFromAndCall( address _from, address _to, uint256 _value, bytes memory _data) public returns (bool); // should be payable
+  function approveAndCall(address _spender, uint256 _value, bytes memory _data) public payable returns (bool);
 }
 	)";
 	CHECK_INFO_ALLOW_MULTI(text, (std::vector<string>{

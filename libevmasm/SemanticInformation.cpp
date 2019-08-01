@@ -145,12 +145,13 @@ bool SemanticInformation::isDeterministic(AssemblyItem const& _item)
 	case Instruction::DELEGATECALL:
 	case Instruction::STATICCALL:
 	case Instruction::CREATE:
-	case Instruction::CREATE2:
+	/// XXX: conflict with ENI //case Instruction::CREATE2:
 	case Instruction::GAS:
 	case Instruction::PC:
 	case Instruction::MSIZE: // depends on previous writes and reads, not only on content
 	case Instruction::BALANCE: // depends on previous calls
 	case Instruction::EXTCODESIZE:
+	case Instruction::EXTCODEHASH:
 	case Instruction::RETURNDATACOPY: // depends on previous calls
 	case Instruction::RETURNDATASIZE:
 		return false;
@@ -172,6 +173,7 @@ bool SemanticInformation::movable(Instruction _instruction)
 	case Instruction::KECCAK256:
 	case Instruction::BALANCE:
 	case Instruction::EXTCODESIZE:
+	case Instruction::EXTCODEHASH:
 	case Instruction::RETURNDATASIZE:
 	case Instruction::SLOAD:
 	case Instruction::PC:
@@ -212,7 +214,7 @@ bool SemanticInformation::invalidatesStorage(Instruction _instruction)
 	case Instruction::CALLCODE:
 	case Instruction::DELEGATECALL:
 	case Instruction::CREATE:
-	case Instruction::CREATE2:
+	/// XXX: conflict with ENI // case Instruction::CREATE2:
 	case Instruction::SSTORE:
 		return true;
 	default:
@@ -233,6 +235,7 @@ bool SemanticInformation::invalidInPureFunctions(Instruction _instruction)
 	case Instruction::GASPRICE:
 	case Instruction::EXTCODESIZE:
 	case Instruction::EXTCODECOPY:
+	case Instruction::EXTCODEHASH:
 	case Instruction::BLOCKHASH:
 	case Instruction::COINBASE:
 	case Instruction::TIMESTAMP:
@@ -264,7 +267,7 @@ bool SemanticInformation::invalidInViewFunctions(Instruction _instruction)
 	case Instruction::CALL:
 	case Instruction::CALLCODE:
 	case Instruction::DELEGATECALL:
-	case Instruction::CREATE2:
+	/// XXX: conflict with ENI //case Instruction::CREATE2:
 	case Instruction::SELFDESTRUCT:
 		return true;
 	default:

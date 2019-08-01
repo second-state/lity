@@ -73,11 +73,11 @@ contract C {
         return N;
     }
 
-    function getResult() public view returns (uint256[]) {
+    function getResult() public view returns (uint256[] memory) {
         return result;
     }
 
-    function () public payable { }
+    function () external payable { }
 }
 
 // ----

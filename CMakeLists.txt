@@ -9,7 +9,7 @@ eth_policy()
 
 # project name and version should be set after cmake_policy CMP0048
 set(LITY_PROJECT_VERSION "1.2.7")
-set(SOLC_PROJECT_VERSION "0.4.25")
+set(SOLC_PROJECT_VERSION "0.5.0")
 project(lity VERSION ${LITY_PROJECT_VERSION})
 
 option(LITYC_LINK_STATIC "Link lityc executable statically on supported platforms" OFF)

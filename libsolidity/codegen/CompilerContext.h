@@ -73,8 +73,12 @@ public:
 	void addStateVariable(VariableDeclaration const& _declaration, u256 const& _storageOffset, unsigned _byteOffset);
 	void addVariable(VariableDeclaration const& _declaration, unsigned _offsetToCurrent = 0);
 	void addFact(FactDeclaration const&, unsigned _offsetToCurrent = 0);
-	void removeVariable(VariableDeclaration const& _declaration);
 	void removeFact(FactDeclaration const&);
+	void removeVariable(Declaration const& _declaration);
+	/// Removes all local variables currently allocated above _stackHeight.
+	void removeVariablesAboveStackHeight(unsigned _stackHeight);
+	/// Returns the number of currently allocated local variables.
+	unsigned numberOfLocalVariables() const;
 
 	void setCompiledContracts(std::map<ContractDefinition const*, eth::Assembly const*> const& _contracts) { m_compiledContracts = _contracts; }
 	eth::Assembly const& compiledContract(ContractDefinition const& _contract) const;
@@ -214,10 +218,12 @@ public:
 	/// Appends inline assembly (strict mode).
 	/// @a _replacements are string-matching replacements that are performed prior to parsing the inline assembly.
 	/// @param _localVariables assigns stack positions to variables with the last one being the stack top
+	/// @param _externallyUsedFunctions a set of function names that are not to be renamed or removed.
 	/// @param _system if true, this is a "system-level" assembly where all functions use named labels.
 	void appendInlineAssembly(
 		std::string const& _assembly,
 		std::vector<std::string> const& _localVariables = std::vector<std::string>(),
+		std::set<std::string> const& _externallyUsedFunctions = std::set<std::string>(),
 		bool _system = false
 	);
 
@@ -309,7 +315,7 @@ private:
 	} m_functionCompilationQueue;
 
 	std::map<ContractDefinition const*, eth::AssemblyItem> m_entryAllRules;
-	
+
 	eth::AssemblyPointer m_asm;
 	/// Version of the EVM to compile against.
 	EVMVersion m_evmVersion;

@@ -7,7 +7,7 @@ contract C {
     rule "updateTest" when {
         p: Person(age > 0);
     } then {
-        p.addr.transfer(10);
+        address(uint160(p.addr)).transfer(10);
         p.age--;
         update p;
     }
@@ -23,5 +23,5 @@ contract C {
         fireAllRules;
         return true;
     }
-    function () public payable { }
+    function () external payable { }
 }
