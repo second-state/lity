@@ -45,7 +45,7 @@ public:
 		GasEstimator::ASTGasConsumption const& _gasCosts = GasEstimator::ASTGasConsumption()
 	);
 	/// Output the string representation of the AST to _stream.
-	void print(std::ostream& _stream);
+	void print(std::ostream& _stream, int _indentation=0);
 
 	bool visit(PragmaDirective const& _node) override;
 	bool visit(ImportDirective const& _node) override;

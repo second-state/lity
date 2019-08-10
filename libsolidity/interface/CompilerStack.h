@@ -27,6 +27,8 @@
 #include <libsolidity/interface/ReadFile.h>
 #include <libsolidity/interface/EVMVersion.h>
 
+#include <libsolidity/ast/AST.h>
+
 #include <libevmasm/SourceLocation.h>
 #include <libevmasm/LinkerObject.h>
 
@@ -42,6 +44,7 @@
 #include <memory>
 #include <vector>
 #include <functional>
+#include <tuple>
 
 namespace dev
 {
@@ -249,6 +252,9 @@ public:
 
 	/// @returns a JSON representing the estimated gas usage for contract creation, internal and external functions
 	Json::Value gasEstimates(std::string const& _contractName) const;
+
+	std::vector<std::tuple<VariableDeclaration const*, u256, unsigned>> stateVariables(std::string const& _contractName) const;
+	std::vector<StructDefinition const*> definedStructs(std::string const& _contractName) const;
 
 private:
 	/// The state per source unit. Filled gradually during parsing.

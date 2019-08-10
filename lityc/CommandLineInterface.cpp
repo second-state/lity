@@ -29,6 +29,7 @@
 #include <libsolidity/parsing/Scanner.h>
 #include <libsolidity/parsing/Parser.h>
 #include <libsolidity/ast/ASTPrinter.h>
+#include <libsolidity/ast/ASTVarableMapper.h>
 #include <libsolidity/ast/ASTJsonConverter.h>
 #include <libsolidity/analysis/NameAndTypeResolver.h>
 #include <libsolidity/interface/Exceptions.h>
@@ -60,6 +61,8 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <tuple>
+#include <map>
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -124,6 +127,7 @@ static string const g_strERC827 = "ERC827";
 static string const g_strERC884 = "ERC884";
 static string const g_strContractStandard = "contract-standard";
 static string const g_strDisableOyente = "disable-oyente";
+static string const g_strStateVariables = "state-variables";
 
 static string const g_argAbi = g_strAbi;
 static string const g_argPrettyJson = g_strPrettyJson;
@@ -161,6 +165,7 @@ static string const g_stdinFileName = g_stdinFileNameStr;
 static string const g_argIgnoreMissingFiles = g_strIgnoreMissingFiles;
 static string const g_argContractStandard = g_strContractStandard;
 static string const g_argDisableOyente = g_strDisableOyente;
+static string const g_argStateVariables = g_strStateVariables;
 
 /// Possible arguments to for --combined-json
 static set<string> const g_combinedJsonArgs
@@ -674,7 +679,8 @@ Allowed options)",
 		(g_argSignatureHashes.c_str(), "Function signature hashes of the contracts.")
 		(g_argNatspecUser.c_str(), "Natspec user documentation of all contracts.")
 		(g_argNatspecDev.c_str(), "Natspec developer documentation of all contracts.")
-		(g_argMetadata.c_str(), "Combined Metadata JSON whose Swarm hash is stored on-chain.");
+		(g_argMetadata.c_str(), "Combined Metadata JSON whose Swarm hash is stored on-chain.")
+		(g_argStateVariables.c_str(), "State variables of the contracts.");
 	desc.add(outputComponents);
 
 	po::options_description allOptions = desc;
@@ -1100,6 +1106,104 @@ void CommandLineInterface::handleAst(string const& _argStr)
 	}
 }
 
+class ASTTypeJsonConverter{
+	std::map<const ASTNode*, std::string> structContractMap;
+public:
+	ASTTypeJsonConverter(std::map<const ASTNode*, std::string> m_map):structContractMap(m_map){}
+	Json::Value getStructJson(StructDefinition const& _node){
+		const auto &member = _node.members();
+		Json::Value root;
+		for(const auto &m:member){
+			root.append(getTypeJsom(m->type(),m->name()));
+		}
+		return root;
+	}
+	Json::Value getTypeJsom(TypePointer _type, string name="", string declarate=""){
+		Json::Value root;
+		if(name.size()){
+			root["name"] = name;
+		}
+		if(declarate.size()){
+			root["declarate"] = declarate;
+		}
+		switch(_type->category()){
+			case Type::Category::Contract : {
+				auto pt = dynamic_pointer_cast<ContractType const>(_type);
+				auto location = pt->contractDefinition().location();
+				root["type"] = "contract";
+				root["contractLocation"] = *location.sourceName+":"+pt->contractDefinition().name();
+				break;
+			}
+			case Type::Category::Enum : {
+				auto pt = dynamic_pointer_cast<EnumType const>(_type);
+				root["type"] = "enum_"+to_string(pt->enumDefinition().members().size());
+				break;
+			}
+			case Type::Category::Struct : {
+				auto pt = dynamic_pointer_cast<StructType const>(_type);
+				auto location = pt->structDefinition().location();
+				root["type"] = "struct";
+				root["structLocation"] = structContractMap[&pt->structDefinition()];
+				root["structName"] = pt->structDefinition().name();
+				break;
+			}
+			case Type::Category::Array : {
+				auto pt = dynamic_pointer_cast<ArrayType const>(_type);
+				if(pt->isString()){
+					root["type"] = "string";
+				}else if(pt->isByteArray()){
+					root["type"] = "bytes";
+				}else{
+					root["type"] = "array";
+					if(!pt->isDynamicallySized()){
+						root["length"] = pt->length().str();
+					}
+					root["baseType"] = getTypeJsom(pt->baseType());
+				}
+				break;
+			}
+			case Type::Category::Mapping : {
+				auto pt = dynamic_pointer_cast<MappingType const>(_type);
+				root["type"] = "mapping";
+				root["key"] = getTypeJsom(pt->keyType());
+				root["value"] = getTypeJsom(pt->valueType());
+				break;
+			}
+			default : {
+				root["type"] = _type->canonicalName();
+			}
+		}
+		return root;
+	}
+};
+
+void CommandLineInterface::handleStateVariables(std::string const& _contract)
+{
+	if (!m_args.count(g_argStateVariables))
+		return;
+	ASTTypeJsonConverter acv(structContractMap);
+	Json::Value root;
+	root[_contract] = {};
+	auto stateVariables = m_compiler->stateVariables(_contract);
+	auto structDefinition = m_compiler->definedStructs(_contract);
+	for(const auto &s:structDefinition){
+		root[_contract]["structDefination"][s->name()] = acv.getStructJson(*s);
+	}
+	for(const auto &v:stateVariables){
+		auto type = std::get<0>(v)->type();
+		auto jsonRoot = acv.getTypeJsom(type, std::get<0>(v)->name(), *std::get<0>(v)->location().sourceName+":"+varableContractMap.find(std::get<0>(v))->second);
+		root[_contract]["stateVariables"].append(jsonRoot);
+	}
+	if (m_args.count(g_argOutputDir))
+		createFile(m_compiler->filesystemFriendlyName(_contract) +"_StateVariables.json", root.toStyledString());
+	else
+	{
+		cout << "\n\nContract \""<< _contract << endl;
+		cout << "======= state variables and struct JSON =======" << endl;
+		cout << root << '\n';
+	}
+}
+
 bool CommandLineInterface::actOnInput()
 {
 	if (m_args.count(g_argStandardJSON) || m_onlyAssemble)
@@ -1298,6 +1402,18 @@ void CommandLineInterface::outputCompilationResults()
 	handleAst(g_argAstCompactJson);
 
 	vector<string> contracts = m_compiler->contractNames();
+	if (m_args.count(g_argStateVariables))
+	{
+		for (auto const& sourceCode: m_sourceCodes){
+			ASTVarableMapper varableMapper(m_compiler->ast(sourceCode.first));
+			varableMapper.buildMapping(varableContractMap);
+		}
+		for (string const& contract: contracts){
+			for(const auto &s:m_compiler->definedStructs(contract)){
+				structContractMap[s] = contract;
+			}
+		}
+	}
 	for (string const& contract: contracts)
 	{
 		if (needsHumanTargetedStdout(m_args))
@@ -1331,6 +1447,7 @@ void CommandLineInterface::outputCompilationResults()
 		handleABI(contract);
 		handleNatspec(true, contract);
 		handleNatspec(false, contract);
+		handleStateVariables(contract);
 	} // end of contracts iteration
 }
 

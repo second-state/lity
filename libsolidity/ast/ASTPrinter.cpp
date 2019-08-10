@@ -42,9 +42,10 @@ ASTPrinter::ASTPrinter(
 {
 }
 
-void ASTPrinter::print(ostream& _stream)
+void ASTPrinter::print(ostream& _stream, int _indentation)
 {
 	m_ostream = &_stream;
+	m_indentation = _indentation;
 	m_ast->accept(*this);
 	m_ostream = nullptr;
 }
