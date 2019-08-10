@@ -57,6 +57,9 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <vector>
+#include <tuple>
+
 using namespace std;
 using namespace dev;
 using namespace dev::solidity;
@@ -1068,4 +1071,14 @@ Json::Value CompilerStack::gasEstimates(string const& _contractName) const
 	}
 
 	return output;
+}
+
+vector<tuple<VariableDeclaration const*, u256, unsigned>> CompilerStack::stateVariables(std::string const& _contractName)const
+{
+	return ContractType(contractDefinition(_contractName)).stateVariables();
+}
+
+std::vector<StructDefinition const*> CompilerStack::definedStructs(std::string const& _contractName) const
+{
+	return contractDefinition(_contractName).definedStructs();
 }

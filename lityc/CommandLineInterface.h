@@ -24,11 +24,13 @@
 #include <libsolidity/interface/CompilerStack.h>
 #include <libsolidity/interface/AssemblyStack.h>
 #include <libsolidity/interface/EVMVersion.h>
+#include <libsolidity/ast/AST.h>
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem/path.hpp>
 
 #include <memory>
+#include <map>
 
 namespace dev
 {
@@ -76,6 +78,7 @@ private:
 	void handleNatspec(bool _natspecDev, std::string const& _contract);
 	void handleGasEstimation(std::string const& _contract);
 	void handleFormal();
+	void handleStateVariables(std::string const& _contract);
 
 	/// Fills @a m_sourceCodes initially and @a m_redirects.
 	bool readInputFilesAndConfigureRemappings();
@@ -115,6 +118,10 @@ private:
 	std::unique_ptr<dev::solidity::CompilerStack> m_compiler;
 	/// EVM version to use
 	EVMVersion m_evmVersion;
+
+	/// print StateVariables json to use
+	std::map<const ASTNode*, std::string> varableContractMap;
+	std::map<const ASTNode*, std::string> structContractMap;
 };
 
 }
