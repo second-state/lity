@@ -1107,19 +1107,80 @@ void CommandLineInterface::handleAst(string const& _argStr)
 }
 
 class ASTTypeJsonConverter{
-	std::map<const ASTNode*, std::string> structContractMap;
+	const std::map<const ASTNode*, std::string> &structContractMap;
+	const std::map<std::string, std::string> &sourceCodes;
+	std::map<std::string, std::vector<size_t>> sourceNewLine;
+	std::string systemType;
+	void initSourceNewLine(){
+		for(const auto &it : sourceCodes){
+			auto &NewLine = sourceNewLine[it.first];
+			if(systemType=="linux"){
+				for(size_t i=0; i<it.second.size(); ++i){
+					if(it.second[i]=='\n'){
+						NewLine.emplace_back(i);
+					}
+				}
+			}else if(systemType=="windows"){
+				for(size_t i=1; i<it.second.size(); ++i){
+					if(it.second[i-1]=='\r' && it.second[i]=='\n'){
+						NewLine.emplace_back(i);
+					}
+				}
+			}else{ // systemType=="ios"
+				for(size_t i=0; i<it.second.size(); ++i){
+					if(it.second[i]=='\r'){
+						NewLine.emplace_back(i);
+					}
+				}
+			}
+		}
+	}
+	pair<size_t,size_t> getLineNum(std::string sourceName, size_t start){
+		const auto &NewLine = sourceNewLine[sourceName];
+		auto it = std::upper_bound(NewLine.begin(),NewLine.end(),start);
+		size_t line = it==NewLine.begin() ? 0 : *(--it);
+		return {it-NewLine.begin(),start - line};
+	}
+	std::string printSourcePart(SourceLocation const& location){
+		std::string m_sourceName = *location.sourceName;
+		const auto &source = sourceCodes.find(m_sourceName)->second;
+		std::string res = "   Source: " + Json::valueToQuotedString(source.substr(location.start, location.end - location.start).c_str())+"\n";
+		auto lineInfo = getLineNum(m_sourceName, location.start);
+		res += "   at file: " + m_sourceName + ", Line: " + std::to_string(lineInfo.first+2) + ", Col: " + std::to_string(lineInfo.second) + "\n";
+		return res;
+	}
 public:
-	ASTTypeJsonConverter(std::map<const ASTNode*, std::string> m_map):structContractMap(m_map){}
+	ASTTypeJsonConverter(const std::map<const ASTNode*, std::string> &m_map, const std::map<std::string, std::string> &m_sourceCodes):
+		structContractMap(m_map), sourceCodes(m_sourceCodes)
+	{
+		#ifdef _WIN32
+			systemType = "windows";
+		#elif __APPLE__
+			systemType = "ios";
+		#else
+			systemType = "linux";
+		#endif
+		initSourceNewLine();
+	}
 	Json::Value getStructJson(StructDefinition const& _node){
 		const auto &member = _node.members();
-		Json::Value root;
+		Json::Value root, variable_arr;
 		for(const auto &m:member){
-			root.append(getTypeJsom(m->type(),m->name()));
+			variable_arr.append(getTypeJsom(m->type(),m->name(),"",printSourcePart(m->location())));
 		}
+		root["sourceInfo"] = printSourcePart(_node.location());
+		root["variables"] = variable_arr;
 		return root;
 	}
-	Json::Value getTypeJsom(TypePointer _type, string name="", string declarate=""){
+	Json::Value getVariableJsom(const VariableDeclaration *v, string contractName){
+		auto type = v->type();
+		return getTypeJsom(type, v->name(), *v->location().sourceName+":"+contractName,printSourcePart(v->location()));
+	}
+	Json::Value getTypeJsom(const TypePointer &_type, string name="", string declarate="", string sourceInfo=""){
 		Json::Value root;
+		if(sourceInfo.size()){
+			root["sourceInfo"] = sourceInfo;
+		}
 		if(name.size()){
 			root["name"] = name;
 		}
@@ -1143,7 +1204,7 @@ public:
 				auto pt = dynamic_pointer_cast<StructType const>(_type);
 				auto location = pt->structDefinition().location();
 				root["type"] = "struct";
-				root["structLocation"] = structContractMap[&pt->structDefinition()];
+				root["structLocation"] = structContractMap.find(&pt->structDefinition())->second;
 				root["structName"] = pt->structDefinition().name();
 				break;
 			}
@@ -1181,7 +1242,7 @@ void CommandLineInterface::handleStateVariables(std::string const& _contract)
 {
 	if (!m_args.count(g_argStateVariables))
 		return;
-	ASTTypeJsonConverter acv(structContractMap);
+	ASTTypeJsonConverter acv(structContractMap, m_sourceCodes);
 	Json::Value root;
 	root[_contract] = {};
 	auto stateVariables = m_compiler->stateVariables(_contract);
@@ -1190,9 +1251,7 @@ void CommandLineInterface::handleStateVariables(std::string const& _contract)
 		root[_contract]["structDefination"][s->name()] = acv.getStructJson(*s);
 	}
 	for(const auto &v:stateVariables){
-		auto type = std::get<0>(v)->type();
-		auto jsonRoot = acv.getTypeJsom(type, std::get<0>(v)->name(), *std::get<0>(v)->location().sourceName+":"+varableContractMap.find(std::get<0>(v))->second);
-		root[_contract]["stateVariables"].append(jsonRoot);
+		root[_contract]["stateVariables"].append(acv.getVariableJsom(std::get<0>(v), varableContractMap.find(std::get<0>(v))->second));
 	}
 	if (m_args.count(g_argOutputDir))
 		createFile(m_compiler->filesystemFriendlyName(_contract) +"_StateVariables.json", root.toStyledString());
