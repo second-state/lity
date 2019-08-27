@@ -166,6 +166,16 @@ void ENIHandler::initSizeOfDataSection() {
 
 void ENIHandler::handleIdentifier(IdentifierInfo& pIdentifierInfo) {
 	Identifier const* identifier = dynamic_cast<Identifier const*>(pIdentifierInfo.m_Expression);
+	MemberAccess const* memberaccess = nullptr;
+	if( !identifier )
+	{
+		// Try cast from Member Access
+		memberaccess = dynamic_cast<MemberAccess const *>(pIdentifierInfo.m_Expression);
+		solAssert(memberaccess, "Unknown internal identifier cast error");
+
+		identifier = dynamic_cast<Identifier const*>(&memberaccess->expression());
+		solAssert(identifier, "Unknown internal memberaccess cast error");
+	}
 	CompilerContext::LocationSetter locationSetter(*m_Context, *identifier);
 	Declaration const* declaration = identifier->annotation().referencedDeclaration;
 	auto variable = dynamic_cast<VariableDeclaration const*>(declaration);
@@ -186,6 +196,37 @@ void ENIHandler::handleIdentifier(IdentifierInfo& pIdentifierInfo) {
 		/// TODO: Handle constant identifier
 		/// variable->value()->accept(*this);
 		/// utils().convertType(variable->value()->annotation().type, variable->annotation().type);
+	}
+
+	/// Pick up data from struct
+	if (type->category() == Type::Category::Struct) {
+			ASTString const& member = memberaccess->memberName();
+			StructType const &st = dynamic_cast<StructType const &>(*type);
+			*m_Context << st.memoryOffsetOfMember(member) << Instruction::ADD;
+			
+			/// Update type
+			type = pIdentifierInfo.m_Type;
+
+			/// stack: <memberPointer>
+			if( type->category() == Type::Category::Array )
+			{
+				auto arrayType = dynamic_cast<ArrayType const*>(type.get());
+				if (arrayType->isString()) {
+					*m_Context << Instruction::MLOAD;
+				} else {
+					solUnimplementedAssert(false, "Unsupported type of bytes array identifier in struct");
+				}
+			} else {
+				switch (type->category()) {
+					case Type::Category::Integer:
+						*m_Context << Instruction::MLOAD;
+						break;
+					default:
+						solUnimplementedAssert(false, "Unsupported type of unknown type of identifier in struct");
+
+				}		
+			}
+			/// stack: <member>
 	}
 
 	/// Pack identifier from stack to memory

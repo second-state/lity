@@ -1691,6 +1691,8 @@ public:
 	{
 		return std::make_shared<MemberAccess>(location(), m_expression->deepCopy(), m_memberName);
 	}
+
+	bool saveToENISection(ENIHandler&, CompilerContext&) const override;
 private:
 	ASTPointer<Expression> m_expression;
 	ASTPointer<ASTString> m_memberName;
