@@ -19,6 +19,7 @@ Everything about Ethereum Native Interface (ENI)
    eni-tutorial
    reverse-string
    rsa-crypto
+   json
    verify-dogecoin-block-on-travis
 
 Other documentations
@@ -37,4 +38,3 @@ Other documentations
    vm-wrapper
    erc-contract-checker-guide
    opcodes
-
