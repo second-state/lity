@@ -1751,14 +1751,14 @@ void ExpressionCompiler::appendArithmeticOperatorCode(Token _operator, Type cons
 	switch (_operator)
 	{
 	case Token::Add:
-		m_context << (c_isSigned ? Instruction::SADD : Instruction::ADD);
+		m_context << Instruction::ADD;
 		break;
 	case Token::Sub:
-		m_context << (c_isSigned ? Instruction::SSUB : Instruction::SUB);
+		m_context << Instruction::SUB;
 		break;
 	case Token::Mul:
 		if (!fixedType)
-			m_context << (c_isSigned ? Instruction::SMUL : Instruction::MUL);
+			m_context << Instruction::MUL;
 		else
 			m_context <<
 				fixedType->fractionalDigits() << Instruction::SWAP2 << Instruction::SWAP1 <<
