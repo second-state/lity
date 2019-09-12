@@ -49,9 +49,6 @@ enum class Instruction: uint8_t
 	MULMOD,				///< unsigned modular multiplication
 	EXP,				///< exponential operation
 	SIGNEXTEND,			///< extend length of signed integer
-	SADD,				///< signed addition operation with overflow checking
-	SSUB,				///< signed subtraction operation with overflow checking
-	SMUL,				///< signed multiplication operation with overflow checking
 
 	LT = 0x10,			///< less-than comparison
 	GT,					///< greater-than comparison

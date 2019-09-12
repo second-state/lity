@@ -436,7 +436,7 @@ void StorageByteArrayElement::retrieveValue(SourceLocation const&, bool _remove)
 void StorageByteArrayElement::storeValue(Type const&, SourceLocation const&, bool _move) const
 {
 	// stack: value ref byte_number
-	m_context << u256(31) << Instruction::SSUB << u256(0x100) << Instruction::EXP;
+	m_context << u256(31) << Instruction::SUB << u256(0x100) << Instruction::EXP;
 	// stack: value ref (1<<(8*(31-byte_number)))
 	m_context << Instruction::DUP2 << Instruction::SLOAD;
 	// stack: value ref (1<<(8*(31-byte_number))) old_full_value
@@ -457,7 +457,7 @@ void StorageByteArrayElement::setToZero(SourceLocation const&, bool _removeRefer
 {
 	// stack: ref byte_number
 	solAssert(_removeReference, "");
-	m_context << u256(31) << Instruction::SSUB << u256(0x100) << Instruction::EXP;
+	m_context << u256(31) << Instruction::SUB << u256(0x100) << Instruction::EXP;
 	// stack: ref (1<<(8*(31-byte_number)))
 	m_context << Instruction::DUP2 << Instruction::SLOAD;
 	// stack: ref (1<<(8*(31-byte_number))) old_full_value
