@@ -59,11 +59,8 @@ std::vector<SimplificationRule<Pattern>> simplificationRuleListPart1(
 	return std::vector<SimplificationRule<Pattern>> {
 		// arithmetic on constants
 		{{Instruction::ADD, {A, B}}, [=]{ return A.d() + B.d(); }, false},
-		{{Instruction::SADD, {A, B}}, [=]{ return A.d() + B.d(); }, false},
 		{{Instruction::MUL, {A, B}}, [=]{ return A.d() * B.d(); }, false},
-		{{Instruction::SMUL, {A, B}}, [=]{ return A.d() * B.d(); }, false},
 		{{Instruction::SUB, {A, B}}, [=]{ return A.d() - B.d(); }, false},
-		{{Instruction::SSUB, {A, B}}, [=]{ return A.d() - B.d(); }, false},
 		{{Instruction::DIV, {A, B}}, [=]{ return B.d() == 0 ? 0 : divWorkaround(A.d(), B.d()); }, false},
 		{{Instruction::SDIV, {A, B}}, [=]{ return B.d() == 0 ? 0 : s2u(divWorkaround(u2s(A.d()), u2s(B.d()))); }, false},
 		{{Instruction::MOD, {A, B}}, [=]{ return B.d() == 0 ? 0 : modWorkaround(A.d(), B.d()); }, false},
@@ -104,22 +101,13 @@ std::vector<SimplificationRule<Pattern>> simplificationRuleListPart1(
 		// invariants involving known constants
 		{{Instruction::ADD, {X, 0}}, [=]{ return X; }, false},
 		{{Instruction::ADD, {0, X}}, [=]{ return X; }, false},
-		{{Instruction::SADD, {X, 0}}, [=]{ return X; }, false},
-		{{Instruction::SADD, {0, X}}, [=]{ return X; }, false},
 		{{Instruction::SUB, {X, 0}}, [=]{ return X; }, false},
-		{{Instruction::SSUB, {X, 0}}, [=]{ return X; }, false},
 		{{Instruction::MUL, {X, 0}}, [=]{ return u256(0); }, true},
 		{{Instruction::MUL, {0, X}}, [=]{ return u256(0); }, true},
 		{{Instruction::MUL, {X, 1}}, [=]{ return X; }, false},
 		{{Instruction::MUL, {1, X}}, [=]{ return X; }, false},
 		{{Instruction::MUL, {X, u256(-1)}}, [=]() -> Pattern { return {Instruction::SUB, {0, X}}; }, false},
 		{{Instruction::MUL, {u256(-1), X}}, [=]() -> Pattern { return {Instruction::SUB, {0, X}}; }, false},
-		{{Instruction::SMUL, {X, 0}}, [=]{ return u256(0); }, true},
-		{{Instruction::SMUL, {0, X}}, [=]{ return u256(0); }, true},
-		{{Instruction::SMUL, {X, 1}}, [=]{ return X; }, false},
-		{{Instruction::SMUL, {1, X}}, [=]{ return X; }, false},
-		{{Instruction::SMUL, {X, u256(-1)}}, [=]() -> Pattern { return {Instruction::SSUB, {0, X}}; }, false},
-		{{Instruction::SMUL, {u256(-1), X}}, [=]() -> Pattern { return {Instruction::SSUB, {0, X}}; }, false},
 		{{Instruction::DIV, {X, 0}}, [=]{ return u256(0); }, true},
 		{{Instruction::DIV, {0, X}}, [=]{ return u256(0); }, true},
 		{{Instruction::DIV, {X, 1}}, [=]{ return X; }, false},
@@ -146,7 +134,6 @@ std::vector<SimplificationRule<Pattern>> simplificationRuleListPart1(
 		{{Instruction::OR, {X, X}}, [=]{ return X; }, true},
 		{{Instruction::XOR, {X, X}}, [=]{ return u256(0); }, true},
 		{{Instruction::SUB, {X, X}}, [=]{ return u256(0); }, true},
-		{{Instruction::SSUB, {X, X}}, [=]{ return u256(0); }, true},
 		{{Instruction::EQ, {X, X}}, [=]{ return u256(1); }, true},
 		{{Instruction::LT, {X, X}}, [=]{ return u256(0); }, true},
 		{{Instruction::SLT, {X, X}}, [=]{ return u256(0); }, true},
@@ -250,9 +237,7 @@ std::vector<SimplificationRule<Pattern>> simplificationRuleListPart2(
 	// Associative operations
 	for (auto const& opFun: std::vector<std::pair<Instruction,std::function<u256(u256 const&,u256 const&)>>>{
 		{Instruction::ADD, std::plus<u256>()},
-		{Instruction::SADD, std::plus<u256>()},
 		{Instruction::MUL, std::multiplies<u256>()},
-		{Instruction::SMUL, std::multiplies<u256>()},
 		{Instruction::AND, std::bit_and<u256>()},
 		{Instruction::OR, std::bit_or<u256>()},
 		{Instruction::XOR, std::bit_xor<u256>()}
@@ -289,8 +274,7 @@ std::vector<SimplificationRule<Pattern>> simplificationRuleListPart2(
 		}
 	}
 	for (auto const& add_sub: std::vector<std::pair<Instruction, Instruction>>{
-		{Instruction::ADD, Instruction::SUB},
-		{Instruction::SADD, Instruction::SSUB}
+		{Instruction::ADD, Instruction::SUB}
 	})
 	{
 		auto const& add = add_sub.first;

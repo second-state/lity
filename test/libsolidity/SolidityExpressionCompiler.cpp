@@ -373,7 +373,7 @@ BOOST_AUTO_TEST_CASE(unary_operators)
 	bytes expectation({uint8_t(Instruction::PUSH1), 0x2,
 					   uint8_t(Instruction::DUP2),
 					   uint8_t(Instruction::PUSH1), 0x0,
-					   uint8_t(Instruction::SSUB),
+					   uint8_t(Instruction::SUB),
 					   uint8_t(Instruction::NOT),
 					   uint8_t(Instruction::EQ),
 					   uint8_t(Instruction::ISZERO)});

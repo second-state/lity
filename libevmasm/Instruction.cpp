@@ -33,11 +33,8 @@ const std::map<std::string, Instruction> dev::solidity::c_instructions =
 {
 	{ "STOP", Instruction::STOP },
 	{ "ADD", Instruction::ADD },
-	{ "SADD", Instruction::SADD },
 	{ "SUB", Instruction::SUB },
-	{ "SSUB", Instruction::SSUB },
 	{ "MUL", Instruction::MUL },
-	{ "SMUL", Instruction::SMUL },
 	{ "DIV", Instruction::DIV },
 	{ "SDIV", Instruction::SDIV },
 	{ "MOD", Instruction::MOD },
@@ -188,11 +185,8 @@ static const std::map<Instruction, InstructionInfo> c_instructionInfo =
 { //												Add, Args, Ret, SideEffects, GasPriceTier
 	{ Instruction::STOP,		{ "STOP",			0, 0, 0, true,  Tier::Zero } },
 	{ Instruction::ADD,			{ "ADD",			0, 2, 1, false, Tier::VeryLow } },
-	{ Instruction::SADD,		{ "SADD",			0, 2, 1, false, Tier::VeryLow } },
 	{ Instruction::SUB,			{ "SUB",			0, 2, 1, false, Tier::VeryLow } },
-	{ Instruction::SSUB,		{ "SSUB",			0, 2, 1, false, Tier::VeryLow } },
 	{ Instruction::MUL,			{ "MUL",			0, 2, 1, false, Tier::Low } },
-	{ Instruction::SMUL,		{ "SMUL",			0, 2, 1, false, Tier::Low } },
 	{ Instruction::DIV,			{ "DIV",			0, 2, 1, false, Tier::Low } },
 	{ Instruction::SDIV,		{ "SDIV",			0, 2, 1, false, Tier::Low } },
 	{ Instruction::MOD,			{ "MOD",			0, 2, 1, false, Tier::Low } },

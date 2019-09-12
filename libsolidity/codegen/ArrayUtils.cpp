@@ -390,14 +390,14 @@ void ArrayUtils::copyArrayToMemory(ArrayType const& _sourceType, bool _padToWord
 			// round off, load from there.
 			// stack <target + size> <remainder = size % 32>
 			m_context << Instruction::DUP1 << Instruction::DUP3;
-			m_context << Instruction::SSUB;
+			m_context << Instruction::SUB;
 			// stack: target+size remainder <target + size - remainder>
 			m_context << Instruction::DUP1 << Instruction::MLOAD;
 			// Now we AND it with ~(2**(8 * (32 - remainder)) - 1)
 			m_context << u256(1);
-			m_context << Instruction::DUP4 << u256(32) << Instruction::SSUB;
+			m_context << Instruction::DUP4 << u256(32) << Instruction::SUB;
 			// stack: ...<v> 1 <32 - remainder>
-			m_context << u256(0x100) << Instruction::EXP << Instruction::SSUB;
+			m_context << u256(0x100) << Instruction::EXP << Instruction::SUB;
 			m_context << Instruction::NOT << Instruction::AND;
 			// stack: target+size remainder target+size-remainder <v & ...>
 			m_context << Instruction::DUP2 << Instruction::MSTORE;
@@ -515,7 +515,7 @@ void ArrayUtils::copyArrayToMemory(ArrayType const& _sourceType, bool _padToWord
 			// memory_end_offset - start is the actual length (we want to compute the ceil of).
 			// memory_offset - start is its next multiple of 32, but it might be off by 32.
 			// so we compute: memory_end_offset += (memory_offset - memory_end_offest) & 31
-			m_context << Instruction::DUP3 << Instruction::SWAP1 << Instruction::SSUB;
+			m_context << Instruction::DUP3 << Instruction::SWAP1 << Instruction::SUB;
 			m_context << u256(31) << Instruction::AND;
 			m_context << Instruction::DUP3 << Instruction::ADD;
 			m_context << Instruction::SWAP2;
@@ -674,7 +674,7 @@ void ArrayUtils::resizeDynamicArray(ArrayType const& _typeIn) const
 				eth::AssemblyItem shortToShort = _context.newTag();
 				_context << shortToShort;
 				_context << Instruction::DUP3 << u256(8) << Instruction::MUL;
-				_context << u256(0x100) << Instruction::SSUB;
+				_context << u256(0x100) << Instruction::SUB;
 				_context << u256(2) << Instruction::EXP;
 				// Divide and multiply by that value, clearing bits.
 				_context << Instruction::DUP1 << Instruction::SWAP2;
@@ -1016,7 +1016,7 @@ void ArrayUtils::retrieveLength(ArrayType const& _arrayType, unsigned _stackDept
 				// computes (x & (-1)) / 2, which is equivalent to just x / 2.
 				m_context << u256(1) << Instruction::DUP2 << u256(1) << Instruction::AND;
 				m_context << Instruction::ISZERO << u256(0x100) << Instruction::MUL;
-				m_context << Instruction::SSUB << Instruction::AND;
+				m_context << Instruction::SUB << Instruction::AND;
 				m_context << u256(2) << Instruction::SWAP1 << Instruction::DIV;
 			}
 			break;
@@ -1138,7 +1138,7 @@ void ArrayUtils::incrementByteOffset(unsigned _byteSize, unsigned _byteOffsetPos
 		<< Instruction::ADD << swapInstruction(_storageOffsetPosition);
 	// stack: X
 	// set source_byte_offset to zero if X == 1 (using source_byte_offset *= 1 - X)
-	m_context << u256(1) << Instruction::SSUB;
+	m_context << u256(1) << Instruction::SUB;
 	// stack: 1 - X
 	if (_byteOffsetPosition == 1)
 		m_context << Instruction::MUL;

@@ -27,9 +27,6 @@ When an overflow occurs, it will terminate the contract execution and report an 
 Currently, three arithmetic operations are overflow-checked: ADD, SUB and MUL.
 And overflow checking only applies for 32-byte integers.
 
-Since signed and unsigned overflow must be checked in a different method,
-each of those integer operations(ADD, SUB and MUL) divides into a signed operation and an unsigned operation.
-We see original operation(e.g. ADD) as unsigned ones and a new operation(e.g. SADD) as signed one.
 
 Note that this approach only applies for Lity's version of compiler and EVM.
 

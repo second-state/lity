@@ -394,7 +394,7 @@ bool ExpressionCompiler::visit(UnaryOperation const& _unaryOperation)
 			type.toString() +
 			".");
 		bool const c_isSigned = intType ? intType->isSigned() : fixedType->isSigned();
-		m_context << u256(0) << (c_isSigned ? Instruction::SSUB : Instruction::SUB);
+		m_context << u256(0) << Instruction::SUB;
 		break;
 	}
 	case Token::FactInsert:
