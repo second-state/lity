@@ -65,6 +65,7 @@ class IfStatement;
 class BreakableStatement;
 class WhileStatement;
 class ForStatement;
+class FireAllRulesStatement;
 class Continue;
 class Break;
 class Return;
