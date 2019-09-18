@@ -19,7 +19,7 @@
 #include <vector>
 #include <memory>
 #include <iostream>
-
+using namespace std;
 namespace dev
 {
 namespace solidity
@@ -84,6 +84,13 @@ public:
 	/// Pack ENI parameters to memory.
 	void packedToMemory();
 
+	void packedToMemoryPrepare();
+	void packedToMemoryEnd();
+
+	void appendTypePointer(TypePointer);
+	void packData(TypePointer, Expression const&);
+	void setFunctionName(const std::string &Name) { m_FunctionName = Name; }
+
 	/// Get CompilerUtils from current CompilerContext.
 	CompilerUtils utils();
 
@@ -117,6 +124,11 @@ private:
 	/// Handle identifer type of parameters
 	void handleIdentifier(IdentifierInfo&);
 
+	/// Handle literal type of parameters
+	void handleLiteralPointer(Token, std::string );
+	/// Handle identifer type of parameters
+	void handleIdentifierPointer(TypePointer);
+
 private:
 	bytes m_TypeSection;
 	bytes m_ReturnSection;
@@ -124,6 +136,7 @@ private:
 	std::string m_FunctionName;
 	/// Store literals and identifiers of ENI function parameters.
 	std::vector<ENIParameter> m_Parameters;
+	std::vector<TypePointer> m_ParameterTypes;
 	/// Use CompilerContext to access identifiers.
 	CompilerContext* m_Context;
 };
