@@ -1135,20 +1135,44 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 		{
 			m_context.eniHandler().clearENIObjects();
 			m_context.eniHandler().setContext(&m_context);
+
+			// Add all args type to Enihendler First
+			bool isFirst = true;
 			for (auto const& arg: arguments)
 			{
-				if (!arg->saveToENISection(m_context.eniHandler(), m_context)) {
-					/// Current ENI function supports the following types:
-					///		1. StringLiteral, e.g. "Hello, world!".
-					///		2. Signed or Unsigned Number(int or uint), e.g. 100.
-					///		3. Number Variable. e.g. int i = 10. eni(i).
-					///		4. String memory Variable. e.g. string memory s = "RX230". eni(s).
-					///		5. FunctionCall whose return value is listed on below.
-					solAssert(false, "Unsupported type for ENI function\n");
+				//First Param is Function name, dont push it into data
+				if( isFirst )
+				{
+					isFirst = false;
+					//TODO: Can it be identifier !?
+					auto lit = dynamic_cast<Literal const *>(&*arg);
+					
+					solAssert(lit, "Eni Function name cast error.");
+					solAssert(dynamic_cast<StringLiteralType const*>(arg->annotation().type.get()), "Eni Function name is not a string.");
+					m_context.eniHandler().setFunctionName(lit->value());
+					continue;
 				}
-				//arg->accept(*this);
+				m_context.eniHandler().appendTypePointer( arg->annotation().type );
 			}
-			m_context.eniHandler().packedToMemory();
+
+			m_context.eniHandler().packedToMemoryPrepare();
+
+			
+			isFirst = true;
+			for (auto const& arg: arguments)
+			{
+				//First Param is Function name, dont push it into data
+				if( isFirst )
+				{
+					isFirst = false;
+					continue;
+				}
+				//TODO: put arg->accept(*this) inside eniHandler to hide this for loop
+				arg->accept(*this);
+				m_context.eniHandler().packData( arg->annotation().type, *arg );
+			}
+
+			m_context.eniHandler().packedToMemoryEnd();
 			m_context.eniHandler().clearENIObjects();
 			break;
 		}
