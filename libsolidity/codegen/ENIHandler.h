@@ -72,8 +72,8 @@ public:
 	virtual ~ENIHandler() {}
 
 	/// Appends ENI function parameters
-	void appendLiteral(Token, std::string);
-	void appendIdentifier(TypePointer, Declaration const&, Expression const&);
+	void appendTypePointer(TypePointer);
+	void setFunctionName(const std::string &Name) { m_FunctionName = Name; }
 
 	/// Clear all ENI function parameters
 	void clearENIObjects();
@@ -83,11 +83,8 @@ public:
 
 	/// Pack ENI parameters to memory.
 	void packedToMemoryPrepare();
-	void packedToMemoryEnd();
-
-	void appendTypePointer(TypePointer);
 	void packData(TypePointer, Expression const&);
-	void setFunctionName(const std::string &Name) { m_FunctionName = Name; }
+	void packedToMemoryEnd();
 
 	/// Get CompilerUtils from current CompilerContext.
 	CompilerUtils utils();

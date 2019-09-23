@@ -1397,8 +1397,6 @@ public:
 
 	ExpressionAnnotation& annotation() const override;
 
-	virtual bool saveToENISection(ENIHandler&, CompilerContext&) const { return false; };
-
 	virtual void replaceChild(Expression*, ASTPointer<Expression>){}
 	virtual ASTPointer<Expression> deepCopy() const = 0;
 };
@@ -1691,8 +1689,6 @@ public:
 	{
 		return std::make_shared<MemberAccess>(location(), m_expression->deepCopy(), m_memberName);
 	}
-
-	bool saveToENISection(ENIHandler&, CompilerContext&) const override;
 private:
 	ASTPointer<Expression> m_expression;
 	ASTPointer<ASTString> m_memberName;
@@ -1761,8 +1757,6 @@ public:
 	ASTString const& name() const { return *m_name; }
 
 	virtual IdentifierAnnotation& annotation() const override;
-
-	bool saveToENISection(ENIHandler&, CompilerContext&) const override;
 
 	virtual ASTPointer<Expression> deepCopy() const override
 	{
@@ -1844,8 +1838,6 @@ public:
 	bool passesAddressChecksum() const;
 	/// @returns the checksummed version of an address (or empty string if not valid)
 	std::string getChecksummedAddress() const;
-
-	bool saveToENISection(ENIHandler&, CompilerContext&) const override;
 
 	virtual ASTPointer<Expression> deepCopy() const override
 	{

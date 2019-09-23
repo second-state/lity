@@ -1147,7 +1147,7 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 					//TODO: Can it be identifier !?
 					auto lit = dynamic_cast<Literal const *>(&*arg);
 					
-					solAssert(lit, "Eni Function name cast error.");
+					solAssert(lit, "Eni Function name cast error. It should be a String Literal");
 					solAssert(dynamic_cast<StringLiteralType const*>(arg->annotation().type.get()), "Eni Function name is not a string.");
 					m_context.eniHandler().setFunctionName(lit->value());
 					continue;
@@ -1157,7 +1157,7 @@ bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 
 			m_context.eniHandler().packedToMemoryPrepare();
 
-			
+
 			isFirst = true;
 			for (auto const& arg: arguments)
 			{
