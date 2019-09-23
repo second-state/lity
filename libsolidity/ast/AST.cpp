@@ -641,29 +641,6 @@ FireAllRulesAnnotation& FireAllRulesStatement::annotation() const
 	return dynamic_cast<FireAllRulesAnnotation&>(*m_annotation);
 }
 
-bool Identifier::saveToENISection(ENIHandler& _handler, CompilerContext& _context) const
-{
-	CompilerContext::LocationSetter locationSetter(_context, *this);
-	Declaration const* declaration = this->annotation().referencedDeclaration;
-	auto variable = dynamic_cast<VariableDeclaration const*>(declaration);
-	_handler.appendIdentifier(variable->annotation().type, *variable, static_cast<Expression const&>(*this));
-
-	if (!variable->isConstant()) {
-		/// variable is not a constant.
-		if (_context.isLocalVariable(declaration)) {
-			/// local variable
-		} else if (_context.isStateVariable(declaration)) {
-			/// state variable
-		} else {
-			solUnimplementedAssert(false, "Unsupported identifier type\n");
-		}
-	} else {
-		solUnimplementedAssert(false, "Should handler constant identifier\n");
-	}
-	_handler.setContext(&_context);
-	return true;
-}
-
 IdentifierAnnotation& Identifier::annotation() const
 {
 	if (!m_annotation)
@@ -709,13 +686,6 @@ string Literal::getChecksummedAddress() const
 		return string();
 	address.insert(address.begin(), 40 - address.size(), '0');
 	return dev::getChecksummedAddress(address);
-}
-
-bool Literal::saveToENISection(ENIHandler& _handler, CompilerContext& _context) const
-{
-	_handler.appendLiteral(m_token, *m_value);
-	_handler.setContext(&_context);
-	return true;
 }
 
 TypePointer Rule::type() const
@@ -774,30 +744,6 @@ void NewExpression::replaceChild(Expression*, ASTPointer<Expression>)
 {
 
 }
-
-bool MemberAccess::saveToENISection(ENIHandler& _handler, CompilerContext& _context) const 
-{ 
-	CompilerContext::LocationSetter locationSetter(_context, *this);
-	Declaration const* declaration = this->annotation().referencedDeclaration;
-	auto variable = dynamic_cast<VariableDeclaration const*>(declaration);
-	auto ide = std::dynamic_pointer_cast<Identifier>( m_expression );
-
-	_handler.appendIdentifier(annotation().type, *variable, static_cast<Expression const&>(*this));
-	if (!variable->isConstant()) {
-		/// variable is not a constant.
-		if (_context.isLocalVariable(ide->annotation().referencedDeclaration)) {
-			/// local variable
-		} else if (_context.isStateVariable(ide->annotation().referencedDeclaration)) {
-			/// state variable
-		} else {
-			solUnimplementedAssert(false, "Unsupported identifier type\n");
-		}
-	} else {
-		solUnimplementedAssert(false, "Should handler constant identifier\n");
-	}
-	_handler.setContext(&_context);
-	return true;
-};
 
 void MemberAccess::replaceChild(Expression *oldExp, ASTPointer<Expression> newExp)
 {

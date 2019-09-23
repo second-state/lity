@@ -250,54 +250,13 @@ void ENIHandler::handleLiteralPointer(Token token, std::string value) {
 	}
 }
 
-void ENIHandler::appendLiteral(Token pType, std::string pValue) {
-	if (m_FunctionName == "" && m_TypeSection.size() == 0) {
-		/// First parameter of ENI function is its function name.
-		m_FunctionName = pValue;
-	} else {
-		ENIParameter param;
-		param.m_Type = ENIParameterType::kLiteral;
-		param.m_LiteralInfo = LiteralInfo(pType, pValue);
-		m_TypeSection.push_back(literalTypeToString(pType));
-	}
-}
-
-void ENIHandler::appendIdentifier(TypePointer pType, Declaration const& pDeclaration, Expression const& pExpression) {
-	ENIParameter param;
-	param.m_Type = ENIParameterType::kIdentifier;
-	param.m_IdentifierInfo = IdentifierInfo(pType, &pDeclaration, &pExpression);
-	m_TypeSection.push_back(identifierTypeToString(pType));
-}
-
 void  ENIHandler::appendTypePointer(TypePointer pType)
 {
+	// Unused member.
 	m_ParameterTypes.push_back(pType);
 
 	// Make type pointer to decide how to deal with data, so it is not required to judge if it is Literal.
 	m_TypeSection.push_back(identifierTypeToString(pType));
-}
-
-void ENIHandler::clearENIObjects() {
-	m_FunctionName = std::string("");
-	m_TypeSection.clear();
-	m_ReturnSection.clear();
-}
-
-void ENIHandler::packData(TypePointer pType, Expression const &pExpr )
-{
-	// TODO: Do it exist better way to judge isLiteral?
-	const string magicWord = "literal";
-	bool isLiteral = pType->toString().substr(0, magicWord.size()) == magicWord;
-
-	if( isLiteral )
-	{
-		auto lit = dynamic_cast<Literal const *>(&pExpr);
-		handleLiteralPointer(lit->token(), lit->value());
-	}
-	else // assume it is identifier
-	{
-		handleIdentifierPointer(pType);
-	}
 }
 
 void ENIHandler::packedToMemoryPrepare() {
@@ -350,6 +309,23 @@ void ENIHandler::packedToMemoryPrepare() {
 	/// stack post: typeSectionOffset dataSectionOffset
 }
 
+void ENIHandler::packData(TypePointer pType, Expression const &pExpr )
+{
+	// TODO: Do it exist better way to judge isLiteral?
+	const string magicWord = "literal";
+	bool isLiteral = pType->toString().substr(0, magicWord.size()) == magicWord;
+
+	if( isLiteral )
+	{
+		auto lit = dynamic_cast<Literal const *>(&pExpr);
+		handleLiteralPointer(lit->token(), lit->value());
+	}
+	else // assume it is identifier
+	{
+		handleIdentifierPointer(pType);
+	}
+}
+
 void ENIHandler::packedToMemoryEnd() {
 	/// Calculate and store size of data section
 	/// stack pre: typeSectionOffset dataSectionOffset
@@ -361,6 +337,13 @@ void ENIHandler::packedToMemoryEnd() {
 	*m_Context << h256::Arith(h256(toBytes(m_FunctionName), h256::AlignLeft));
 	/// stack post: dataSectionOffset typeSectionOffset eni_function_name
 	*m_Context << Instruction::ENI;
+}
+
+void ENIHandler::clearENIObjects() {
+	m_FunctionName = std::string("");
+	m_TypeSection.clear();
+	m_ParameterTypes.clear();
+	m_ReturnSection.clear();
 }
 
 }
