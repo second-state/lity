@@ -66,7 +66,7 @@ public:
 		m_TypeSection(),
 		m_ReturnSection(),
 		m_FunctionName(),
-		m_Parameters(),
+		m_ParameterTypes(),
 		m_Context(nullptr) {}
 
 	virtual ~ENIHandler() {}
@@ -82,8 +82,6 @@ public:
 	void setContext(CompilerContext* pContext) { m_Context = pContext; }
 
 	/// Pack ENI parameters to memory.
-	void packedToMemory();
-
 	void packedToMemoryPrepare();
 	void packedToMemoryEnd();
 
@@ -120,11 +118,6 @@ private:
 	/// stack post: typeSectionOffset
 	void storeReturnSection();
 	/// Handle literal type of parameters
-	void handleLiteral(LiteralInfo&);
-	/// Handle identifer type of parameters
-	void handleIdentifier(IdentifierInfo&);
-
-	/// Handle literal type of parameters
 	void handleLiteralPointer(Token, std::string );
 	/// Handle identifer type of parameters
 	void handleIdentifierPointer(TypePointer);
@@ -135,7 +128,6 @@ private:
 	/// Store current ENI function name.
 	std::string m_FunctionName;
 	/// Store literals and identifiers of ENI function parameters.
-	std::vector<ENIParameter> m_Parameters;
 	std::vector<TypePointer> m_ParameterTypes;
 	/// Use CompilerContext to access identifiers.
 	CompilerContext* m_Context;
