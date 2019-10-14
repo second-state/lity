@@ -18,6 +18,7 @@ Everything about Ethereum Native Interface (ENI)
 
    eni-tutorial
    reverse-string
+   advanced-eni
    rsa-crypto
    json
    verify-dogecoin-block-on-travis
