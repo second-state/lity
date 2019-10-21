@@ -18,9 +18,7 @@
 #pragma once
 
 #include <libsolidity/formal/SolverInterface.h>
-
 #include <boost/noncopyable.hpp>
-
 #include <z3++.h>
 
 namespace dev
@@ -40,21 +38,29 @@ public:
 	void push() override;
 	void pop() override;
 
-	void declareFunction(std::string _name, Sort _domain, Sort _codomain) override;
-	void declareInteger(std::string _name) override;
-	void declareBool(std::string _name) override;
+	void declareVariable(std::string const& _name, Sort const& _sort) override;
 
 	void addAssertion(Expression const& _expr) override;
 	std::pair<CheckResult, std::vector<std::string>> check(std::vector<Expression> const& _expressionsToEvaluate) override;
 
-private:
 	z3::expr toZ3Expr(Expression const& _expr);
-	z3::sort z3Sort(smt::Sort _sort);
+
+	std::map<std::string, z3::expr> constants() const { return m_constants; }
+	std::map<std::string, z3::func_decl> functions() const { return m_functions; }
+
+	z3::context* context() { return &m_context; }
+
+private:
+	void declareFunction(std::string const& _name, Sort const& _sort);
+
+	z3::sort z3Sort(smt::Sort const& _sort);
+	z3::sort_vector z3Sort(std::vector<smt::SortPointer> const& _sorts);
+
+	std::map<std::string, z3::expr> m_constants;
+	std::map<std::string, z3::func_decl> m_functions;
 
 	z3::context m_context;
 	z3::solver m_solver;
-	std::map<std::string, z3::expr> m_constants;
-	std::map<std::string, z3::func_decl> m_functions;
 };
 
 }

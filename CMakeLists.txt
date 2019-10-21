@@ -1,7 +1,9 @@
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.9.0)
 
 set(ETH_CMAKE_DIR   "${CMAKE_CURRENT_LIST_DIR}/cmake"   CACHE PATH "The the path to the cmake directory")
 list(APPEND CMAKE_MODULE_PATH ${ETH_CMAKE_DIR})
+
+include(EthToolchains)
 
 # Set cmake_policies
 include(EthPolicy)
@@ -9,12 +11,19 @@ eth_policy()
 
 # project name and version should be set after cmake_policy CMP0048
 set(LITY_PROJECT_VERSION "1.2.8")
-set(SOLC_PROJECT_VERSION "0.5.0")
-project(lity VERSION ${LITY_PROJECT_VERSION})
-
+set(SOLC_PROJECT_VERSION "0.5.12")
+project(lity VERSION ${LITY_PROJECT_VERSION} LANGUAGES C CXX)
 option(LITYC_LINK_STATIC "Link lityc executable statically on supported platforms" OFF)
+
+include(TestBigEndian)
+TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
+if (IS_BIG_ENDIAN)
+	message(FATAL_ERROR "${PROJECT_NAME} currently does not support big endian systems.")
+endif()
+
+option(LLL "Build LLL" OFF)
 option(LLLC_LINK_STATIC "Link lllc executable statically on supported platforms" OFF)
-option(INSTALL_LLLC "Include lllc executable in installation" OFF)
+option(INSTALL_LLLC "Include lllc executable in installation" ${LLL})
 
 # Setup cccache.
 include(EthCcache)
@@ -45,14 +54,18 @@ include(EthOptions)
 configure_project(TESTS)
 
 add_subdirectory(libdevcore)
+add_subdirectory(liblangutil)
 add_subdirectory(libevmasm)
+add_subdirectory(libyul)
 add_subdirectory(libsolidity)
 add_subdirectory(liblityc)
 
 if (NOT EMSCRIPTEN)
 	add_subdirectory(lityc)
-	add_subdirectory(liblll)
-	add_subdirectory(lllc)
+	if (LLL)
+		add_subdirectory(liblll)
+		add_subdirectory(lllc)
+	endif()
 endif()
 
 if (TESTS AND NOT EMSCRIPTEN)

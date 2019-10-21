@@ -19,7 +19,11 @@
  * @date 2014
  */
 
-#include "CommonIO.h"
+#include <libdevcore/CommonIO.h>
+#include <libdevcore/Assertions.h>
+
+#include <boost/filesystem.hpp>
+
 #include <iostream>
 #include <cstdlib>
 #include <fstream>
@@ -29,8 +33,6 @@
 #include <unistd.h>
 #include <termios.h>
 #endif
-#include <boost/filesystem.hpp>
-#include "Assertions.h"
 
 using namespace std;
 using namespace dev;
@@ -126,26 +128,6 @@ int dev::readStandardInputChar()
 {
 	DisableConsoleBuffering disableConsoleBuffering;
 	return cin.get();
-}
-
-boost::filesystem::path dev::weaklyCanonicalFilesystemPath(boost::filesystem::path const &_path)
-{
-	if (boost::filesystem::exists(_path))
-		return boost::filesystem::canonical(_path);
-	else
-	{
-		boost::filesystem::path head(_path);
-		boost::filesystem::path tail;
-		for (auto it = --_path.end(); !head.empty(); --it)
-		{
-			if (boost::filesystem::exists(head))
-				break;
-			tail = (*it) / tail;
-			head.remove_filename();
-		}
-		head = boost::filesystem::canonical(head);
-		return head / tail;
-	}
 }
 
 string dev::absolutePath(string const& _path, string const& _reference)

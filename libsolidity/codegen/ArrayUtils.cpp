@@ -21,16 +21,21 @@
  */
 
 #include <libsolidity/codegen/ArrayUtils.h>
-#include <libevmasm/Instruction.h>
+
+#include <libsolidity/ast/Types.h>
+#include <libsolidity/ast/TypeProvider.h>
 #include <libsolidity/codegen/CompilerContext.h>
 #include <libsolidity/codegen/CompilerUtils.h>
-#include <libsolidity/ast/Types.h>
-#include <libsolidity/interface/Exceptions.h>
 #include <libsolidity/codegen/LValue.h>
+
+#include <libevmasm/Instruction.h>
+#include <liblangutil/Exceptions.h>
 
 using namespace std;
 using namespace dev;
-using namespace solidity;
+using namespace dev::eth;
+using namespace langutil;
+using namespace dev::solidity;
 
 void ArrayUtils::copyArrayToStorage(ArrayType const& _targetType, ArrayType const& _sourceType) const
 {
@@ -40,7 +45,7 @@ void ArrayUtils::copyArrayToStorage(ArrayType const& _targetType, ArrayType cons
 	// stack layout: [source_ref] [source length] target_ref (top)
 	solAssert(_targetType.location() == DataLocation::Storage, "");
 
-	TypePointer uint256 = make_shared<IntegerType>(256);
+	TypePointer uint256 = TypeProvider::uint256();
 	TypePointer targetBaseType = _targetType.isByteArray() ? uint256 : _targetType.baseType();
 	TypePointer sourceBaseType = _sourceType.isByteArray() ? uint256 : _sourceType.baseType();
 
@@ -70,8 +75,8 @@ void ArrayUtils::copyArrayToStorage(ArrayType const& _targetType, ArrayType cons
 	}
 
 	// stack: target_ref source_ref source_length
-	TypePointer targetType = _targetType.shared_from_this();
-	TypePointer sourceType = _sourceType.shared_from_this();
+	TypePointer targetType = &_targetType;
+	TypePointer sourceType = &_sourceType;
 	m_context.callLowLevelFunction(
 		"$copyArrayToStorage_" + sourceType->identifier() + "_to_" + targetType->identifier(),
 		3,
@@ -238,7 +243,7 @@ void ArrayUtils::copyArrayToStorage(ArrayType const& _targetType, ArrayType cons
 				else if (_sourceType.location() == DataLocation::Memory)
 					_context << sourceBaseType->memoryHeadSize();
 				else
-					_context << sourceBaseType->calldataEncodedSize(true);
+					_context << sourceBaseType->calldataHeadSize();
 				_context
 					<< Instruction::ADD
 					<< swapInstruction(2 + byteOffsetSize);
@@ -289,20 +294,13 @@ void ArrayUtils::copyArrayToMemory(ArrayType const& _sourceType, bool _padToWord
 		"Nested dynamic arrays not implemented here."
 	);
 	CompilerUtils utils(m_context);
-	unsigned baseSize = 1;
-	if (!_sourceType.isByteArray())
-	{
-		// We always pad the elements, regardless of _padToWordBoundaries.
-		baseSize = _sourceType.baseType()->calldataEncodedSize();
-		solAssert(baseSize >= 0x20, "");
-	}
 
 	if (_sourceType.location() == DataLocation::CallData)
 	{
 		if (!_sourceType.isDynamicallySized())
 			m_context << _sourceType.length();
-		if (baseSize > 1)
-			m_context << u256(baseSize) << Instruction::MUL;
+		if (!_sourceType.isByteArray())
+			convertLengthToSize(_sourceType);
 
 		string routine = "calldatacopy(target, source, len)\n";
 		if (_padToWordBoundaries)
@@ -332,7 +330,7 @@ void ArrayUtils::copyArrayToMemory(ArrayType const& _sourceType, bool _padToWord
 			m_context << Instruction::DUP3 << Instruction::DUP5;
 			accessIndex(_sourceType, false);
 			MemoryItem(m_context, *_sourceType.baseType(), true).retrieveValue(SourceLocation(), true);
-			if (auto baseArray = dynamic_cast<ArrayType const*>(_sourceType.baseType().get()))
+			if (auto baseArray = dynamic_cast<ArrayType const*>(_sourceType.baseType()))
 				copyArrayToMemory(*baseArray, _padToWordBoundaries);
 			else
 				utils.storeInMemoryDynamic(*_sourceType.baseType());
@@ -353,15 +351,14 @@ void ArrayUtils::copyArrayToMemory(ArrayType const& _sourceType, bool _padToWord
 			m_context << Instruction::SWAP1 << u256(32) << Instruction::ADD;
 			m_context << Instruction::SWAP1;
 		}
-		// convert length to size
-		if (baseSize > 1)
-			m_context << u256(baseSize) << Instruction::MUL;
+		if (!_sourceType.isByteArray())
+			convertLengthToSize(_sourceType);
 		// stack: <target> <source> <size>
 		m_context << Instruction::DUP1 << Instruction::DUP4 << Instruction::DUP4;
 		// We can resort to copying full 32 bytes only if
 		// - the length is known to be a multiple of 32 or
 		// - we will pad to full 32 bytes later anyway.
-		if (((baseSize % 32) == 0) || _padToWordBoundaries)
+		if (!_sourceType.isByteArray() || _padToWordBoundaries)
 			utils.memoryCopy32();
 		else
 			utils.memoryCopy();
@@ -369,11 +366,8 @@ void ArrayUtils::copyArrayToMemory(ArrayType const& _sourceType, bool _padToWord
 		m_context << Instruction::SWAP1 << Instruction::POP;
 		// stack: <target> <size>
 
-		bool paddingNeeded = false;
-		if (_sourceType.isDynamicallySized())
-			paddingNeeded = _padToWordBoundaries && ((baseSize % 32) != 0);
-		else
-			paddingNeeded = _padToWordBoundaries && (((_sourceType.length() * baseSize) % 32) != 0);
+		bool paddingNeeded = _padToWordBoundaries && _sourceType.isByteArray();
+
 		if (paddingNeeded)
 		{
 			// stack: <target> <size>
@@ -450,10 +444,10 @@ void ArrayUtils::copyArrayToMemory(ArrayType const& _sourceType, bool _padToWord
 			m_context.appendJumpTo(loopEnd);
 			m_context << longByteArray;
 		}
-		// compute memory end offset
-		if (baseSize > 1)
+		else
 			// convert length to memory size
-			m_context << u256(baseSize) << Instruction::MUL;
+			m_context << _sourceType.baseType()->memoryHeadSize() << Instruction::MUL;
+
 		m_context << Instruction::DUP3 << Instruction::ADD << Instruction::SWAP2;
 		if (_sourceType.isDynamicallySized())
 		{
@@ -489,7 +483,7 @@ void ArrayUtils::copyArrayToMemory(ArrayType const& _sourceType, bool _padToWord
 			else
 				m_context << Instruction::DUP2 << u256(0);
 			StorageItem(m_context, *_sourceType.baseType()).retrieveValue(SourceLocation(), true);
-			if (auto baseArray = dynamic_cast<ArrayType const*>(_sourceType.baseType().get()))
+			if (auto baseArray = dynamic_cast<ArrayType const*>(_sourceType.baseType()))
 				copyArrayToMemory(*baseArray, _padToWordBoundaries);
 			else
 				utils.storeInMemoryDynamic(*_sourceType.baseType());
@@ -510,7 +504,12 @@ void ArrayUtils::copyArrayToMemory(ArrayType const& _sourceType, bool _padToWord
 		// stack here: memory_end_offset storage_data_offset [storage_byte_offset] memory_offset
 		if (haveByteOffset)
 			m_context << Instruction::SWAP1 << Instruction::POP;
-		if (_padToWordBoundaries && baseSize % 32 != 0)
+		if (!_sourceType.isByteArray())
+		{
+			solAssert(_sourceType.calldataStride() % 32 == 0, "");
+			solAssert(_sourceType.memoryStride() % 32 == 0, "");
+		}
+		if (_padToWordBoundaries && _sourceType.isByteArray())
 		{
 			// memory_end_offset - start is the actual length (we want to compute the ceil of).
 			// memory_offset - start is its next multiple of 32, but it might be off by 32.
@@ -526,7 +525,7 @@ void ArrayUtils::copyArrayToMemory(ArrayType const& _sourceType, bool _padToWord
 
 void ArrayUtils::clearArray(ArrayType const& _typeIn) const
 {
-	TypePointer type = _typeIn.shared_from_this();
+	TypePointer type = &_typeIn;
 	m_context.callLowLevelFunction(
 		"$clearArray_" + _typeIn.identifier(),
 		2,
@@ -580,7 +579,7 @@ void ArrayUtils::clearArray(ArrayType const& _typeIn) const
 				ArrayUtils(_context).convertLengthToSize(_type);
 				_context << Instruction::ADD << Instruction::SWAP1;
 				if (_type.baseType()->storageBytes() < 32)
-					ArrayUtils(_context).clearStorageLoop(make_shared<IntegerType>(256));
+					ArrayUtils(_context).clearStorageLoop(TypeProvider::uint256());
 				else
 					ArrayUtils(_context).clearStorageLoop(_type.baseType());
 				_context << Instruction::POP;
@@ -620,8 +619,8 @@ void ArrayUtils::clearDynamicArray(ArrayType const& _type) const
 	m_context << Instruction::SWAP1 << Instruction::DUP2 << Instruction::ADD
 		<< Instruction::SWAP1;
 	// stack: data_pos_end data_pos
-	if (_type.isByteArray() || _type.baseType()->storageBytes() < 32)
-		clearStorageLoop(make_shared<IntegerType>(256));
+	if (_type.storageStride() < 32)
+		clearStorageLoop(TypeProvider::uint256());
 	else
 		clearStorageLoop(_type.baseType());
 	// cleanup
@@ -631,7 +630,7 @@ void ArrayUtils::clearDynamicArray(ArrayType const& _type) const
 
 void ArrayUtils::resizeDynamicArray(ArrayType const& _typeIn) const
 {
-	TypePointer type = _typeIn.shared_from_this();
+	TypePointer type = &_typeIn;
 	m_context.callLowLevelFunction(
 		"$resizeDynamicArray_" + _typeIn.identifier(),
 		2,
@@ -728,7 +727,7 @@ void ArrayUtils::resizeDynamicArray(ArrayType const& _typeIn) const
 				ArrayUtils(_context).convertLengthToSize(_type);
 				_context << Instruction::DUP2 << Instruction::ADD << Instruction::SWAP1;
 				// stack: ref new_length current_length first_word data_location_end data_location
-				ArrayUtils(_context).clearStorageLoop(make_shared<IntegerType>(256));
+				ArrayUtils(_context).clearStorageLoop(TypeProvider::uint256());
 				_context << Instruction::POP;
 				// stack: ref new_length current_length first_word
 				solAssert(_context.stackHeight() - stackHeightStart == 4 - 2, "3");
@@ -766,8 +765,8 @@ void ArrayUtils::resizeDynamicArray(ArrayType const& _typeIn) const
 			// stack: ref new_length data_pos new_size delete_end
 			_context << Instruction::SWAP2 << Instruction::ADD;
 			// stack: ref new_length delete_end delete_start
-			if (_type.isByteArray() || _type.baseType()->storageBytes() < 32)
-				ArrayUtils(_context).clearStorageLoop(make_shared<IntegerType>(256));
+			if (_type.storageStride() < 32)
+				ArrayUtils(_context).clearStorageLoop(TypeProvider::uint256());
 			else
 				ArrayUtils(_context).clearStorageLoop(_type.baseType());
 
@@ -897,17 +896,22 @@ void ArrayUtils::popStorageArrayElement(ArrayType const& _type) const
 		// Stack: ArrayReference oldLength
 		m_context << u256(1) << Instruction::SWAP1 << Instruction::SUB;
 		// Stack ArrayReference newLength
-		m_context << Instruction::DUP2 << Instruction::DUP2;
-		// Stack ArrayReference newLength ArrayReference newLength;
-		accessIndex(_type, false);
-		// Stack: ArrayReference newLength storage_slot byte_offset
-		StorageItem(m_context, *_type.baseType()).setToZero(SourceLocation(), true);
+
+		if (_type.baseType()->category() != Type::Category::Mapping)
+		{
+			m_context << Instruction::DUP2 << Instruction::DUP2;
+			// Stack ArrayReference newLength ArrayReference newLength;
+			accessIndex(_type, false);
+			// Stack: ArrayReference newLength storage_slot byte_offset
+			StorageItem(m_context, *_type.baseType()).setToZero(SourceLocation(), true);
+		}
+
 		// Stack: ArrayReference newLength
 		m_context << Instruction::SWAP1 << Instruction::SSTORE;
 	}
 }
 
-void ArrayUtils::clearStorageLoop(TypePointer const& _type) const
+void ArrayUtils::clearStorageLoop(TypePointer _type) const
 {
 	m_context.callLowLevelFunction(
 		"$clearStorageLoop_" + _type->identifier(),
@@ -931,8 +935,11 @@ void ArrayUtils::clearStorageLoop(TypePointer const& _type) const
 			eth::AssemblyItem loopStart = _context.appendJumpToNew();
 			_context << loopStart;
 			// check for loop condition
-			_context << Instruction::DUP1 << Instruction::DUP3
-					   << Instruction::GT << Instruction::ISZERO;
+			_context <<
+				Instruction::DUP1 <<
+				Instruction::DUP3 <<
+				Instruction::GT <<
+				Instruction::ISZERO;
 			eth::AssemblyItem zeroLoopEnd = _context.newTag();
 			_context.appendConditionalJumpTo(zeroLoopEnd);
 			// delete
@@ -979,9 +986,9 @@ void ArrayUtils::convertLengthToSize(ArrayType const& _arrayType, bool _pad) con
 		if (!_arrayType.isByteArray())
 		{
 			if (_arrayType.location() == DataLocation::Memory)
-				m_context << _arrayType.baseType()->memoryHeadSize();
+				m_context << _arrayType.memoryStride();
 			else
-				m_context << _arrayType.baseType()->calldataEncodedSize();
+				m_context << _arrayType.calldataStride();
 			m_context << Instruction::MUL;
 		}
 		else if (_pad)
@@ -1024,7 +1031,7 @@ void ArrayUtils::retrieveLength(ArrayType const& _arrayType, unsigned _stackDept
 	}
 }
 
-void ArrayUtils::accessIndex(ArrayType const& _arrayType, bool _doBoundsCheck) const
+void ArrayUtils::accessIndex(ArrayType const& _arrayType, bool _doBoundsCheck, bool _keepReference) const
 {
 	/// Stack: reference [length] index
 	DataLocation location = _arrayType.location();
@@ -1044,28 +1051,37 @@ void ArrayUtils::accessIndex(ArrayType const& _arrayType, bool _doBoundsCheck) c
 		m_context << Instruction::SWAP1 << Instruction::POP;
 
 	// stack: <base_ref> <index>
-	m_context << Instruction::SWAP1;
-	// stack: <index> <base_ref>
 	switch (location)
 	{
 	case DataLocation::Memory:
-	case DataLocation::CallData:
-		if (location == DataLocation::Memory && _arrayType.isDynamicallySized())
+		// stack: <base_ref> <index>
+		if (!_arrayType.isByteArray())
+			m_context << u256(_arrayType.memoryHeadSize()) << Instruction::MUL;
+		if (_arrayType.isDynamicallySized())
 			m_context << u256(32) << Instruction::ADD;
-
+		if (_keepReference)
+			m_context << Instruction::DUP2;
+		m_context << Instruction::ADD;
+		break;
+	case DataLocation::CallData:
 		if (!_arrayType.isByteArray())
 		{
-			m_context << Instruction::SWAP1;
-			if (location == DataLocation::CallData)
-				m_context << _arrayType.baseType()->calldataEncodedSize();
-			else
-				m_context << u256(_arrayType.memoryHeadSize());
+			m_context << _arrayType.calldataStride();
 			m_context << Instruction::MUL;
 		}
+		// stack: <base_ref> <index * size>
+		if (_keepReference)
+			m_context << Instruction::DUP2;
 		m_context << Instruction::ADD;
 		break;
 	case DataLocation::Storage:
 	{
+		if (_keepReference)
+			m_context << Instruction::DUP2;
+		else
+			m_context << Instruction::SWAP1;
+		// stack: [<base_ref>] <index> <base_ref>
+
 		eth::AssemblyItem endTag = m_context.newTag();
 		if (_arrayType.isByteArray())
 		{
@@ -1108,6 +1124,50 @@ void ArrayUtils::accessIndex(ArrayType const& _arrayType, bool _doBoundsCheck) c
 		m_context << endTag;
 		break;
 	}
+	}
+}
+
+void ArrayUtils::accessCallDataArrayElement(ArrayType const& _arrayType, bool _doBoundsCheck) const
+{
+	solAssert(_arrayType.location() == DataLocation::CallData, "");
+	if (_arrayType.baseType()->isDynamicallyEncoded())
+	{
+		// stack layout: <base_ref> <length> <index>
+		ArrayUtils(m_context).accessIndex(_arrayType, _doBoundsCheck, true);
+		// stack layout: <base_ref> <ptr_to_tail>
+
+		CompilerUtils(m_context).accessCalldataTail(*_arrayType.baseType());
+		// stack layout: <tail_ref> [length]
+	}
+	else
+	{
+		ArrayUtils(m_context).accessIndex(_arrayType, _doBoundsCheck);
+		if (_arrayType.baseType()->isValueType())
+		{
+			solAssert(_arrayType.baseType()->storageBytes() <= 32, "");
+			if (
+				!_arrayType.isByteArray() &&
+				_arrayType.baseType()->storageBytes() < 32 &&
+				m_context.experimentalFeatureActive(ExperimentalFeature::ABIEncoderV2)
+			)
+			{
+				m_context << u256(32);
+				CompilerUtils(m_context).abiDecodeV2({_arrayType.baseType()}, false);
+			}
+			else
+				CompilerUtils(m_context).loadFromMemoryDynamic(
+					*_arrayType.baseType(),
+					true,
+					!_arrayType.isByteArray(),
+					false
+				);
+		}
+		else
+			solAssert(
+				_arrayType.baseType()->category() == Type::Category::Struct ||
+				_arrayType.baseType()->category() == Type::Category::Array,
+				"Invalid statically sized non-value base type on array access."
+			);
 	}
 }
 

@@ -19,17 +19,18 @@
  * @date 2014
  */
 
-#include "./Instruction.h"
+#include <libevmasm/Instruction.h>
 
-#include <algorithm>
-#include <functional>
 #include <libdevcore/Common.h>
 #include <libdevcore/CommonIO.h>
+#include <algorithm>
+#include <functional>
+
 using namespace std;
 using namespace dev;
-using namespace dev::solidity;
+using namespace dev::eth;
 
-const std::map<std::string, Instruction> dev::solidity::c_instructions =
+std::map<std::string, Instruction> const dev::eth::c_instructions =
 {
 	{ "STOP", Instruction::STOP },
 	{ "ADD", Instruction::ADD },
@@ -88,6 +89,8 @@ const std::map<std::string, Instruction> dev::solidity::c_instructions =
 	{ "NUMBER", Instruction::NUMBER },
 	{ "DIFFICULTY", Instruction::DIFFICULTY },
 	{ "GASLIMIT", Instruction::GASLIMIT },
+	{ "CHAINID", Instruction::CHAINID },
+	{ "SELFBALANCE", Instruction::SELFBALANCE },
 	{ "POP", Instruction::POP },
 	{ "MLOAD", Instruction::MLOAD },
 	{ "MSTORE", Instruction::MSTORE },
@@ -181,7 +184,7 @@ const std::map<std::string, Instruction> dev::solidity::c_instructions =
 	{ "SELFDESTRUCT", Instruction::SELFDESTRUCT }
 };
 
-static const std::map<Instruction, InstructionInfo> c_instructionInfo =
+static std::map<Instruction, InstructionInfo> const c_instructionInfo =
 { //												Add, Args, Ret, SideEffects, GasPriceTier
 	{ Instruction::STOP,		{ "STOP",			0, 0, 0, true,  Tier::Zero } },
 	{ Instruction::ADD,			{ "ADD",			0, 2, 1, false, Tier::VeryLow } },
@@ -240,6 +243,8 @@ static const std::map<Instruction, InstructionInfo> c_instructionInfo =
 	{ Instruction::NUMBER,		{ "NUMBER",			0, 0, 1, false, Tier::Base } },
 	{ Instruction::DIFFICULTY,	{ "DIFFICULTY",		0, 0, 1, false, Tier::Base } },
 	{ Instruction::GASLIMIT,	{ "GASLIMIT",		0, 0, 1, false, Tier::Base } },
+	{ Instruction::CHAINID,		{ "CHAINID",		0, 0, 1, false, Tier::Base } },
+	{ Instruction::SELFBALANCE,	{ "SELFBALANCE",	0, 0, 1, false, Tier::Low } },
 	{ Instruction::POP,			{ "POP",			0, 1, 0, false, Tier::Base } },
 	{ Instruction::MLOAD,		{ "MLOAD",			0, 1, 1, true, Tier::VeryLow } },
 	{ Instruction::MSTORE,		{ "MSTORE",			0, 2, 0, true, Tier::VeryLow } },
@@ -333,7 +338,7 @@ static const std::map<Instruction, InstructionInfo> c_instructionInfo =
 	{ Instruction::SELFDESTRUCT,	{ "SELFDESTRUCT",		0, 1, 0, true, Tier::Special } }
 };
 
-void dev::solidity::eachInstruction(
+void dev::eth::eachInstruction(
 	bytes const& _mem,
 	function<void(Instruction,u256 const&)> const& _onInstruction
 )
@@ -362,7 +367,7 @@ void dev::solidity::eachInstruction(
 	}
 }
 
-string dev::solidity::disassemble(bytes const& _mem)
+string dev::eth::disassemble(bytes const& _mem)
 {
 	stringstream ret;
 	eachInstruction(_mem, [&](Instruction _instr, u256 const& _data) {
@@ -379,7 +384,7 @@ string dev::solidity::disassemble(bytes const& _mem)
 	return ret.str();
 }
 
-InstructionInfo dev::solidity::instructionInfo(Instruction _inst)
+InstructionInfo dev::eth::instructionInfo(Instruction _inst)
 {
 	try
 	{
@@ -391,7 +396,7 @@ InstructionInfo dev::solidity::instructionInfo(Instruction _inst)
 	}
 }
 
-bool dev::solidity::isValidInstruction(Instruction _inst)
+bool dev::eth::isValidInstruction(Instruction _inst)
 {
 	return !!c_instructionInfo.count(_inst);
 }

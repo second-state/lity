@@ -20,20 +20,19 @@
  */
 #pragma once
 
-#include <libyul/ASTDataForward.h>
+#include <libyul/AsmDataForward.h>
 
 #include <libyul/optimiser/ASTWalker.h>
 #include <libyul/optimiser/NameDispenser.h>
 
 #include <vector>
 
-namespace dev
-{
 namespace yul
 {
 
 class NameCollector;
-
+struct Dialect;
+struct OptimiserStepContext;
 
 /**
  * Optimiser component that modifies an AST in place, turning complex
@@ -59,18 +58,21 @@ class NameCollector;
 class ExpressionSplitter: public ASTModifier
 {
 public:
-	explicit ExpressionSplitter(NameDispenser& _nameDispenser):
-		m_nameDispenser(_nameDispenser)
-	{ }
+	static constexpr char const* name{"ExpressionSplitter"};
+	static void run(OptimiserStepContext&, Block& _ast);
 
-	virtual void operator()(FunctionalInstruction&) override;
-	virtual void operator()(FunctionCall&) override;
-	virtual void operator()(If&) override;
-	virtual void operator()(Switch&) override;
-	virtual void operator()(ForLoop&) override;
-	virtual void operator()(Block& _block) override;
+	void operator()(FunctionalInstruction&) override;
+	void operator()(FunctionCall&) override;
+	void operator()(If&) override;
+	void operator()(Switch&) override;
+	void operator()(ForLoop&) override;
+	void operator()(Block& _block) override;
 
 private:
+	explicit ExpressionSplitter(Dialect const& _dialect, NameDispenser& _nameDispenser):
+		m_dialect(_dialect), m_nameDispenser(_nameDispenser)
+	{ }
+
 	/// Replaces the expression by a variable if it is a function call or functional
 	/// instruction. The declaration of the variable is appended to m_statementsToPrefix.
 	/// Recurses via visit().
@@ -79,8 +81,8 @@ private:
 	/// List of statements that should go in front of the currently visited AST element,
 	/// at the statement level.
 	std::vector<Statement> m_statementsToPrefix;
+	Dialect const& m_dialect;
 	NameDispenser& m_nameDispenser;
 };
 
-}
 }

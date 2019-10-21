@@ -19,7 +19,7 @@
  * Performs local optimising code changes to assembly.
  */
 
-#include "PeepholeOptimiser.h"
+#include <libevmasm/PeepholeOptimiser.h>
 
 #include <libevmasm/AssemblyItem.h>
 #include <libevmasm/SemanticInformation.h>
@@ -43,6 +43,14 @@ struct OptimiserState
 template <class Method, size_t Arguments>
 struct ApplyRule
 {
+};
+template <class Method>
+struct ApplyRule<Method, 4>
+{
+	static bool applyRule(AssemblyItems::const_iterator _in, std::back_insert_iterator<AssemblyItems> _out)
+	{
+		return Method::applySimple(_in[0], _in[1], _in[2], _in[3], _out);
+	}
 };
 template <class Method>
 struct ApplyRule<Method, 3>
@@ -160,8 +168,7 @@ struct CommutativeSwap: SimplePeepholeOptimizerMethod<CommutativeSwap, 2>
 	{
 		// Remove SWAP1 if following instruction is commutative
 		if (
-			_swap.type() == Operation &&
-			_swap.instruction() == Instruction::SWAP1 &&
+			_swap == Instruction::SWAP1 &&
 			SemanticInformation::isCommutativeOperation(_op)
 		)
 		{
@@ -177,7 +184,7 @@ struct SwapComparison: SimplePeepholeOptimizerMethod<SwapComparison, 2>
 {
 	static bool applySimple(AssemblyItem const& _swap, AssemblyItem const& _op, std::back_insert_iterator<AssemblyItems> _out)
 	{
-		map<Instruction, Instruction> swappableOps{
+		static map<Instruction, Instruction> const swappableOps{
 			{ Instruction::LT, Instruction::GT },
 			{ Instruction::GT, Instruction::LT },
 			{ Instruction::SLT, Instruction::SGT },
@@ -185,13 +192,38 @@ struct SwapComparison: SimplePeepholeOptimizerMethod<SwapComparison, 2>
 		};
 
 		if (
-			_swap.type() == Operation &&
-			_swap.instruction() == Instruction::SWAP1 &&
+			_swap == Instruction::SWAP1 &&
 			_op.type() == Operation &&
 			swappableOps.count(_op.instruction())
 		)
 		{
 			*_out = swappableOps.at(_op.instruction());
+			return true;
+		}
+		else
+			return false;
+	}
+};
+
+struct IsZeroIsZeroJumpI: SimplePeepholeOptimizerMethod<IsZeroIsZeroJumpI, 4>
+{
+	static size_t applySimple(
+		AssemblyItem const& _iszero1,
+		AssemblyItem const& _iszero2,
+		AssemblyItem const& _pushTag,
+		AssemblyItem const& _jumpi,
+		std::back_insert_iterator<AssemblyItems> _out
+	)
+	{
+		if (
+			_iszero1 == Instruction::ISZERO &&
+			_iszero2 == Instruction::ISZERO &&
+			_pushTag.type() == PushTag &&
+			_jumpi == Instruction::JUMPI
+		)
+		{
+			*_out = _pushTag;
+			*_out = _jumpi;
 			return true;
 		}
 		else
@@ -322,7 +354,12 @@ bool PeepholeOptimiser::optimise()
 {
 	OptimiserState state {m_items, 0, std::back_inserter(m_optimisedItems)};
 	while (state.i < m_items.size())
-		applyMethods(state, PushPop(), OpPop(), DoublePush(), DoubleSwap(), CommutativeSwap(), SwapComparison(), JumpToNext(), UnreachableCode(), TagConjunctions(), TruthyAnd(), Identity());
+		applyMethods(
+			state,
+			PushPop(), OpPop(), DoublePush(), DoubleSwap(), CommutativeSwap(), SwapComparison(),
+			IsZeroIsZeroJumpI(), JumpToNext(), UnreachableCode(),
+			TagConjunctions(), TruthyAnd(), Identity()
+		);
 	if (m_optimisedItems.size() < m_items.size() || (
 		m_optimisedItems.size() == m_items.size() && (
 			eth::bytesRequired(m_optimisedItems, 3) < eth::bytesRequired(m_items, 3) ||

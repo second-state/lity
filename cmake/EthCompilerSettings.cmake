@@ -24,10 +24,6 @@ endif()
 eth_add_cxx_compiler_flag_if_supported(-Wimplicit-fallthrough)
 
 if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
-
-	# Use ISO C++11 standard language.
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-
 	# Enables all the warnings about constructions that some users consider questionable,
 	# and that are easy to avoid.  Also enable some extra warning flags that are not
 	# enabled by -Wall.   Finally, treat at warnings-as-errors, which forces developers
@@ -37,19 +33,19 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
 	add_compile_options(-Werror)
 
 	# Configuration-specific compiler settings.
-	set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g -DETH_DEBUG")
+	set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g3 -DETH_DEBUG")
 	set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os -DNDEBUG")
 	set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
-	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
+	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g3")
 
 	# Additional GCC-specific compiler settings.
 	if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
 
-		# Check that we've got GCC 4.7 or newer.
+		# Check that we've got GCC 5.0 or newer.
 		execute_process(
 			COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
-		if (NOT (GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL 4.7))
-			message(FATAL_ERROR "${PROJECT_NAME} requires g++ 4.7 or greater.")
+		if (NOT (GCC_VERSION VERSION_GREATER 5.0 OR GCC_VERSION VERSION_EQUAL 5.0))
+			message(FATAL_ERROR "${PROJECT_NAME} requires g++ 5.0 or greater.")
 		endif ()
 
 	# Additional Clang-specific compiler settings.
@@ -58,6 +54,12 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
 			# Set stack size to 32MB - by default Apple's clang defines a stack size of 8MB.
 			# Normally 16MB is enough to run all tests, but it will exceed the stack, if -DSANITIZE=address is used.
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-stack_size -Wl,0x2000000")
+
+			# Boost libraries use visibility=hidden to reduce unnecessary DWARF entries.
+			# Unless we match visibility, ld will give a warning message like:
+			#   ld: warning: direct access in function 'boost::filesystem... from file ...
+			#   means the weak symbol cannot be overridden at runtime. This was likely caused by different translation units being compiled with different visibility settings.
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 		endif()
 
 		# Some Linux-specific Clang settings.  We don't want these for OS X.
@@ -78,10 +80,7 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
 			# into errors, which makes sense.
 			# http://stackoverflow.com/questions/21617158/how-to-silence-unused-command-line-argument-error-with-clang-without-disabling-i
 			add_compile_options(-Qunused-arguments)
-		endif()
-
-		if (EMSCRIPTEN)
-			# Do not emit a separate memory initialiser file
+		elseif(EMSCRIPTEN)
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --memory-init-file 0")
 			# Leave only exported symbols as public and aggressively remove others
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdata-sections -ffunction-sections -Wl,--gc-sections -fvisibility=hidden")
@@ -104,7 +103,13 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
 			# Abort if linking results in any undefined symbols
 			# Note: this is on by default in the CMake Emscripten module which we aren't using
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s ERROR_ON_UNDEFINED_SYMBOLS=1")
-			add_definitions(-DETH_EMSCRIPTEN=1)
+			# Disallow deprecated emscripten build options.
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s STRICT=1")
+			# Export the Emscripten-generated auxiliary methods which are needed by solc-js.
+			# Which methods of libsolc itself are exported is specified in libsolc/CMakeLists.txt.
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s EXTRA_EXPORTED_RUNTIME_METHODS=['cwrap','addFunction','removeFunction','Pointer_stringify','lengthBytesUTF8','_malloc','stringToUTF8','setValue']")
+			# Do not build as a WebAssembly target - we need an asm.js output.
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s WASM=0")
 		endif()
 	endif()
 
@@ -124,6 +129,7 @@ elseif (DEFINED MSVC)
 	add_compile_options(/wd4800)					# disable forcing value to bool 'true' or 'false' (performance warning) (4800)
 	add_compile_options(-D_WIN32_WINNT=0x0600)		# declare Windows Vista API requirement
 	add_compile_options(-DNOMINMAX)					# undefine windows.h MAX && MIN macros cause it cause conflicts with std::min && std::max functions
+	add_compile_options(/utf-8)					# enable utf-8 encoding (solves warning 4819)
 
 	# disable empty object file warning
 	set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /ignore:4221")
@@ -138,7 +144,13 @@ else ()
 endif ()
 
 if (SANITIZE)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=${SANITIZE}")
+	# Perform case-insensitive string compare
+	string(TOLOWER "${SANITIZE}" san)
+	# -fno-omit-frame-pointer gives more informative stack trace in case of an error
+	# -fsanitize-address-use-after-scope throws an error when a variable is used beyond its scope
+	if (san STREQUAL "address")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=address -fsanitize-address-use-after-scope")
+	endif()
 endif()
 
 # Code coverage support.
@@ -166,9 +178,8 @@ option(USE_CVC4 "Allow compiling with CVC4 SMT solver integration" ON)
 if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
 	option(USE_LD_GOLD "Use GNU gold linker" ON)
 	if (USE_LD_GOLD)
-		execute_process(COMMAND ${CMAKE_C_COMPILER} -fuse-ld=gold -Wl,--version ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
+		execute_process(COMMAND ${CMAKE_CXX_COMPILER} -fuse-ld=gold -Wl,--version ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
 		if ("${LD_VERSION}" MATCHES "GNU gold")
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fuse-ld=gold")
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fuse-ld=gold")
 		endif ()
 	endif ()

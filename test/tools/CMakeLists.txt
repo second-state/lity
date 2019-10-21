@@ -1,10 +1,39 @@
-add_executable(solfuzzer fuzzer.cpp)
-target_link_libraries(solfuzzer PRIVATE liblityc evmasm ${Boost_PROGRAM_OPTIONS_LIBRARIES} ${Boost_SYSTEM_LIBRARIES})
+add_subdirectory(ossfuzz)
+
+add_subdirectory(yulInterpreter)
+add_executable(yulrun yulrun.cpp)
+target_link_libraries(yulrun PRIVATE yulInterpreter liblityc evmasm Boost::boost Boost::program_options)
+
+add_executable(solfuzzer afl_fuzzer.cpp fuzzer_common.cpp)
+target_link_libraries(solfuzzer PRIVATE liblityc evmasm Boost::boost Boost::program_options Boost::system)
 
 add_executable(yulopti yulopti.cpp)
-target_link_libraries(yulopti PRIVATE lity ${Boost_PROGRAM_OPTIONS_LIBRARIES} ${Boost_SYSTEM_LIBRARIES})
+target_link_libraries(yulopti PRIVATE lity Boost::boost Boost::program_options Boost::system)
 
-add_executable(isoltest isoltest.cpp ../Options.cpp ../Common.cpp ../libsolidity/TestCase.cpp ../libsolidity/SyntaxTest.cpp
-        ../libsolidity/AnalysisFramework.cpp ../libsolidity/SolidityExecutionFramework.cpp ../ExecutionFramework.cpp
-        ../RPCSession.cpp ../libsolidity/ASTJSONTest.cpp ../libyul/YulOptimizerTest.cpp)
-target_link_libraries(isoltest PRIVATE liblityc lity evmasm ${Boost_PROGRAM_OPTIONS_LIBRARIES} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARIES})
+add_executable(isoltest
+	isoltest.cpp
+	IsolTestOptions.cpp
+	../Options.cpp
+	../Common.cpp
+	../EVMHost.cpp
+	../TestCase.cpp
+        ../libsolidity/util/BytesUtils.cpp
+        ../libsolidity/util/ContractABIUtils.cpp
+	../libsolidity/util/TestFileParser.cpp
+	../libsolidity/util/TestFunctionCall.cpp
+	../libsolidity/GasTest.cpp
+	../libsolidity/SyntaxTest.cpp
+	../libsolidity/SemanticTest.cpp
+	../libsolidity/AnalysisFramework.cpp
+	../libsolidity/SolidityExecutionFramework.cpp
+	../ExecutionFramework.cpp
+	../libsolidity/ABIJsonTest.cpp
+	../libsolidity/ASTJSONTest.cpp
+	../libsolidity/SMTCheckerJSONTest.cpp
+	../libyul/Common.cpp
+	../libyul/FunctionSideEffects.cpp
+	../libyul/ObjectCompilerTest.cpp
+	../libyul/YulOptimizerTest.cpp
+	../libyul/YulInterpreterTest.cpp
+)
+target_link_libraries(isoltest PRIVATE evmc liblityc lity yulInterpreter evmasm Boost::boost Boost::program_options Boost::unit_test_framework)

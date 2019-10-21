@@ -21,11 +21,12 @@
  */
 
 #include <libsolidity/interface/Version.h>
-#include <string>
+
+#include <liblangutil/Exceptions.h>
 #include <libdevcore/CommonData.h>
 #include <libdevcore/Common.h>
-#include <libsolidity/interface/Exceptions.h>
 #include <lity/BuildInfo.h>
+#include <string>
 
 using namespace dev;
 using namespace dev::solidity;
@@ -97,3 +98,10 @@ bytes dev::solidity::binaryVersion(const std::string& versionString)
 	return ret;
 }
 
+bytes const dev::solidity::VersionCompactBytes = {
+	LITY_PROJECT_VERSION_MAJOR,
+	LITY_PROJECT_VERSION_MINOR,
+	LITY_PROJECT_VERSION_PATCH
+};
+
+bool const dev::solidity::VersionIsRelease = string(LITY_VERSION_PRERELEASE).empty();

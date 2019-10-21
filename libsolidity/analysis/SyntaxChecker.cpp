@@ -16,19 +16,26 @@
 */
 
 #include <libsolidity/analysis/SyntaxChecker.h>
-#include <memory>
+
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/ast/ExperimentalFeatures.h>
-#include <libsolidity/analysis/SemVerHandler.h>
-#include <libsolidity/interface/ErrorReporter.h>
 #include <libsolidity/interface/Version.h>
-#include <boost/algorithm/cxx11/all_of.hpp>
 
+#include <libyul/optimiser/Semantics.h>
+#include <libyul/AsmData.h>
+
+#include <liblangutil/ErrorReporter.h>
+#include <liblangutil/SemVerHandler.h>
+
+#include <boost/algorithm/cxx11/all_of.hpp>
 #include <boost/algorithm/string.hpp>
+
+#include <memory>
 #include <string>
 
 using namespace std;
 using namespace dev;
+using namespace langutil;
 using namespace dev::solidity;
 
 
@@ -276,6 +283,20 @@ bool SyntaxChecker::visit(UnaryOperation const& _operation)
 	return true;
 }
 
+bool SyntaxChecker::visit(InlineAssembly const& _inlineAssembly)
+{
+	if (!m_useYulOptimizer)
+		return false;
+
+	if (yul::MSizeFinder::containsMSize(_inlineAssembly.dialect(), _inlineAssembly.operations()))
+		m_errorReporter.syntaxError(
+			_inlineAssembly.location(),
+			"The msize instruction cannot be used when the Yul optimizer is activated because "
+			"it can change its semantics. Either disable the Yul optimizer or do not use the instruction."
+		);
+	return false;
+}
+
 bool SyntaxChecker::visit(PlaceholderStatement const&)
 {
 	m_placeholderFound = true;
@@ -284,7 +305,7 @@ bool SyntaxChecker::visit(PlaceholderStatement const&)
 
 bool SyntaxChecker::visit(ContractDefinition const& _contract)
 {
-	m_isInterface = _contract.contractKind() == ContractDefinition::ContractKind::Interface;
+	m_isInterface = _contract.isInterface();
 
 	ASTString const& contractName = _contract.name();
 	for (FunctionDefinition const* function: _contract.definedFunctions())

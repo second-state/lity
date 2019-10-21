@@ -1,191 +1,228 @@
+# vim:ts=2:sw=2:et
+# --------------------------------------------------------------------------
+#   Prefixes used in order to keep CircleCI workflow overview more readable:
+#     - b: build
+#     - t: test
+#     - ubu: ubuntu
+#     - ems: Emscripten
+version: 2
+
 defaults:
-  # The default for tags is to not run, so we have to explicitly match a filter.
-  - build_on_tags: &build_on_tags
-      filters:
-        tags:
-          only: /.*/
+
+  # --------------------------------------------------------------------------
+  # Build Templates
+
   - setup_prerelease_commit_hash: &setup_prerelease_commit_hash
       name: Store commit hash and prerelease
       command: |
         if [ "$CIRCLE_BRANCH" = release -o -n "$CIRCLE_TAG" ]; then echo -n > prerelease.txt; else date -u +"nightly.%Y.%-m.%-d" > prerelease.txt; fi
         echo -n "$CIRCLE_SHA1" > commit_hash.txt
+
   - run_build: &run_build
       name: Build
       command: |
+        set -ex
+        if [ "$CIRCLE_BRANCH" = release -o -n "$CIRCLE_TAG" -o -n "$FORCE_RELEASE" ]; then echo -n > prerelease.txt; else date -u +"nightly.%Y.%-m.%-d" > prerelease.txt; fi
+        echo -n "$CIRCLE_SHA1" > commit_hash.txt
         mkdir -p build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo $CMAKE_OPTIONS
+        [ -n "$COVERAGE" -a "$CIRCLE_BRANCH" != release -a -z "$CIRCLE_TAG" ] && CMAKE_OPTIONS="$CMAKE_OPTIONS -DCOVERAGE=ON"
+        cmake .. -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE:-Release} $CMAKE_OPTIONS -G "Unix Makefiles"
         make -j4
-  - run_tests: &run_tests
-      name: Tests
-      command: scripts/tests.sh --junit_report test_results
-  - solc_artifact: &solc_artifact
+
+  - run_build_ossfuzz: &run_build_ossfuzz
+      name: Build_ossfuzz
+      command: |
+        mkdir -p build
+        cd build
+        protoc --proto_path=../test/tools/ossfuzz yulProto.proto --cpp_out=../test/tools/ossfuzz
+        protoc --proto_path=../test/tools/ossfuzz abiV2Proto.proto --cpp_out=../test/tools/ossfuzz
+        cmake .. -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE:-Release} $CMAKE_OPTIONS
+        make ossfuzz ossfuzz_proto ossfuzz_abiv2 -j4
+
+  - run_proofs: &run_proofs
+      name: Correctness proofs for optimization rules
+      command: scripts/run_proofs.sh
+
+  # --------------------------------------------------------------------------
+  # Artifacts Templates
+
+  # the whole build directory
+  - artifacts_build_dir: &artifacts_build_dir
+      root: build
+      paths:
+        - "*"
+
+  # compiled solc executable target
+  - artifacts_solc: &artifacts_solc
       path: build/solc/solc
       destination: solc
-  - all_artifacts: &all_artifacts
+
+  # compiled executable targets
+  - artifacts_executables: &artifacts_executables
       root: build
       paths:
         - solc/solc
         - test/soltest
         - test/tools/solfuzzer
 
-version: 2
+  # compiled OSSFUZZ targets
+  - artifacts_executables_ossfuzz: &artifacts_executables_ossfuzz
+      root: build
+      paths:
+        - test/tools/ossfuzz/abiv2_proto_ossfuzz
+        - test/tools/ossfuzz/const_opt_ossfuzz
+        - test/tools/ossfuzz/solc_noopt_ossfuzz
+        - test/tools/ossfuzz/solc_opt_ossfuzz
+        - test/tools/ossfuzz/strictasm_assembly_ossfuzz
+        - test/tools/ossfuzz/strictasm_diff_ossfuzz
+        - test/tools/ossfuzz/strictasm_opt_ossfuzz
+        - test/tools/ossfuzz/yul_proto_diff_ossfuzz
+        - test/tools/ossfuzz/yul_proto_ossfuzz
+
+  # test result output directory
+  - artifacts_test_results: &artifacts_test_results
+      path: test_results/
+      destination: test_results/
+
+  # --------------------------------------------------------------------------
+  # Tests Templates
+
+  # store_test_results helper
+  - store_test_results: &store_test_results
+      path: test_results/
+
+  - run_soltest: &run_soltest
+      name: soltest
+      command: ./.circleci/soltest.sh
+
+  - run_soltest_all: &run_soltest_all
+      name: soltest_all
+      command: ./.circleci/soltest_all.sh
+
+  - run_cmdline_tests: &run_cmdline_tests
+      name: command line tests
+      command: ./test/cmdlineTests.sh
+
+  - test_ubuntu1904: &test_ubuntu1904
+      docker:
+        - image: ethereum/solidity-buildpack-deps:ubuntu1904
+      steps:
+        - checkout
+        - attach_workspace:
+            at: build
+        - run: *run_soltest
+        - store_test_results: *store_test_results
+        - store_artifacts: *artifacts_test_results
+
+  - test_ubuntu1904_clang: &test_ubuntu1904_clang
+      docker:
+        - image: ethereum/solidity-buildpack-deps:ubuntu1904-clang
+      steps:
+        - checkout
+        - attach_workspace:
+            at: build
+        - run: *run_soltest
+        - store_test_results: *store_test_results
+        - store_artifacts: *artifacts_test_results
+
+  - test_ubuntu1904_all: &test_ubuntu1904
+      docker:
+        - image: ethereum/solidity-buildpack-deps:ubuntu1904
+      steps:
+        - checkout
+        - attach_workspace:
+            at: build
+        - run: *run_soltest_all
+        - store_test_results: *store_test_results
+        - store_artifacts: *artifacts_test_results
+
+  - test_asan: &test_asan
+      <<: *test_ubuntu1904
+      steps:
+      - checkout
+      - attach_workspace:
+          at: build
+      - run:
+          <<: *run_soltest
+          no_output_timeout: 30m
+      - store_test_results: *store_test_results
+      - store_artifacts: *artifacts_test_results
+
+  # --------------------------------------------------------------------------
+  # Workflow Templates
+
+  - workflow_trigger_on_tags: &workflow_trigger_on_tags
+      filters:
+        tags:
+          only: /.*/
+
+  - workflow_ubuntu1904: &workflow_ubuntu1904
+      <<: *workflow_trigger_on_tags
+      requires:
+        - b_ubu
+
+  - workflow_ubuntu1904_clang: &workflow_ubuntu1904_clang
+      <<: *workflow_trigger_on_tags
+      requires:
+        - b_ubu_clang
+
+  - workflow_ubuntu1904_release: &workflow_ubuntu1904_release
+      <<: *workflow_trigger_on_tags
+      requires:
+        - b_ubu_release
+
+  - workflow_ubuntu1904_codecov: &workflow_ubuntu1904_codecov
+      <<: *workflow_trigger_on_tags
+      requires:
+        - b_ubu_codecov
+
+  - workflow_osx: &workflow_osx
+      <<: *workflow_trigger_on_tags
+      requires:
+        - b_osx
+
+  - workflow_ubuntu1904_asan: &workflow_ubuntu1904_asan
+      <<: *workflow_trigger_on_tags
+      requires:
+        - b_ubu_asan
+
+  - workflow_emscripten: &workflow_emscripten
+      <<: *workflow_trigger_on_tags
+      requires:
+        - b_ems
+
+  - workflow_ubuntu1904_ossfuzz: &workflow_ubuntu1904_ossfuzz
+      <<: *workflow_trigger_on_tags
+      requires:
+        - b_ubu_ossfuzz
+
+  # --------------------------------------------------------------------------
+  # Notification Templates
+  - gitter_notify_failure: &gitter_notify_failure
+      name: Gitter notify failure
+      command: >-
+        curl -X POST -i
+        -i -H "Content-Type: application/json"
+        -H "Accept: application/json"
+        -H "Authorization: Bearer $GITTER_API_TOKEN" "https://api.gitter.im/v1/rooms/$GITTER_NOTIFY_ROOM_ID/chatMessages"
+        -d '{"text":" ❌ Nightly job **'$CIRCLE_JOB'** failed on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}'
+      when: on_fail
+
+  - gitter_notify_success: &gitter_notify_success
+      name: Gitter notify success
+      command: >-
+        curl -X POST -i
+        -i -H "Content-Type: application/json"
+        -H "Accept: application/json"
+        -H "Authorization: Bearer $GITTER_API_TOKEN" "https://api.gitter.im/v1/rooms/$GITTER_NOTIFY_ROOM_ID/chatMessages"
+        -d '{"text":" ✅ Nightly job **'$CIRCLE_JOB'** succeeded on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}'
+      when: on_success
+
+# -----------------------------------------------------------------------------------------------
 jobs:
-  build_emscripten:
-    docker:
-      - image: trzeci/emscripten:sdk-tag-1.37.21-64bit
-    environment:
-      TERM: xterm
-    steps:
-      - checkout
-      - restore_cache:
-          name: Restore Boost build
-          key: &boost-cache-key emscripten-boost-{{ checksum "scripts/travis-emscripten/install_deps.sh" }}{{ checksum "scripts/travis-emscripten/build_emscripten.sh" }}
-      - run:
-          name: Bootstrap Boost
-          command: |
-            scripts/travis-emscripten/install_deps.sh
-      - run:
-          name: Build
-          command: |
-            scripts/travis-emscripten/build_emscripten.sh
-      - save_cache:
-          name: Save Boost build
-          key: *boost-cache-key
-          paths:
-            - boost_1_57_0
-      - store_artifacts:
-          path: build/libsolc/soljson.js
-          destination: soljson.js
-      - run: mkdir -p workspace
-      - run: cp build/libsolc/soljson.js workspace/soljson.js
-      - run: scripts/get_version.sh > workspace/version.txt
-      - persist_to_workspace:
-          root: workspace
-          paths:
-            - soljson.js
-            - version.txt
-  test_emscripten_solcjs:
-    docker:
-      - image: trzeci/emscripten:sdk-tag-1.37.21-64bit
-    environment:
-      TERM: xterm
-    steps:
-      - checkout
-      - attach_workspace:
-          at: /tmp/workspace
-      - run:
-          name: Install external tests deps
-          command: |
-            apt-get -qq update
-            apt-get -qy install netcat curl
-            curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.4/install.sh | NVM_DIR=/usr/local/nvm bash
-            export NVM_DIR="/usr/local/nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-            nvm --version
-            nvm install 8
-            node --version
-            npm --version
-      - run:
-          name: Test solcjs
-          command: |
-            . /usr/local/nvm/nvm.sh
-            test/solcjsTests.sh /tmp/workspace/soljson.js $(cat /tmp/workspace/version.txt)
-  test_emscripten_external:
-    docker:
-      - image: trzeci/emscripten:sdk-tag-1.37.21-64bit
-    environment:
-      TERM: xterm
-    steps:
-      - checkout
-      - attach_workspace:
-          at: /tmp/workspace
-      - run:
-          name: Install external tests deps
-          command: |
-            apt-get -qq update
-            apt-get -qy install netcat curl
-            curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.4/install.sh | NVM_DIR=/usr/local/nvm bash
-            export NVM_DIR="/usr/local/nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-            nvm --version
-            nvm install 8
-            node --version
-            npm --version
-      - run:
-          name: External tests
-          command: |
-            . /usr/local/nvm/nvm.sh
-            test/externalTests.sh /tmp/workspace/soljson.js || test/externalTests.sh /tmp/workspace/soljson.js
-  build_x86_linux:
-    docker:
-      - image: buildpack-deps:artful
-    environment:
-      TERM: xterm
-      CMAKE_OPTIONS: -DCOVERAGE=OFF
-    steps:
-      - checkout
-      - run:
-          name: Install build dependencies
-          command: |
-            apt-get -qq update
-            apt-get -qy install cmake libboost-regex-dev libboost-filesystem-dev libboost-test-dev libboost-system-dev libboost-program-options-dev libz3-dev
-            ./scripts/install_obsolete_jsoncpp_1_7_4.sh
-      - run: *setup_prerelease_commit_hash
-      - run: *run_build
-      - store_artifacts: *solc_artifact
-      - persist_to_workspace:
-          root: build
-          paths:
-            - "*"
 
-  build_x86_clang7:
-    docker:
-      - image: buildpack-deps:cosmic
-    environment:
-      TERM: xterm
-      CC: /usr/bin/clang-7
-      CXX: /usr/bin/clang++-7
-    steps:
-      - checkout
-      - run:
-          name: Install build dependencies
-          command: |
-            apt-get -qq update
-            apt-get -qy install clang-7 cmake libboost-regex-dev libboost-filesystem-dev libboost-test-dev libboost-system-dev libboost-program-options-dev libz3-dev
-            ./scripts/install_obsolete_jsoncpp_1_7_4.sh
-      - run: *setup_prerelease_commit_hash
-      - run: *run_build
-      - store_artifacts: *solc_artifact
-      - persist_to_workspace:
-          root: build
-          paths:
-            - "*"
-
-  build_x86_mac:
-    macos:
-      xcode: "10.0.0"
-    environment:
-      TERM: xterm
-    steps:
-      - checkout
-      - run:
-          name: Install build dependencies
-          command: |
-            brew update
-            brew upgrade
-            brew unlink python
-            brew install z3
-            brew install boost
-            brew install cmake
-            brew install wget
-            ./scripts/install_obsolete_jsoncpp_1_7_4.sh
-      - run: *setup_prerelease_commit_hash
-      - run: *run_build
-      - store_artifacts: *solc_artifact
-      - persist_to_workspace: *all_artifacts
-
-  test_check_spelling:
+  chk_spelling:
     docker:
       - image: circleci/python:3.6
     environment:
@@ -200,18 +237,34 @@ jobs:
             pip install --user codespell
       - run:
           name: Check spelling
-          command: ~/.local/bin/codespell -S "*.enc,.git" -I ./scripts/codespell_whitelist.txt
+          command: ~/.local/bin/codespell -S "*.enc,.git,Dockerfile*" -I ./scripts/codespell_whitelist.txt
 
-  test_check_style:
+  chk_docs_examples:
     docker:
-      - image: buildpack-deps:artful
+      - image: circleci/node
+    environment:
+      TERM: xterm
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
+      - run:
+          name: JS deps
+          command: sudo npm install -g solhint
+      - run:
+          name: Test Docs examples
+          command: ./test/docsCodeStyle.sh
+
+  chk_coding_style:
+    docker:
+      - image: buildpack-deps:disco
     steps:
       - checkout
       - run:
-          name: Check for trailing whitespace
+          name: Check for C++ coding style
           command: ./scripts/check_style.sh
 
-  test_buglist:
+  chk_buglist:
     docker:
       - image: circleci/node
     environment:
@@ -228,39 +281,169 @@ jobs:
           name: Test buglist
           command: ./test/buglistTests.js
 
-  test_x86_linux:
+  chk_proofs:
     docker:
-      - image: buildpack-deps:artful
+      - image: buildpack-deps:disco
     environment:
       TERM: xterm
+    steps:
+      - checkout
+      - run:
+          name: Z3 python deps
+          command: |
+            apt-get -qq update
+            apt-get -qy install python-pip
+            pip install --user z3-solver
+      - run: *run_proofs
+
+  b_ubu_clang: &build_ubuntu1904_clang
+    docker:
+      - image: ethereum/solidity-buildpack-deps:ubuntu1904-clang
+    environment:
+      CC: clang
+      CXX: clang++
+    steps:
+      - checkout
+      - run: *run_build
+      - store_artifacts: *artifacts_solc
+      - persist_to_workspace: *artifacts_executables
+
+  b_ubu: &build_ubuntu1904
+    docker:
+      - image: ethereum/solidity-buildpack-deps:ubuntu1904
+    steps:
+      - checkout
+      - run: *run_build
+      - store_artifacts: *artifacts_solc
+      - persist_to_workspace: *artifacts_executables
+
+  b_ubu_release: &build_ubuntu1904_release
+    <<: *build_ubuntu1904
+    environment:
+      FORCE_RELEASE: ON
+
+  b_ubu18: &build_ubuntu1804
+    docker:
+      - image: ethereum/solidity-buildpack-deps:ubuntu1804
+    environment:
+      CMAKE_OPTIONS: -DCMAKE_CXX_FLAGS=-O2
+      CMAKE_BUILD_TYPE: RelWithDebugInfo
+    steps:
+      - checkout
+      - run: *run_build
+      - store_artifacts: *artifacts_solc
+      - persist_to_workspace: *artifacts_executables
+
+  b_ubu_codecov:
+    <<: *build_ubuntu1904
+    environment:
+      COVERAGE: ON
+      CMAKE_BUILD_TYPE: Debug
+    steps:
+      - checkout
+      - run: *run_build
+      - persist_to_workspace: *artifacts_build_dir
+
+  t_ubu_codecov:
+    <<: *test_ubuntu1904
+    environment:
+      EVM: constantinople
+      OPTIMIZE: 1
     steps:
       - checkout
       - attach_workspace:
           at: build
       - run:
-          name: Install dependencies
-          command: |
-            apt-get -qq update
-            apt-get -qy install libz3-dev libleveldb1v5 python-pip
-            pip install codecov
-      - run: mkdir -p test_results
+          name: "soltest: Syntax Tests"
+          command: build/test/soltest -t 'syntaxTest*' -- --testpath test
       - run:
-          name: Test type checker
-          command: build/test/soltest -t 'syntaxTest*' -- --no-ipc --testpath test
-      - run:
-          name: Coverage of type checker
+          name: "Code Coverage: Syntax Tests"
           command: codecov --flags syntax --gcov-root build
-      - run: *run_tests
+      - run: *run_soltest
       - run:
-          name: Coverage of all
+          name: "Coverage: All"
           command: codecov --flags all --gcov-root build
-      - store_test_results:
-          path: test_results/
-      - store_artifacts:
-          path: test_results/
-          destination: test_results/
+      - store_artifacts: *artifacts_test_results
 
-  test_x86_mac:
+  # Builds in C++20 mode and uses debug build in order to speed up.
+  # Do *NOT* store any artifacts or workspace as we don't run tests on this build.
+  b_ubu_cxx20:
+    <<: *build_ubuntu1904
+    environment:
+      CMAKE_BUILD_TYPE: Debug
+      CMAKE_OPTIONS: -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/cxx20.cmake -DUSE_CVC4=OFF
+    steps:
+      - checkout
+      - run: *run_build
+
+  b_ubu_ossfuzz:
+    <<: *build_ubuntu1904_clang
+    environment:
+      TERM: xterm
+      CC: clang
+      CXX: clang++
+      CMAKE_OPTIONS: -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/libfuzzer.cmake
+    steps:
+      - checkout
+      - run: *setup_prerelease_commit_hash
+      - run: *run_build_ossfuzz
+      - persist_to_workspace: *artifacts_executables_ossfuzz
+
+  t_ubu_ossfuzz: &t_ubu_ossfuzz
+    <<: *test_ubuntu1904_clang
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
+      - run:
+          name: Regression tests
+          command: |
+            mkdir -p test_results
+            export ASAN_OPTIONS="check_initialization_order=true:detect_stack_use_after_return=true:strict_init_order=true:strict_string_checks=true:detect_invalid_pointer_pairs=2"
+            scripts/regressions.py -o test_results
+      - run: *gitter_notify_failure
+      - run: *gitter_notify_success
+      - store_test_results: *store_test_results
+      - store_artifacts: *artifacts_test_results
+
+  b_archlinux:
+    docker:
+      - image: archlinux/base
+    environment:
+      TERM: xterm
+    steps:
+      - run:
+          name: Install build dependencies
+          command: |
+            pacman --noconfirm -Syu --noprogressbar --needed base-devel boost cmake z3 cvc4 git openssh tar
+      - checkout
+      - run: *run_build
+      - store_artifacts: *artifacts_solc
+      - persist_to_workspace: *artifacts_executables
+
+  b_osx:
+    macos:
+      xcode: "10.0.0"
+    environment:
+      TERM: xterm
+      CMAKE_BUILD_TYPE: Debug
+      CMAKE_OPTIONS: -DLLL=ON
+    steps:
+      - checkout
+      - run:
+          name: Install build dependencies
+          command: |
+            brew unlink python
+            brew install z3
+            brew install boost
+            brew install cmake
+            brew install wget
+            ./scripts/install_obsolete_jsoncpp_1_7_4.sh
+      - run: *run_build
+      - store_artifacts: *artifacts_solc
+      - persist_to_workspace: *artifacts_executables
+
+  t_osx_cli:
     macos:
       xcode: "10.0.0"
     environment:
@@ -272,28 +455,63 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            brew update
-            brew upgrade
             brew unlink python
             brew install z3
-      - run: mkdir -p test_results
-      - run: *run_tests
-      - store_test_results:
-          path: test_results/
-      - store_artifacts:
-          path: test_results/
-          destination: test_results/
+      - run: *run_cmdline_tests
+      - store_artifacts: *artifacts_test_results
 
-  docs:
+  b_ems:
     docker:
-      - image: buildpack-deps:artful
+      - image: trzeci/emscripten:sdk-tag-1.38.22-64bit
+    environment:
+      TERM: xterm
     steps:
       - checkout
+      - restore_cache:
+          name: Restore Boost build
+          key: &boost-cache-key emscripten-boost-{{ checksum "scripts/travis-emscripten/install_deps.sh" }}{{ checksum "scripts/build_emscripten.sh" }}{{ checksum "scripts/travis-emscripten/build_emscripten.sh" }}
       - run:
-          name: Install build dependencies
+          name: Bootstrap Boost
           command: |
-            apt-get -qq update
-            apt-get -qy install python-sphinx python-pip
+            scripts/travis-emscripten/install_deps.sh
+      - run:
+          name: Build
+          command: |
+            scripts/travis-emscripten/build_emscripten.sh
+      - save_cache:
+          name: Save Boost build
+          key: *boost-cache-key
+          paths:
+            - boost_1_70_0_install
+      - store_artifacts:
+          path: emscripten_build/libsolc/soljson.js
+          destination: soljson.js
+      - run: mkdir -p workspace
+      - run: cp emscripten_build/libsolc/soljson.js workspace/soljson.js
+      - run: scripts/get_version.sh > workspace/version.txt
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - soljson.js
+            - version.txt
+
+  # x64 ASAN build, for testing for memory related bugs
+  b_ubu_asan: &b_ubu_asan
+    <<: *build_ubuntu1904
+    environment:
+      CMAKE_OPTIONS: -DSANITIZE=address
+      CMAKE_BUILD_TYPE: Release
+    steps:
+      - checkout
+      - run: *run_build
+      - store_artifacts: *artifacts_solc
+      - persist_to_workspace: *artifacts_executables
+
+  b_docs:
+    docker:
+      - image: ethereum/solidity-buildpack-deps:ubuntu1904
+    steps:
+      - checkout
       - run: *setup_prerelease_commit_hash
       - run:
           name: Build documentation
@@ -302,31 +520,191 @@ jobs:
           path: docs/_build/html/
           destination: docs-html
 
+  t_ubu_soltest: &t_ubu_soltest
+    <<: *test_ubuntu1904
+
+  t_ubu_clang_soltest: &t_ubu_clang_soltest
+    <<: *test_ubuntu1904_clang
+    environment:
+      EVM: constantinople
+      OPTIMIZE: 0
+
+  t_ubu_release_soltest: &t_ubu_release_soltest
+    <<: *t_ubu_soltest
+
+  t_ubu_cli: &t_ubu_cli
+    docker:
+      - image: ethereum/solidity-buildpack-deps:ubuntu1904
+    environment:
+      TERM: xterm
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
+      - run: *run_cmdline_tests
+      - store_test_results: *store_test_results
+      - store_artifacts: *artifacts_test_results
+
+  t_ubu_release_cli: &t_ubu_release_cli
+    <<: *t_ubu_cli
+
+  t_ubu_asan_cli:
+    <<: *t_ubu_cli
+    environment:
+      TERM: xterm
+      ASAN_OPTIONS: check_initialization_order=true:detect_stack_use_after_return=true:strict_init_order=true:strict_string_checks=true:detect_invalid_pointer_pairs=2
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
+      - run:
+          <<: *run_cmdline_tests
+          no_output_timeout: 30m
+      - store_test_results: *store_test_results
+      - store_artifacts: *artifacts_test_results
+
+  t_ubu_asan_constantinople:
+    <<: *test_asan
+    environment:
+      EVM: constantinople
+      OPTIMIZE: 0
+      flags: --no-smt
+      ASAN_OPTIONS: check_initialization_order=true:detect_stack_use_after_return=true:strict_init_order=true:strict_string_checks=true:detect_invalid_pointer_pairs=2
+
+  t_ems_solcjs:
+    docker:
+      - image: circleci/node:10
+    environment:
+      TERM: xterm
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Test solcjs
+          command: |
+            node --version
+            npm --version
+            test/solcjsTests.sh /tmp/workspace/soljson.js $(cat /tmp/workspace/version.txt)
+
+  t_ems_external_gnosis:
+    docker:
+      - image: circleci/node:10
+    environment:
+      TERM: xterm
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: External GnosisSafe tests
+          command: |
+            test/externalTests/gnosis.sh /tmp/workspace/soljson.js || test/externalTests/gnosis.sh /tmp/workspace/soljson.js
+      - run: *gitter_notify_failure
+      - run: *gitter_notify_success
+
+  t_ems_external_zeppelin:
+    docker:
+      - image: circleci/node:10
+    environment:
+      TERM: xterm
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: External Zeppelin tests
+          command: |
+            test/externalTests/zeppelin.sh /tmp/workspace/soljson.js || test/externalTests/zeppelin.sh /tmp/workspace/soljson.js
+      - run: *gitter_notify_failure
+      - run: *gitter_notify_success
+
+  t_ems_external_colony:
+    docker:
+      - image: circleci/node:10
+    environment:
+      TERM: xterm
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Install test dependencies
+          command: |
+            sudo apt-get -qy install lsof
+      - run:
+          name: External ColonyNetworks tests
+          command: |
+            test/externalTests/colony.sh /tmp/workspace/soljson.js || test/externalTests/colony.sh /tmp/workspace/soljson.js
+      - run: *gitter_notify_failure
+      - run: *gitter_notify_success
+
 workflows:
   version: 2
-  build_all:
+
+  main:
     jobs:
-      - test_check_spelling: *build_on_tags
-      - test_check_style: *build_on_tags
-      - test_buglist: *build_on_tags
-      - build_emscripten: *build_on_tags
-      - test_emscripten_solcjs:
-          <<: *build_on_tags
-          requires:
-            - build_emscripten
-      - test_emscripten_external:
-          <<: *build_on_tags
-          requires:
-            - build_emscripten
-      - build_x86_linux: *build_on_tags
-      - build_x86_clang7: *build_on_tags
-      - build_x86_mac: *build_on_tags
-      - test_x86_linux:
-          <<: *build_on_tags
-          requires:
-            - build_x86_linux
-      - test_x86_mac:
-          <<: *build_on_tags
-          requires:
-            - build_x86_mac
-      - docs: *build_on_tags
+      # basic checks
+      - chk_spelling: *workflow_trigger_on_tags
+      - chk_coding_style: *workflow_trigger_on_tags
+      - chk_docs_examples: *workflow_trigger_on_tags
+      - chk_buglist: *workflow_trigger_on_tags
+      - chk_proofs: *workflow_trigger_on_tags
+
+      # build-only
+      - b_docs: *workflow_trigger_on_tags
+      - b_archlinux: *workflow_trigger_on_tags
+      - b_ubu_cxx20: *workflow_trigger_on_tags
+      - b_ubu_ossfuzz: *workflow_trigger_on_tags
+
+      # OS/X build and tests
+      - b_osx: *workflow_trigger_on_tags
+      - t_osx_cli: *workflow_osx
+
+      # Ubuntu build and tests
+      - b_ubu: *workflow_trigger_on_tags
+      - b_ubu18: *workflow_trigger_on_tags
+      - t_ubu_cli: *workflow_ubuntu1904
+      - t_ubu_soltest: *workflow_ubuntu1904
+      - b_ubu_clang: *workflow_trigger_on_tags
+      - t_ubu_clang_soltest: *workflow_ubuntu1904_clang
+
+      # Ubuntu fake release build and tests
+      - b_ubu_release: *workflow_trigger_on_tags
+      - t_ubu_release_cli: *workflow_ubuntu1904_release
+      - t_ubu_release_soltest: *workflow_ubuntu1904_release
+
+      # ASan build and tests
+      - b_ubu_asan: *workflow_trigger_on_tags
+      - t_ubu_asan_constantinople: *workflow_ubuntu1904_asan
+      - t_ubu_asan_cli: *workflow_ubuntu1904_asan
+
+      # Emscripten build and selected tests
+      - b_ems: *workflow_trigger_on_tags
+      - t_ems_solcjs: *workflow_emscripten
+
+  nightly:
+
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - develop
+                - develop_060
+
+    jobs:
+      # Emscripten builds and external tests
+      - b_ems: *workflow_trigger_on_tags
+      - t_ems_external_zeppelin: *workflow_emscripten
+      - t_ems_external_gnosis: *workflow_emscripten
+      - t_ems_external_colony: *workflow_emscripten
+
+      # OSSFUZZ builds and (regression) tests
+      - b_ubu_ossfuzz: *workflow_trigger_on_tags
+      - t_ubu_ossfuzz: *workflow_ubuntu1904_ossfuzz
+
+      # Code Coverage enabled build and tests
+      - b_ubu_codecov: *workflow_trigger_on_tags
+      - t_ubu_codecov: *workflow_ubuntu1904_codecov

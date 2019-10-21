@@ -22,13 +22,13 @@
 
 #include <libyul/Exceptions.h>
 
-#include <libsolidity/inlineasm/AsmData.h>
+#include <libyul/AsmData.h>
 
 #include <libdevcore/Common.h>
 
 using namespace std;
 using namespace dev;
-using namespace dev::yul;
+using namespace yul;
 
 Statement ASTCopier::operator()(Instruction const&)
 {
@@ -91,7 +91,7 @@ Expression ASTCopier::operator()(FunctionalInstruction const& _instruction)
 
 Expression ASTCopier::operator()(Identifier const& _identifier)
 {
-	return Identifier{_identifier.location, translateIdentifier(_identifier.name)};
+	return translate(_identifier);
 }
 
 Expression ASTCopier::operator()(Literal const& _literal)
@@ -137,6 +137,15 @@ Statement ASTCopier::operator()(ForLoop const& _forLoop)
 		translate(_forLoop.post),
 		translate(_forLoop.body)
 	};
+}
+Statement ASTCopier::operator()(Break const& _break)
+{
+	return Break{ _break };
+}
+
+Statement ASTCopier::operator()(Continue const& _continue)
+{
+	return Continue{ _continue };
 }
 
 Statement ASTCopier::operator ()(Block const& _block)

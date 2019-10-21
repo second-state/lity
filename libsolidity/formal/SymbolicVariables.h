@@ -17,19 +17,19 @@
 
 #pragma once
 
-#include <libsolidity/formal/SSAVariable.h>
-
 #include <libsolidity/formal/SolverInterface.h>
-
+#include <libsolidity/formal/SSAVariable.h>
 #include <libsolidity/ast/Types.h>
-
 #include <memory>
 
 namespace dev
 {
 namespace solidity
 {
+namespace smt
+{
 
+class EncodingContext;
 class Type;
 
 /**
@@ -39,43 +39,49 @@ class SymbolicVariable
 {
 public:
 	SymbolicVariable(
-		TypePointer _type,
-		std::string const& _uniqueName,
-		smt::SolverInterface& _interface
+		solidity::TypePointer _type,
+		solidity::TypePointer _originalType,
+		std::string _uniqueName,
+		EncodingContext& _context
+	);
+	SymbolicVariable(
+		SortPointer _sort,
+		std::string _uniqueName,
+		EncodingContext& _context
 	);
 
 	virtual ~SymbolicVariable() = default;
 
-	smt::Expression currentValue() const
+	virtual Expression currentValue(solidity::TypePointer const& _targetType = TypePointer{}) const;
+	std::string currentName() const;
+	virtual Expression valueAtIndex(int _index) const;
+	virtual std::string nameAtIndex(int _index) const;
+	virtual Expression resetIndex();
+	virtual Expression increaseIndex();
+	virtual Expression operator()(std::vector<Expression> /*_arguments*/) const
 	{
-		return valueAtIndex(m_ssa->index());
-	}
-
-	virtual smt::Expression valueAtIndex(int _index) const = 0;
-
-	smt::Expression increaseIndex()
-	{
-		++(*m_ssa);
-		return currentValue();
+		solAssert(false, "Function application to non-function.");
 	}
 
 	unsigned index() const { return m_ssa->index(); }
 	unsigned& index() { return m_ssa->index(); }
 
-	/// Sets the var to the default value of its type.
-	/// Inherited types must implement.
-	virtual void setZeroValue() = 0;
-	/// The unknown value is the full range of valid values.
-	/// It is sub-type dependent, but not mandatory.
-	virtual void setUnknownValue() {}
+	SortPointer const& sort() const { return m_sort; }
+	solidity::TypePointer const& type() const { return m_type; }
+	solidity::TypePointer const& originalType() const { return m_originalType; }
 
 protected:
 	std::string uniqueSymbol(unsigned _index) const;
 
-	TypePointer m_type = nullptr;
+	/// SMT sort.
+	SortPointer m_sort;
+	/// Solidity type, used for size and range in number types.
+	solidity::TypePointer m_type;
+	/// Solidity original type, used for type conversion if necessary.
+	solidity::TypePointer m_originalType;
 	std::string m_uniqueName;
-	smt::SolverInterface& m_interface;
-	std::shared_ptr<SSAVariable> m_ssa = nullptr;
+	EncodingContext& m_context;
+	std::unique_ptr<SSAVariable> m_ssa;
 };
 
 /**
@@ -85,18 +91,10 @@ class SymbolicBoolVariable: public SymbolicVariable
 {
 public:
 	SymbolicBoolVariable(
-		TypePointer _type,
-		std::string const& _uniqueName,
-		smt::SolverInterface& _interface
+		solidity::TypePointer _type,
+		std::string _uniqueName,
+		EncodingContext& _context
 	);
-
-	/// Sets the var to false.
-	void setZeroValue();
-	/// Does nothing since the SMT solver already knows the valid values for Bool.
-	void setUnknownValue();
-
-protected:
-	smt::Expression valueAtIndex(int _index) const;
 };
 
 /**
@@ -106,18 +104,11 @@ class SymbolicIntVariable: public SymbolicVariable
 {
 public:
 	SymbolicIntVariable(
-		TypePointer _type,
-		std::string const& _uniqueName,
-		smt::SolverInterface& _interface
+		solidity::TypePointer _type,
+		solidity::TypePointer _originalType,
+		std::string _uniqueName,
+		EncodingContext& _context
 	);
-
-	/// Sets the var to 0.
-	void setZeroValue();
-	/// Sets the variable to the full valid value range.
-	void setUnknownValue();
-
-protected:
-	smt::Expression valueAtIndex(int _index) const;
 };
 
 /**
@@ -127,8 +118,8 @@ class SymbolicAddressVariable: public SymbolicIntVariable
 {
 public:
 	SymbolicAddressVariable(
-		std::string const& _uniqueName,
-		smt::SolverInterface& _interface
+		std::string _uniqueName,
+		EncodingContext& _context
 	);
 };
 
@@ -139,11 +130,106 @@ class SymbolicFixedBytesVariable: public SymbolicIntVariable
 {
 public:
 	SymbolicFixedBytesVariable(
+		solidity::TypePointer _originalType,
 		unsigned _numBytes,
-		std::string const& _uniqueName,
-		smt::SolverInterface& _interface
+		std::string _uniqueName,
+		EncodingContext& _context
 	);
 };
 
+/**
+ * Specialization of SymbolicVariable for FunctionType
+ */
+class SymbolicFunctionVariable: public SymbolicVariable
+{
+public:
+	SymbolicFunctionVariable(
+		solidity::TypePointer _type,
+		std::string _uniqueName,
+		EncodingContext& _context
+	);
+	SymbolicFunctionVariable(
+		SortPointer _sort,
+		std::string _uniqueName,
+		EncodingContext& _context
+	);
+
+	Expression increaseIndex();
+	Expression operator()(std::vector<Expression> _arguments) const;
+
+private:
+	/// Creates a new function declaration.
+	void resetDeclaration();
+
+	/// Stores the current function declaration.
+	Expression m_declaration;
+};
+
+/**
+ * Specialization of SymbolicVariable for Mapping
+ */
+class SymbolicMappingVariable: public SymbolicVariable
+{
+public:
+	SymbolicMappingVariable(
+		solidity::TypePointer _type,
+		std::string _uniqueName,
+		EncodingContext& _context
+	);
+};
+
+/**
+ * Specialization of SymbolicVariable for Array
+ */
+class SymbolicArrayVariable: public SymbolicVariable
+{
+public:
+	SymbolicArrayVariable(
+		solidity::TypePointer _type,
+		solidity::TypePointer _originalTtype,
+		std::string _uniqueName,
+		EncodingContext& _context
+	);
+
+	Expression currentValue(solidity::TypePointer const& _targetType = TypePointer{}) const override;
+};
+
+/**
+ * Specialization of SymbolicVariable for Enum
+ */
+class SymbolicEnumVariable: public SymbolicVariable
+{
+public:
+	SymbolicEnumVariable(
+		solidity::TypePointer _type,
+		std::string _uniqueName,
+		EncodingContext& _context
+	);
+};
+
+/**
+ * Specialization of SymbolicVariable for Tuple
+ */
+class SymbolicTupleVariable: public SymbolicVariable
+{
+public:
+	SymbolicTupleVariable(
+		solidity::TypePointer _type,
+		std::string _uniqueName,
+		EncodingContext& _context
+	);
+
+	std::vector<std::shared_ptr<SymbolicVariable>> const& components()
+	{
+		return m_components;
+	}
+
+	void setComponents(std::vector<std::shared_ptr<SymbolicVariable>> _components);
+
+private:
+	std::vector<std::shared_ptr<SymbolicVariable>> m_components;
+};
+
+}
 }
 }

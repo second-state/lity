@@ -27,8 +27,11 @@
 #include <test/ExecutionFramework.h>
 
 #include <libsolidity/interface/CompilerStack.h>
-#include <libsolidity/interface/Exceptions.h>
-#include <libsolidity/interface/SourceReferenceFormatter.h>
+
+#include <libyul/AssemblyStack.h>
+
+#include <liblangutil/Exceptions.h>
+#include <liblangutil/SourceReferenceFormatter.h>
 
 namespace dev
 {
@@ -42,7 +45,10 @@ class SolidityExecutionFramework: public dev::test::ExecutionFramework
 {
 
 public:
-	SolidityExecutionFramework();
+	SolidityExecutionFramework() {}
+	explicit SolidityExecutionFramework(langutil::EVMVersion _evmVersion):
+		ExecutionFramework(_evmVersion)
+	{}
 
 	virtual bytes const& compileAndRunWithoutCheck(
 		std::string const& _sourceCode,
@@ -61,31 +67,7 @@ public:
 		std::string const& _sourceCode,
 		std::string const& _contractName = "",
 		std::map<std::string, dev::test::Address> const& _libraryAddresses = std::map<std::string, dev::test::Address>()
-	)
-	{
-		// Silence compiler version warning
-		std::string sourceCode = "pragma solidity >=0.0;\n" + _sourceCode;
-		m_compiler.reset(false);
-		m_compiler.addSource("", sourceCode);
-		m_compiler.setLibraries(_libraryAddresses);
-		m_compiler.setEVMVersion(m_evmVersion);
-		m_compiler.setOptimiserSettings(m_optimize, m_optimizeRuns);
-		if (!m_compiler.compile())
-		{
-			auto scannerFromSourceName = [&](std::string const& _sourceName) -> solidity::Scanner const& { return m_compiler.scanner(_sourceName); };
-			SourceReferenceFormatter formatter(std::cerr, scannerFromSourceName);
-
-			for (auto const& error: m_compiler.errors())
-				formatter.printExceptionInformation(
-					*error,
-					error->typeNameCstr()
-				);
-			BOOST_ERROR("Compiling contract failed");
-		}
-		eth::LinkerObject obj = m_compiler.object(_contractName.empty() ? m_compiler.lastContractName() : _contractName);
-		BOOST_REQUIRE(obj.linkReferences.empty());
-		return obj.bytecode;
-	}
+	);
 
 	using rational = boost::rational<dev::bigint>;
 
@@ -100,6 +82,7 @@ public:
 	}
 protected:
 	dev::solidity::CompilerStack m_compiler;
+	bool m_compileViaYul = false;
 };
 
 }

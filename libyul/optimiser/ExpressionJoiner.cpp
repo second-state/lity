@@ -22,10 +22,9 @@
 #include <libyul/optimiser/ExpressionJoiner.h>
 
 #include <libyul/optimiser/NameCollector.h>
-#include <libyul/optimiser/Utilities.h>
+#include <libyul/optimiser/OptimizerUtilities.h>
 #include <libyul/Exceptions.h>
-
-#include <libsolidity/inlineasm/AsmData.h>
+#include <libyul/AsmData.h>
 
 #include <libdevcore/CommonData.h>
 
@@ -33,8 +32,13 @@
 
 using namespace std;
 using namespace dev;
-using namespace dev::yul;
-using namespace dev::solidity;
+using namespace yul;
+
+void ExpressionJoiner::run(OptimiserStepContext&, Block& _ast)
+{
+	ExpressionJoiner{_ast}(_ast);
+}
+
 
 void ExpressionJoiner::operator()(FunctionalInstruction& _instruction)
 {
@@ -78,11 +82,6 @@ void ExpressionJoiner::visit(Expression& _e)
 	}
 	else
 		ASTModifier::visit(_e);
-}
-
-void ExpressionJoiner::run(Block& _ast)
-{
-	ExpressionJoiner{_ast}(_ast);
 }
 
 ExpressionJoiner::ExpressionJoiner(Block& _ast)

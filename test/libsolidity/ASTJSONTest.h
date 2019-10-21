@@ -17,8 +17,8 @@
 
 #pragma once
 
-#include <test/libsolidity/FormattedScope.h>
-#include <test/libsolidity/TestCase.h>
+#include <libdevcore/AnsiColorized.h>
+#include <test/TestCase.h>
 
 #include <iosfwd>
 #include <string>
@@ -35,14 +35,14 @@ namespace test
 class ASTJSONTest: public TestCase
 {
 public:
-	static std::unique_ptr<TestCase> create(std::string const& _filename)
-	{ return std::unique_ptr<TestCase>(new ASTJSONTest(_filename)); }
+	static std::unique_ptr<TestCase> create(Config const& _config)
+	{ return std::unique_ptr<TestCase>(new ASTJSONTest(_config.filename)); }
 	ASTJSONTest(std::string const& _filename);
 
-	virtual bool run(std::ostream& _stream, std::string const& _linePrefix = "", bool const _formatted = false) override;
+	TestResult run(std::ostream& _stream, std::string const& _linePrefix = "", bool const _formatted = false) override;
 
-	virtual void printSource(std::ostream& _stream, std::string const& _linePrefix = "", bool const _formatted = false) const override;
-	virtual void printUpdatedExpectations(std::ostream& _stream, std::string const& _linePrefix) const override;
+	void printSource(std::ostream& _stream, std::string const& _linePrefix = "", bool const _formatted = false) const override;
+	void printUpdatedExpectations(std::ostream& _stream, std::string const& _linePrefix) const override;
 private:
 	std::vector<std::pair<std::string, std::string>> m_sources;
 	std::string m_expectation;

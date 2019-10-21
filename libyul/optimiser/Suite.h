@@ -20,36 +20,63 @@
 
 #pragma once
 
-#include <libyul/ASTDataForward.h>
+#include <libyul/AsmDataForward.h>
 #include <libyul/YulString.h>
+#include <libyul/optimiser/OptimiserStep.h>
+#include <libyul/optimiser/NameDispenser.h>
+#include <liblangutil/EVMVersion.h>
 
 #include <set>
+#include <string>
+#include <memory>
 
-namespace dev
-{
-namespace solidity
-{
-namespace assembly
-{
-struct AsmAnalysisInfo;
-}
-}
 namespace yul
 {
 
+struct AsmAnalysisInfo;
+struct Dialect;
+class GasMeter;
+struct Object;
+
 /**
- * Optimiser suite that combines all steps and also provides the settings for the heuristics
+ * Optimiser suite that combines all steps and also provides the settings for the heuristics.
+ * Only optimizes the code of the provided object, does not descend into the sub-objects.
  */
 class OptimiserSuite
 {
 public:
+	enum class Debug
+	{
+		None,
+		PrintStep
+	};
 	static void run(
-		Block& _ast,
-		solidity::assembly::AsmAnalysisInfo const& _analysisInfo,
-
+		Dialect const& _dialect,
+		GasMeter const* _meter,
+		Object& _object,
+		bool _optimizeStackAllocation,
 		std::set<YulString> const& _externallyUsedIdentifiers = {}
 	);
+
+	void runSequence(std::vector<std::string> const& _steps, Block& _ast);
+
+	static std::map<std::string, std::unique_ptr<OptimiserStep>> const& allSteps();
+
+private:
+	OptimiserSuite(
+		Dialect const& _dialect,
+		std::set<YulString> const& _externallyUsedIdentifiers,
+		Debug _debug,
+		Block& _ast
+	):
+		m_dispenser{_dialect, _ast, _externallyUsedIdentifiers},
+		m_context{_dialect, m_dispenser, _externallyUsedIdentifiers},
+		m_debug(_debug)
+	{}
+
+	NameDispenser m_dispenser;
+	OptimiserStepContext m_context;
+	Debug m_debug;
 };
 
-}
 }

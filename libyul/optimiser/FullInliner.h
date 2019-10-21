@@ -19,22 +19,21 @@
  */
 #pragma once
 
-#include <libyul/ASTDataForward.h>
+#include <libyul/AsmDataForward.h>
 
 #include <libyul/optimiser/ASTCopier.h>
 #include <libyul/optimiser/ASTWalker.h>
 #include <libyul/optimiser/NameDispenser.h>
+#include <libyul/optimiser/OptimiserStep.h>
 #include <libyul/Exceptions.h>
 
-#include <libevmasm/SourceLocation.h>
+#include <liblangutil/SourceLocation.h>
 
 #include <boost/variant.hpp>
 #include <boost/optional.hpp>
 
 #include <set>
 
-namespace dev
-{
 namespace yul
 {
 
@@ -65,32 +64,46 @@ class NameCollector;
  * code of f, with replacements: a -> f_a, b -> f_b, c -> f_c
  * let z := f_c
  *
- * Prerequisites: Disambiguator, Function Hoister
- * More efficient if run after: Expression Splitter
+ * Prerequisites: Disambiguator
+ * More efficient if run after: Function Hoister, Expression Splitter
  */
 class FullInliner: public ASTModifier
 {
 public:
-	explicit FullInliner(Block& _ast, NameDispenser& _dispenser);
-
-	void run();
+	static constexpr char const* name{"FullInliner"};
+	static void run(OptimiserStepContext&, Block& _ast);
 
 	/// Inlining heuristic.
 	/// @param _callSite the name of the function in which the function call is located.
 	bool shallInline(FunctionCall const& _funCall, YulString _callSite);
 
-	FunctionDefinition& function(YulString _name) { return *m_functions.at(_name); }
+	FunctionDefinition* function(YulString _name)
+	{
+		auto it = m_functions.find(_name);
+		if (it != m_functions.end())
+			return it->second;
+		return nullptr;
+	}
+
+	/// Adds the size of _funCall to the size of _callSite. This is just
+	/// a rough estimate that is done during inlining. The proper size
+	/// should be determined after inlining is completed.
+	void tentativelyUpdateCodeSize(YulString _function, YulString _callSite);
 
 private:
-	void updateCodeSize(FunctionDefinition& fun);
+	FullInliner(Block& _ast, NameDispenser& _dispenser);
+	void run();
+
+	void updateCodeSize(FunctionDefinition const& _fun);
 	void handleBlock(YulString _currentFunctionName, Block& _block);
+	bool recursive(FunctionDefinition const& _fun) const;
 
 	/// The AST to be modified. The root block itself will not be modified, because
 	/// we store pointers to functions.
 	Block& m_ast;
 	std::map<YulString, FunctionDefinition*> m_functions;
 	/// Names of functions to always inline.
-	std::set<YulString> m_alwaysInline;
+	std::set<YulString> m_singleUse;
 	/// Variables that are constants (used for inlining heuristic)
 	std::set<YulString> m_constants;
 	std::map<YulString, size_t> m_functionSizes;
@@ -110,7 +123,7 @@ public:
 		m_nameDispenser(_nameDispenser)
 	{ }
 
-	virtual void operator()(Block& _block) override;
+	void operator()(Block& _block) override;
 
 private:
 	boost::optional<std::vector<Statement>> tryInlineStatement(Statement& _statement);
@@ -131,26 +144,22 @@ class BodyCopier: public ASTCopier
 public:
 	BodyCopier(
 		NameDispenser& _nameDispenser,
-		YulString _varNamePrefix,
 		std::map<YulString, YulString> const& _variableReplacements
 	):
 		m_nameDispenser(_nameDispenser),
-		m_varNamePrefix(_varNamePrefix),
 		m_variableReplacements(_variableReplacements)
 	{}
 
 	using ASTCopier::operator ();
 
-	virtual Statement operator()(VariableDeclaration const& _varDecl) override;
-	virtual Statement operator()(FunctionDefinition const& _funDef) override;
+	Statement operator()(VariableDeclaration const& _varDecl) override;
+	Statement operator()(FunctionDefinition const& _funDef) override;
 
-	virtual YulString translateIdentifier(YulString _name) override;
+	YulString translateIdentifier(YulString _name) override;
 
 	NameDispenser& m_nameDispenser;
-	YulString m_varNamePrefix;
 	std::map<YulString, YulString> m_variableReplacements;
 };
 
 
-}
 }

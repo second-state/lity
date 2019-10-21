@@ -20,32 +20,37 @@
  * @date 2014
  * Solidity command line interface.
  */
-#include "CommandLineInterface.h"
+#include <solc/CommandLineInterface.h>
 
 #include "lity/BuildInfo.h"
 #include "license.h"
 
 #include <libsolidity/interface/Version.h>
-#include <libsolidity/parsing/Scanner.h>
 #include <libsolidity/parsing/Parser.h>
 #include <libsolidity/ast/ASTPrinter.h>
 #include <libsolidity/ast/ASTVarableMapper.h>
 #include <libsolidity/ast/ASTJsonConverter.h>
 #include <libsolidity/analysis/NameAndTypeResolver.h>
-#include <libsolidity/interface/Exceptions.h>
 #include <libsolidity/interface/CompilerStack.h>
 #include <libsolidity/interface/StandardCompiler.h>
-#include <libsolidity/interface/SourceReferenceFormatter.h>
 #include <libsolidity/interface/GasEstimator.h>
-#include <libsolidity/interface/AssemblyStack.h>
+
+#include <libyul/AssemblyStack.h>
 
 #include <libevmasm/Instruction.h>
 #include <libevmasm/GasMeter.h>
+
+#include <liblangutil/Exceptions.h>
+#include <liblangutil/Scanner.h>
+#include <liblangutil/SourceReferenceFormatter.h>
+#include <liblangutil/SourceReferenceFormatterHuman.h>
 
 #include <libdevcore/Common.h>
 #include <libdevcore/CommonData.h>
 #include <libdevcore/CommonIO.h>
 #include <libdevcore/JSON.h>
+
+#include <memory>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -58,6 +63,7 @@
 #else // unix
 	#include <unistd.h>
 #endif
+
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -66,13 +72,36 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#if !defined(STDERR_FILENO)
+	#define STDERR_FILENO 2
+#endif
+
 using namespace std;
+using namespace langutil;
 namespace po = boost::program_options;
 
 namespace dev
 {
 namespace solidity
 {
+
+bool g_hasOutput = false;
+
+std::ostream& sout()
+{
+	g_hasOutput = true;
+	return cout;
+}
+
+std::ostream& serr(bool _used = true)
+{
+	if (_used)
+		g_hasOutput = true;
+	return cerr;
+}
+
+#define cout
+#define cerr
 
 static string const g_stdinFileNameStr = "<stdin>";
 static string const g_strAbi = "abi";
@@ -88,6 +117,7 @@ static string const g_strBinaryRuntime = "bin-runtime";
 static string const g_strCombinedJson = "combined-json";
 static string const g_strCompactJSON = "compact-format";
 static string const g_strContracts = "contracts";
+static string const g_strErrorRecovery = "error-recovery";
 static string const g_strEVM = "evm";
 static string const g_strEVM15 = "evm15";
 static string const g_strEVMVersion = "evm-version";
@@ -97,6 +127,8 @@ static string const g_strHelp = "help";
 static string const g_strInputFile = "input-file";
 static string const g_strInterface = "interface";
 static string const g_strYul = "yul";
+static string const g_strIR = "ir";
+static string const g_strEWasm = "ewasm";
 static string const g_strLicense = "license";
 static string const g_strLibraries = "libraries";
 static string const g_strLink = "link";
@@ -108,6 +140,7 @@ static string const g_strNatspecUser = "userdoc";
 static string const g_strOpcodes = "opcodes";
 static string const g_strOptimize = "optimize";
 static string const g_strOptimizeRuns = "optimize-runs";
+static string const g_strOptimizeYul = "optimize-yul";
 static string const g_strOutputDir = "output-dir";
 static string const g_strOverwrite = "overwrite";
 static string const g_strSignatureHashes = "hashes";
@@ -128,6 +161,9 @@ static string const g_strERC884 = "ERC884";
 static string const g_strContractStandard = "contract-standard";
 static string const g_strDisableOyente = "disable-oyente";
 static string const g_strStateVariables = "state-variables";
+static string const g_strColor = "color";
+static string const g_strNoColor = "no-color";
+static string const g_strNewReporter = "new-reporter";
 
 static string const g_argAbi = g_strAbi;
 static string const g_argPrettyJson = g_strPrettyJson;
@@ -142,10 +178,13 @@ static string const g_argBinary = g_strBinary;
 static string const g_argBinaryRuntime = g_strBinaryRuntime;
 static string const g_argCombinedJson = g_strCombinedJson;
 static string const g_argCompactJSON = g_strCompactJSON;
+static string const g_argErrorRecovery = g_strErrorRecovery;
 static string const g_argGas = g_strGas;
 static string const g_argHelp = g_strHelp;
 static string const g_argInputFile = g_strInputFile;
 static string const g_argYul = g_strYul;
+static string const g_argIR = g_strIR;
+static string const g_argEWasm = g_strEWasm;
 static string const g_argLibraries = g_strLibraries;
 static string const g_argLink = g_strLink;
 static string const g_argMachine = g_strMachine;
@@ -166,6 +205,9 @@ static string const g_argIgnoreMissingFiles = g_strIgnoreMissingFiles;
 static string const g_argContractStandard = g_strContractStandard;
 static string const g_argDisableOyente = g_strDisableOyente;
 static string const g_argStateVariables = g_strStateVariables;
+static string const g_argColor = g_strColor;
+static string const g_argNoColor = g_strNoColor;
+static string const g_argNewReporter = g_strNewReporter;
 
 /// Possible arguments to for --combined-json
 static set<string> const g_combinedJsonArgs
@@ -206,7 +248,7 @@ static set<string> const g_contractStandardArgs
 
 static void version()
 {
-	cout <<
+	sout() <<
 		"lityc, the solidity compiler commandline interface" <<
 		endl <<
 		"Version: " <<
@@ -217,9 +259,9 @@ static void version()
 
 static void license()
 {
-	cout << otherLicenses << endl;
+	sout() << otherLicenses << endl;
 	// This is a static variable generated by cmake from LICENSE.txt
-	cout << licenseText << endl;
+	sout() << licenseText << endl;
 	exit(0);
 }
 
@@ -255,8 +297,8 @@ void CommandLineInterface::handleBinary(string const& _contract)
 			createFile(m_compiler->filesystemFriendlyName(_contract) + ".bin", objectWithLinkRefsHex(m_compiler->object(_contract)));
 		else
 		{
-			cout << "Binary: " << endl;
-			cout << objectWithLinkRefsHex(m_compiler->object(_contract)) << endl;
+			sout() << "Binary: " << endl;
+			sout() << objectWithLinkRefsHex(m_compiler->object(_contract)) << endl;
 		}
 	}
 	if (m_args.count(g_argBinaryRuntime))
@@ -265,8 +307,8 @@ void CommandLineInterface::handleBinary(string const& _contract)
 			createFile(m_compiler->filesystemFriendlyName(_contract) + ".bin-runtime", objectWithLinkRefsHex(m_compiler->runtimeObject(_contract)));
 		else
 		{
-			cout << "Binary of the runtime part: " << endl;
-			cout << objectWithLinkRefsHex(m_compiler->runtimeObject(_contract)) << endl;
+			sout() << "Binary of the runtime part: " << endl;
+			sout() << objectWithLinkRefsHex(m_compiler->runtimeObject(_contract)) << endl;
 		}
 	}
 }
@@ -274,12 +316,40 @@ void CommandLineInterface::handleBinary(string const& _contract)
 void CommandLineInterface::handleOpcode(string const& _contract)
 {
 	if (m_args.count(g_argOutputDir))
-		createFile(m_compiler->filesystemFriendlyName(_contract) + ".opcode", solidity::disassemble(m_compiler->object(_contract).bytecode));
+		createFile(m_compiler->filesystemFriendlyName(_contract) + ".opcode", dev::eth::disassemble(m_compiler->object(_contract).bytecode));
 	else
 	{
-		cout << "Opcodes: " << endl;
-		cout << solidity::disassemble(m_compiler->object(_contract).bytecode);
-		cout << endl;
+		sout() << "Opcodes: " << endl;
+		sout() << dev::eth::disassemble(m_compiler->object(_contract).bytecode);
+		sout() << endl;
+	}
+}
+
+void CommandLineInterface::handleIR(string const& _contractName)
+{
+	if (m_args.count(g_argIR))
+	{
+		if (m_args.count(g_argOutputDir))
+			createFile(m_compiler->filesystemFriendlyName(_contractName) + ".yul", m_compiler->yulIR(_contractName));
+		else
+		{
+			sout() << "IR: " << endl;
+			sout() << m_compiler->yulIR(_contractName) << endl;
+		}
+	}
+}
+
+void CommandLineInterface::handleEWasm(string const& _contractName)
+{
+	if (m_args.count(g_argEWasm))
+	{
+		if (m_args.count(g_argOutputDir))
+			createFile(m_compiler->filesystemFriendlyName(_contractName) + ".wast", m_compiler->eWasm(_contractName));
+		else
+		{
+			sout() << "eWasm: " << endl;
+			sout() << m_compiler->eWasm(_contractName) << endl;
+		}
 	}
 }
 
@@ -304,7 +374,7 @@ void CommandLineInterface::handleSignatureHashes(string const& _contract)
 	if (m_args.count(g_argOutputDir))
 		createFile(m_compiler->filesystemFriendlyName(_contract) + ".signatures", out);
 	else
-		cout << "Function signatures: " << endl << out;
+		sout() << "Function signatures: " << endl << out;
 }
 
 void CommandLineInterface::handleMetadata(string const& _contract)
@@ -316,7 +386,7 @@ void CommandLineInterface::handleMetadata(string const& _contract)
 	if (m_args.count(g_argOutputDir))
 		createFile(m_compiler->filesystemFriendlyName(_contract) + "_meta.json", data);
 	else
-		cout << "Metadata: " << endl << data << endl;
+		sout() << "Metadata: " << endl << data << endl;
 }
 
 void CommandLineInterface::handleABI(string const& _contract)
@@ -328,7 +398,7 @@ void CommandLineInterface::handleABI(string const& _contract)
 	if (m_args.count(g_argOutputDir))
 		createFile(m_compiler->filesystemFriendlyName(_contract) + ".abi", data);
 	else
-		cout << "Contract JSON ABI " << endl << data << endl;
+		sout() << "Contract JSON ABI " << endl << data << endl;
 }
 
 void CommandLineInterface::handleNatspec(bool _natspecDev, string const& _contract)
@@ -362,8 +432,8 @@ void CommandLineInterface::handleNatspec(bool _natspecDev, string const& _contra
 			createFile(m_compiler->filesystemFriendlyName(_contract) + suffix, output);
 		else
 		{
-			cout << title << endl;
-			cout << output << endl;
+			sout() << title << endl;
+			sout() << output << endl;
 		}
 
 	}
@@ -372,39 +442,39 @@ void CommandLineInterface::handleNatspec(bool _natspecDev, string const& _contra
 void CommandLineInterface::handleGasEstimation(string const& _contract)
 {
 	Json::Value estimates = m_compiler->gasEstimates(_contract);
-	cout << "Gas estimation:" << endl;
+	sout() << "Gas estimation:" << endl;
 
 	if (estimates["creation"].isObject())
 	{
 		Json::Value creation = estimates["creation"];
-		cout << "construction:" << endl;
-		cout << "   " << creation["executionCost"].asString();
-		cout << " + " << creation["codeDepositCost"].asString();
-		cout << " = " << creation["totalCost"].asString() << endl;
+		sout() << "construction:" << endl;
+		sout() << "   " << creation["executionCost"].asString();
+		sout() << " + " << creation["codeDepositCost"].asString();
+		sout() << " = " << creation["totalCost"].asString() << endl;
 	}
 
 	if (estimates["external"].isObject())
 	{
 		Json::Value externalFunctions = estimates["external"];
-		cout << "external:" << endl;
+		sout() << "external:" << endl;
 		for (auto const& name: externalFunctions.getMemberNames())
 		{
 			if (name.empty())
-				cout << "   fallback:\t";
+				sout() << "   fallback:\t";
 			else
-				cout << "   " << name << ":\t";
-			cout << externalFunctions[name].asString() << endl;
+				sout() << "   " << name << ":\t";
+			sout() << externalFunctions[name].asString() << endl;
 		}
 	}
 
 	if (estimates["internal"].isObject())
 	{
 		Json::Value internalFunctions = estimates["internal"];
-		cout << "internal:" << endl;
+		sout() << "internal:" << endl;
 		for (auto const& name: internalFunctions.getMemberNames())
 		{
-			cout << "   " << name << ":\t";
-			cout << internalFunctions[name].asString() << endl;
+			sout() << "   " << name << ":\t";
+			sout() << internalFunctions[name].asString() << endl;
 		}
 	}
 }
@@ -426,7 +496,7 @@ bool CommandLineInterface::readInputFilesAndConfigureRemappings()
 				}
 				else
 				{
-					cerr << "Invalid remapping: \"" << path << "\"." << endl;
+					serr() << "Invalid remapping: \"" << path << "\"." << endl;
 					return false;
 				}
 			}
@@ -439,11 +509,11 @@ bool CommandLineInterface::readInputFilesAndConfigureRemappings()
 				{
 					if (!ignoreMissing)
 					{
-						cerr << infile << " is not found." << endl;
+						serr() << infile << " is not found." << endl;
 						return false;
 					}
 					else
-						cerr << infile << " is not found. Skipping." << endl;
+						serr() << infile << " is not found. Skipping." << endl;
 
 					continue;
 				}
@@ -452,11 +522,11 @@ bool CommandLineInterface::readInputFilesAndConfigureRemappings()
 				{
 					if (!ignoreMissing)
 					{
-						cerr << infile << " is not a valid file." << endl;
+						serr() << infile << " is not a valid file." << endl;
 						return false;
 					}
 					else
-						cerr << infile << " is not a valid file. Skipping." << endl;
+						serr() << infile << " is not a valid file. Skipping." << endl;
 
 					continue;
 				}
@@ -470,7 +540,7 @@ bool CommandLineInterface::readInputFilesAndConfigureRemappings()
 		m_sourceCodes[g_stdinFileName] = dev::readStandardInput();
 	if (m_sourceCodes.size() == 0)
 	{
-		cerr << "No input files given. If you wish to use the standard input please specify \"-\" explicitly." << endl;
+		serr() << "No input files given. If you wish to use the standard input please specify \"-\" explicitly." << endl;
 		return false;
 	}
 
@@ -501,7 +571,7 @@ bool CommandLineInterface::parseLibraryOption(string const& _input)
 			auto colon = lib.rfind(':');
 			if (colon == string::npos)
 			{
-				cerr << "Colon separator missing in library address specifier \"" << lib << "\"" << endl;
+				serr() << "Colon separator missing in library address specifier \"" << lib << "\"" << endl;
 				return false;
 			}
 			string libName(lib.begin(), lib.begin() + colon);
@@ -512,26 +582,26 @@ bool CommandLineInterface::parseLibraryOption(string const& _input)
 				addrString = addrString.substr(2);
 			if (addrString.empty())
 			{
-				cerr << "Empty address provided for library \"" << libName << "\": " << endl;
-				cerr << "Note that there should not be any whitespace after the colon." << endl;
+				serr() << "Empty address provided for library \"" << libName << "\": " << endl;
+				serr() << "Note that there should not be any whitespace after the colon." << endl;
 				return false;
 			}
 			else if (addrString.length() != 40)
 			{
-				cerr << "Invalid length for address for library \"" << libName << "\": " << addrString.length() << " instead of 40 characters." << endl;
+				serr() << "Invalid length for address for library \"" << libName << "\": " << addrString.length() << " instead of 40 characters." << endl;
 				return false;
 			}
 			if (!passesAddressChecksum(addrString, false))
 			{
-				cerr << "Invalid checksum on address for library \"" << libName << "\": " << addrString << endl;
-				cerr << "The correct checksum is " << dev::getChecksummedAddress(addrString) << endl;
+				serr() << "Invalid checksum on address for library \"" << libName << "\": " << addrString << endl;
+				serr() << "The correct checksum is " << dev::getChecksummedAddress(addrString) << endl;
 				return false;
 			}
 			bytes binAddr = fromHex(addrString);
 			h160 address(binAddr, h160::AlignRight);
 			if (binAddr.size() > 20 || address == h160())
 			{
-				cerr << "Invalid address for library \"" << libName << "\": " << addrString << endl;
+				serr() << "Invalid address for library \"" << libName << "\": " << addrString << endl;
 				return false;
 			}
 			m_libraries[libName] = address;
@@ -551,7 +621,7 @@ void CommandLineInterface::createFile(string const& _fileName, string const& _da
 	string pathName = (p / _fileName).string();
 	if (fs::exists(pathName) && !m_args.count(g_strOverwrite))
 	{
-		cerr << "Refusing to overwrite existing file \"" << pathName << "\" (use --overwrite to force)." << endl;
+		serr() << "Refusing to overwrite existing file \"" << pathName << "\" (use --overwrite to force)." << endl;
 		m_error = true;
 		return;
 	}
@@ -568,6 +638,8 @@ void CommandLineInterface::createJson(string const& _fileName, string const& _js
 
 bool CommandLineInterface::parseArguments(int _argc, char** _argv)
 {
+	g_hasOutput = false;
+
 	// Declare the supported options.
 	po::options_description desc(R"(lityc, the Lity commandline compiler.
 
@@ -595,7 +667,7 @@ Allowed options)",
 		(
 			g_strEVMVersion.c_str(),
 			po::value<string>()->value_name("version"),
-			"Select desired EVM version. Either homestead, tangerineWhistle, spuriousDragon, byzantium, lity (default) or constantinople."
+			"Select desired EVM version. Either homestead, tangerineWhistle, spuriousDragon, byzantium, lity (default), constantinople, petersburg (default), istanbul or berlin."
 		)
 		(g_argOptimize.c_str(), "Enable bytecode optimizer.")
 		(
@@ -604,6 +676,7 @@ Allowed options)",
 			"Set for how many contract runs to optimize."
 			"Lower values will optimize more for initial deployment cost, higher values will optimize more for high-frequency usage."
 		)
+		(g_strOptimizeYul.c_str(), "Enable Yul optimizer in Solidity, mostly for ABIEncoderV2. Still considered experimental.")
 		(g_argPrettyJson.c_str(), "Output JSON in pretty format. Currently it only works with the combined JSON output.")
 		(
 			g_argLibraries.c_str(),
@@ -631,15 +704,15 @@ Allowed options)",
 		)
 		(
 			g_argAssemble.c_str(),
-			"Switch to assembly mode, ignoring all options except --machine and assumes input is assembly."
+			"Switch to assembly mode, ignoring all options except --machine and --optimize and assumes input is assembly."
 		)
 		(
 			g_argYul.c_str(),
-			"Switch to Yul mode, ignoring all options except --machine and assumes input is Yul."
+			"Switch to Yul mode, ignoring all options except --machine and --optimize and assumes input is Yul."
 		)
 		(
 			g_argStrictAssembly.c_str(),
-			"Switch to strict assembly mode, ignoring all options except --machine and assumes input is strict assembly."
+			"Switch to strict assembly mode, ignoring all options except --machine and --optimize and assumes input is strict assembly."
 		)
 		(
 			g_argMachine.c_str(),
@@ -665,6 +738,11 @@ Allowed options)",
 			"'auto' will try to guess what standard is meant to be implemented, then list missing functions for those standard."
 		)
 		(g_argDisableOyente.c_str(), "Diable Oyente analysis.");
+		(g_argColor.c_str(), "Force colored output.")
+		(g_argNoColor.c_str(), "Explicitly disable colored output, disabling terminal auto-detection.")
+		(g_argNewReporter.c_str(), "Enables new diagnostics reporter.")
+		(g_argErrorRecovery.c_str(), "Enables additional parser error recovery.")
+		(g_argIgnoreMissingFiles.c_str(), "Ignore missing files.");
 	po::options_description outputComponents("Output Components");
 	outputComponents.add_options()
 		(g_argAst.c_str(), "AST of all source files.")
@@ -676,6 +754,8 @@ Allowed options)",
 		(g_argBinary.c_str(), "Binary of the contracts in hex.")
 		(g_argBinaryRuntime.c_str(), "Binary of the runtime part of the contracts in hex.")
 		(g_argAbi.c_str(), "ABI specification of the contracts.")
+		(g_argIR.c_str(), "Intermediate Representation (IR) of all contracts (EXPERIMENTAL).")
+		(g_argEWasm.c_str(), "EWasm text representation of all contracts (EXPERIMENTAL).")
 		(g_argSignatureHashes.c_str(), "Function signature hashes of the contracts.")
 		(g_argNatspecUser.c_str(), "Natspec user documentation of all contracts.")
 		(g_argNatspecDev.c_str(), "Natspec developer documentation of all contracts.")
@@ -700,13 +780,21 @@ Allowed options)",
 	}
 	catch (po::error const& _exception)
 	{
-		cerr << _exception.what() << endl;
+		serr() << _exception.what() << endl;
 		return false;
 	}
 
+	if (m_args.count(g_argColor) && m_args.count(g_argNoColor))
+	{
+		serr() << "Option " << g_argColor << " and " << g_argNoColor << " are mutualy exclusive." << endl;
+		return false;
+	}
+
+	m_coloredOutput = !m_args.count(g_argNoColor) && (isatty(STDERR_FILENO) || m_args.count(g_argColor));
+
 	if (m_args.count(g_argHelp) || (isatty(fileno(stdin)) && _argc == 1))
 	{
-		cout << desc;
+		sout() << desc;
 		return false;
 	}
 
@@ -728,7 +816,7 @@ Allowed options)",
 		for (string const& item: boost::split(requests, m_args[g_argCombinedJson].as<string>(), boost::is_any_of(",")))
 			if (!g_combinedJsonArgs.count(item))
 			{
-				cerr << "Invalid option to --combined-json: " << item << endl;
+				serr() << "Invalid option to --combined-json: " << item << endl;
 				return false;
 			}
 	}
@@ -756,7 +844,7 @@ bool CommandLineInterface::processInput()
 		try
 		{
 			auto path = boost::filesystem::path(_path);
-			auto canonicalPath = weaklyCanonicalFilesystemPath(path);
+			auto canonicalPath = boost::filesystem::weakly_canonical(path);
 			bool isAllowed = false;
 			for (auto const& allowedDir: m_allowedDirectories)
 			{
@@ -804,9 +892,7 @@ bool CommandLineInterface::processInput()
 			// path comparison in later parts of the code, so we need to strip
 			// it.
 			if (filesystem_path.filename() == ".")
-			{
 				filesystem_path.remove_filename();
-			}
 			m_allowedDirectories.push_back(filesystem_path);
 		}
 	}
@@ -815,7 +901,7 @@ bool CommandLineInterface::processInput()
 	{
 		string input = dev::readStandardInput();
 		StandardCompiler compiler(fileReader);
-		cout << compiler.compile(input) << endl;
+		sout() << compiler.compile(std::move(input)) << endl;
 		return true;
 	}
 
@@ -830,10 +916,10 @@ bool CommandLineInterface::processInput()
 	if (m_args.count(g_strEVMVersion))
 	{
 		string versionOptionStr = m_args[g_strEVMVersion].as<string>();
-		boost::optional<EVMVersion> versionOption = EVMVersion::fromString(versionOptionStr);
+		boost::optional<langutil::EVMVersion> versionOption = langutil::EVMVersion::fromString(versionOptionStr);
 		if (!versionOption)
 		{
-			cerr << "Invalid option for --evm-version: " << versionOptionStr << endl;
+			serr() << "Invalid option for --evm-version: " << versionOptionStr << endl;
 			return false;
 		}
 		m_evmVersion = *versionOption;
@@ -854,10 +940,11 @@ bool CommandLineInterface::processInput()
 	{
 		// switch to assembly mode
 		m_onlyAssemble = true;
-		using Input = AssemblyStack::Language;
-		using Machine = AssemblyStack::Machine;
+		using Input = yul::AssemblyStack::Language;
+		using Machine = yul::AssemblyStack::Machine;
 		Input inputLanguage = m_args.count(g_argYul) ? Input::Yul : (m_args.count(g_argStrictAssembly) ? Input::StrictAssembly : Input::Assembly);
 		Machine targetMachine = Machine::EVM;
+		bool optimize = m_args.count(g_argOptimize) || m_args.count(g_strOptimizeYul);
 		if (m_args.count(g_argMachine))
 		{
 			string machine = m_args[g_argMachine].as<string>();
@@ -869,11 +956,26 @@ bool CommandLineInterface::processInput()
 				targetMachine = Machine::eWasm;
 			else
 			{
-				cerr << "Invalid option for --machine: " << machine << endl;
+				serr() << "Invalid option for --machine: " << machine << endl;
 				return false;
 			}
 		}
-		return assemble(inputLanguage, targetMachine);
+		if (targetMachine == Machine::eWasm && inputLanguage == Input::StrictAssembly)
+			inputLanguage = Input::EWasm;
+		if (optimize && inputLanguage != Input::StrictAssembly)
+		{
+			serr() <<
+				"Optimizer can only be used for strict assembly. Use --" <<
+				g_strStrictAssembly <<
+				"." <<
+				endl;
+			return false;
+		}
+		serr() <<
+			"Warning: Yul and its optimizer are still experimental. Please use the output with care." <<
+			endl;
+
+		return assemble(inputLanguage, targetMachine, optimize);
 	}
 	if (m_args.count(g_argLink))
 	{
@@ -884,8 +986,11 @@ bool CommandLineInterface::processInput()
 
 	m_compiler.reset(new CompilerStack(fileReader));
 
-	auto scannerFromSourceName = [&](string const& _sourceName) -> solidity::Scanner const& { return m_compiler->scanner(_sourceName); };
-	SourceReferenceFormatter formatter(cerr, scannerFromSourceName);
+	unique_ptr<SourceReferenceFormatter> formatter;
+	if (m_args.count(g_argNewReporter))
+		formatter = make_unique<SourceReferenceFormatterHuman>(serr(false), m_coloredOutput);
+	else
+		formatter = make_unique<SourceReferenceFormatter>(serr(false));
 
 	try
 	{
@@ -893,63 +998,89 @@ bool CommandLineInterface::processInput()
 			m_compiler->useMetadataLiteralSources(true);
 		if (m_args.count(g_argInputFile))
 			m_compiler->setRemappings(m_remappings);
-		for (auto const& sourceCode: m_sourceCodes)
-			m_compiler->addSource(sourceCode.first, sourceCode.second);
+		m_compiler->setSources(m_sourceCodes);
 		if (m_args.count(g_argLibraries))
 			m_compiler->setLibraries(m_libraries);
 		if (m_args.count(g_argContractStandard))
 			m_compiler->setContractStandard(m_contractStandard);
+		m_compiler->setParserErrorRecovery(m_args.count(g_argErrorRecovery));
 		m_compiler->setEVMVersion(m_evmVersion);
 		// TODO: Perhaps we should not compile unless requested
-		bool optimize = m_args.count(g_argOptimize) > 0;
-		unsigned runs = m_args[g_argOptimizeRuns].as<unsigned>();
-		m_compiler->setOptimiserSettings(optimize, runs);
+
+		m_compiler->enableIRGeneration(m_args.count(g_argIR));
+		m_compiler->enableEWasmGeneration(m_args.count(g_argEWasm));
+
+		OptimiserSettings settings = m_args.count(g_argOptimize) ? OptimiserSettings::standard() : OptimiserSettings::minimal();
+		settings.expectedExecutionsPerDeployment = m_args[g_argOptimizeRuns].as<unsigned>();
+		settings.runYulOptimiser = m_args.count(g_strOptimizeYul);
+		settings.optimizeStackAllocation = settings.runYulOptimiser;
+		m_compiler->setOptimiserSettings(settings);
 
 		bool successful = m_compiler->compile();
 
 		for (auto const& error: m_compiler->errors())
-			formatter.printExceptionInformation(
-				*error,
-				error->typeNameCstr()
-			);
+		{
+			g_hasOutput = true;
+			formatter->printErrorInformation(*error);
+		}
 
 		if (!successful)
-			return false;
+		{
+			if (m_args.count(g_argErrorRecovery))
+				return true;
+			else
+				return false;
+		}
 	}
 	catch (CompilerError const& _exception)
 	{
-		formatter.printExceptionInformation(_exception, "Compiler error");
+		g_hasOutput = true;
+		formatter->printExceptionInformation(_exception, "Compiler error");
 		return false;
 	}
 	catch (InternalCompilerError const& _exception)
 	{
-		cerr << "Internal compiler error during compilation:" << endl
-			 << boost::diagnostic_information(_exception);
+		serr() <<
+			"Internal compiler error during compilation:" <<
+			endl <<
+			boost::diagnostic_information(_exception);
 		return false;
 	}
 	catch (UnimplementedFeatureError const& _exception)
 	{
-		cerr << "Unimplemented feature:" << endl
-			 << boost::diagnostic_information(_exception);
+		serr() <<
+			"Unimplemented feature:" <<
+			endl <<
+			boost::diagnostic_information(_exception);
 		return false;
 	}
 	catch (Error const& _error)
 	{
 		if (_error.type() == Error::Type::DocstringParsingError)
-			cerr << "Documentation parsing error: " << *boost::get_error_info<errinfo_comment>(_error) << endl;
+			serr() << "Documentation parsing error: " << *boost::get_error_info<errinfo_comment>(_error) << endl;
 		else
-			formatter.printExceptionInformation(_error, _error.typeName());
+		{
+			g_hasOutput = true;
+			formatter->printExceptionInformation(_error, _error.typeName());
+		}
 
 		return false;
 	}
 	catch (Exception const& _exception)
 	{
-		cerr << "Exception during compilation: " << boost::diagnostic_information(_exception) << endl;
+		serr() << "Exception during compilation: " << boost::diagnostic_information(_exception) << endl;
+		return false;
+	}
+	catch (std::exception const& _e)
+	{
+		serr() << "Unknown exception during compilation" << (
+			_e.what() ? ": " + string(_e.what()) : "."
+		) << endl;
 		return false;
 	}
 	catch (...)
 	{
-		cerr << "Unknown exception during compilation." << endl;
+		serr() << "Unknown exception during compilation." << endl;
 		return false;
 	}
 
@@ -977,20 +1108,20 @@ void CommandLineInterface::handleCombinedJSON()
 			contractData[g_strAbi] = dev::jsonCompactPrint(m_compiler->contractABI(contractName));
 		if (requests.count("metadata"))
 			contractData["metadata"] = m_compiler->metadata(contractName);
-		if (requests.count(g_strBinary))
+		if (requests.count(g_strBinary) && m_compiler->compilationSuccessful())
 			contractData[g_strBinary] = m_compiler->object(contractName).toHex();
-		if (requests.count(g_strBinaryRuntime))
+		if (requests.count(g_strBinaryRuntime) && m_compiler->compilationSuccessful())
 			contractData[g_strBinaryRuntime] = m_compiler->runtimeObject(contractName).toHex();
-		if (requests.count(g_strOpcodes))
-			contractData[g_strOpcodes] = solidity::disassemble(m_compiler->object(contractName).bytecode);
-		if (requests.count(g_strAsm))
+		if (requests.count(g_strOpcodes) && m_compiler->compilationSuccessful())
+			contractData[g_strOpcodes] = dev::eth::disassemble(m_compiler->object(contractName).bytecode);
+		if (requests.count(g_strAsm) && m_compiler->compilationSuccessful())
 			contractData[g_strAsm] = m_compiler->assemblyJSON(contractName, m_sourceCodes);
-		if (requests.count(g_strSrcMap))
+		if (requests.count(g_strSrcMap) && m_compiler->compilationSuccessful())
 		{
 			auto map = m_compiler->sourceMapping(contractName);
 			contractData[g_strSrcMap] = map ? *map : "";
 		}
-		if (requests.count(g_strSrcMapRuntime))
+		if (requests.count(g_strSrcMapRuntime) && m_compiler->compilationSuccessful())
 		{
 			auto map = m_compiler->runtimeSourceMapping(contractName);
 			contractData[g_strSrcMapRuntime] = map ? *map : "";
@@ -1030,7 +1161,7 @@ void CommandLineInterface::handleCombinedJSON()
 	if (m_args.count(g_argOutputDir))
 		createJson("combined", json);
 	else
-		cout << json << endl;
+		sout() << json << endl;
 }
 
 void CommandLineInterface::handleAst(string const& _argStr)
@@ -1053,15 +1184,17 @@ void CommandLineInterface::handleAst(string const& _argStr)
 		for (auto const& sourceCode: m_sourceCodes)
 			asts.push_back(&m_compiler->ast(sourceCode.first));
 		map<ASTNode const*, eth::GasMeter::GasConsumption> gasCosts;
-		for (auto const& contract : m_compiler->contractNames())
-		{
-			auto ret = GasEstimator::breakToStatementLevel(
-				GasEstimator(m_evmVersion).structuralEstimation(*m_compiler->runtimeAssemblyItems(contract), asts),
-				asts
-			);
-			for (auto const& it: ret)
-				gasCosts[it.first] += it.second;
-		}
+		for (auto const& contract: m_compiler->contractNames())
+			if (m_compiler->compilationSuccessful())
+				if (auto const* assemblyItems = m_compiler->runtimeAssemblyItems(contract))
+				{
+					auto ret = GasEstimator::breakToStatementLevel(
+						GasEstimator(m_evmVersion).structuralEstimation(*assemblyItems, asts),
+						asts
+					);
+					for (auto const& it: ret)
+						gasCosts[it.first] += it.second;
+				}
 
 		bool legacyFormat = !m_args.count(g_argAstCompactJson);
 		if (m_args.count(g_argOutputDir))
@@ -1086,10 +1219,10 @@ void CommandLineInterface::handleAst(string const& _argStr)
 		}
 		else
 		{
-			cout << title << endl << endl;
+			sout() << title << endl << endl;
 			for (auto const& sourceCode: m_sourceCodes)
 			{
-				cout << endl << "======= " << sourceCode.first << " =======" << endl;
+				sout() << endl << "======= " << sourceCode.first << " =======" << endl;
 				if (_argStr == g_argAst)
 				{
 					ASTPrinter printer(
@@ -1097,10 +1230,10 @@ void CommandLineInterface::handleAst(string const& _argStr)
 						sourceCode.second,
 						gasCosts
 					);
-					printer.print(cout);
+					printer.print(sout());
 				}
 				else
-					ASTJsonConverter(legacyFormat, m_compiler->sourceIndices()).print(cout, m_compiler->ast(sourceCode.first));
+					ASTJsonConverter(legacyFormat, m_compiler->sourceIndices()).print(sout(), m_compiler->ast(sourceCode.first));
 			}
 		}
 	}
@@ -1305,7 +1438,7 @@ bool CommandLineInterface::link()
 			if (it == end) break;
 			if (end - it < placeholderSize)
 			{
-				cerr << "Error in binary object file " << src.first << " at position " << (end - src.second.begin()) << endl;
+				serr() << "Error in binary object file " << src.first << " at position " << (end - src.second.begin()) << endl;
 				return false;
 			}
 
@@ -1316,14 +1449,14 @@ bool CommandLineInterface::link()
 				copy(hexStr.begin(), hexStr.end(), it);
 			}
 			else
-				cerr << "Reference \"" << name << "\" in file \"" << src.first << "\" still unresolved." << endl;
+				serr() << "Reference \"" << name << "\" in file \"" << src.first << "\" still unresolved." << endl;
 			it += placeholderSize;
 		}
 		// Remove hints for resolved libraries.
 		for (auto const& library: m_libraries)
 			boost::algorithm::erase_all(src.second, "\n" + libraryPlaceholderHint(library.first));
 		while (!src.second.empty() && *prev(src.second.end()) == '\n')
-			   src.second.resize(src.second.size() - 1);
+			src.second.resize(src.second.size() - 1);
 	}
 	return true;
 }
@@ -1332,17 +1465,18 @@ void CommandLineInterface::writeLinkedFiles()
 {
 	for (auto const& src: m_sourceCodes)
 		if (src.first == g_stdinFileName)
-			cout << src.second << endl;
+			sout() << src.second << endl;
 		else
 		{
 			ofstream outFile(src.first);
 			outFile << src.second;
 			if (!outFile)
 			{
-				cerr << "Could not write to file " << src.first << ". Aborting." << endl;
+				serr() << "Could not write to file " << src.first << ". Aborting." << endl;
 				return;
 			}
 		}
+	sout() << "Linking completed." << endl;
 }
 
 string CommandLineInterface::libraryPlaceholderHint(string const& _libraryName)
@@ -1363,28 +1497,43 @@ string CommandLineInterface::objectWithLinkRefsHex(eth::LinkerObject const& _obj
 }
 
 bool CommandLineInterface::assemble(
-	AssemblyStack::Language _language,
-	AssemblyStack::Machine _targetMachine
+	yul::AssemblyStack::Language _language,
+	yul::AssemblyStack::Machine _targetMachine,
+	bool _optimize
 )
 {
 	bool successful = true;
-	map<string, AssemblyStack> assemblyStacks;
+	map<string, yul::AssemblyStack> assemblyStacks;
 	for (auto const& src: m_sourceCodes)
 	{
-		auto& stack = assemblyStacks[src.first] = AssemblyStack(m_evmVersion, _language);
+		auto& stack = assemblyStacks[src.first] = yul::AssemblyStack(
+			m_evmVersion,
+			_language,
+			_optimize ? OptimiserSettings::full() : OptimiserSettings::minimal()
+		);
 		try
 		{
 			if (!stack.parseAndAnalyze(src.first, src.second))
 				successful = false;
+			else
+				stack.optimize();
 		}
 		catch (Exception const& _exception)
 		{
-			cerr << "Exception in assembler: " << boost::diagnostic_information(_exception) << endl;
+			serr() << "Exception in assembler: " << boost::diagnostic_information(_exception) << endl;
+			return false;
+		}
+		catch (std::exception const& _e)
+		{
+			serr() <<
+				"Unknown exception during compilation" <<
+				(_e.what() ? ": " + string(_e.what()) : ".") <<
+				endl;
 			return false;
 		}
 		catch (...)
 		{
-			cerr << "Unknown exception in assembler." << endl;
+			serr() << "Unknown exception in assembler." << endl;
 			return false;
 		}
 	}
@@ -1392,14 +1541,17 @@ bool CommandLineInterface::assemble(
 	for (auto const& sourceAndStack: assemblyStacks)
 	{
 		auto const& stack = sourceAndStack.second;
-		auto scannerFromSourceName = [&](string const&) -> Scanner const& { return stack.scanner(); };
-		SourceReferenceFormatter formatter(cerr, scannerFromSourceName);
+		unique_ptr<SourceReferenceFormatter> formatter;
+		if (m_args.count(g_argNewReporter))
+			formatter = make_unique<SourceReferenceFormatterHuman>(serr(false), m_coloredOutput);
+		else
+			formatter = make_unique<SourceReferenceFormatter>(serr(false));
 
 		for (auto const& error: stack.errors())
-			formatter.printExceptionInformation(
-				*error,
-				error->typeNameCstr()
-			);
+		{
+			g_hasOutput = true;
+			formatter->printErrorInformation(*error);
+		}
 		if (!Error::containsOnlyWarnings(stack.errors()))
 			successful = false;
 	}
@@ -1410,42 +1562,49 @@ bool CommandLineInterface::assemble(
 	for (auto const& src: m_sourceCodes)
 	{
 		string machine =
-			_targetMachine == AssemblyStack::Machine::EVM ? "EVM" :
-			_targetMachine == AssemblyStack::Machine::EVM15 ? "EVM 1.5" :
+			_targetMachine == yul::AssemblyStack::Machine::EVM ? "EVM" :
+			_targetMachine == yul::AssemblyStack::Machine::EVM15 ? "EVM 1.5" :
 			"eWasm";
-		cout << endl << "======= " << src.first << " (" << machine << ") =======" << endl;
-		AssemblyStack& stack = assemblyStacks[src.first];
+		sout() << endl << "======= " << src.first << " (" << machine << ") =======" << endl;
+		yul::AssemblyStack& stack = assemblyStacks[src.first];
 
-		cout << endl << "Pretty printed source:" << endl;
-		cout << stack.print() << endl;
+		sout() << endl << "Pretty printed source:" << endl;
+		sout() << stack.print() << endl;
 
-		MachineAssemblyObject object;
+		yul::MachineAssemblyObject object;
 		try
 		{
 			object = stack.assemble(_targetMachine);
 		}
 		catch (Exception const& _exception)
 		{
-			cerr << "Exception while assembling: " << boost::diagnostic_information(_exception) << endl;
+			serr() << "Exception while assembling: " << boost::diagnostic_information(_exception) << endl;
+			return false;
+		}
+		catch (std::exception const& _e)
+		{
+			serr() << "Unknown exception during compilation" << (
+				_e.what() ? ": " + string(_e.what()) : "."
+			) << endl;
 			return false;
 		}
 		catch (...)
 		{
-			cerr << "Unknown exception while assembling." << endl;
+			serr() << "Unknown exception while assembling." << endl;
 			return false;
 		}
 
-		cout << endl << "Binary representation:" << endl;
+		sout() << endl << "Binary representation:" << endl;
 		if (object.bytecode)
-			cout << object.bytecode->toHex() << endl;
+			sout() << object.bytecode->toHex() << endl;
 		else
-			cerr << "No binary representation found." << endl;
+			serr() << "No binary representation found." << endl;
 
-		cout << endl << "Text representation:" << endl;
+		sout() << endl << "Text representation:" << endl;
 		if (!object.assembly.empty())
-			cout << object.assembly << endl;
+			sout() << object.assembly << endl;
 		else
-			cerr << "No text representation found." << endl;
+			serr() << "No text representation found." << endl;
 	}
 
 	return true;
@@ -1459,6 +1618,12 @@ void CommandLineInterface::outputCompilationResults()
 	handleAst(g_argAst);
 	handleAst(g_argAstJson);
 	handleAst(g_argAstCompactJson);
+
+	if (!m_compiler->compilationSuccessful())
+	{
+		serr() << endl << "Compilation halted after AST generation due to errors." << endl;
+		return;
+	}
 
 	vector<string> contracts = m_compiler->contractNames();
 	if (m_args.count(g_argStateVariables))
@@ -1476,7 +1641,7 @@ void CommandLineInterface::outputCompilationResults()
 	for (string const& contract: contracts)
 	{
 		if (needsHumanTargetedStdout(m_args))
-			cout << endl << "======= " << contract << " =======" << endl;
+			sout() << endl << "======= " << contract << " =======" << endl;
 
 		// do we need EVM assembly?
 		if (m_args.count(g_argAsm) || m_args.count(g_argAsmJson))
@@ -1493,7 +1658,7 @@ void CommandLineInterface::outputCompilationResults()
 			}
 			else
 			{
-				cout << "EVM assembly:" << endl << ret << endl;
+				sout() << "EVM assembly:" << endl << ret << endl;
 			}
 		}
 
@@ -1501,6 +1666,8 @@ void CommandLineInterface::outputCompilationResults()
 			handleGasEstimation(contract);
 
 		handleBytecode(contract);
+		handleIR(contract);
+		handleEWasm(contract);
 		handleSignatureHashes(contract);
 		handleMetadata(contract);
 		handleABI(contract);
@@ -1508,6 +1675,14 @@ void CommandLineInterface::outputCompilationResults()
 		handleNatspec(false, contract);
 		handleStateVariables(contract);
 	} // end of contracts iteration
+
+	if (!g_hasOutput)
+	{
+		if (m_args.count(g_argOutputDir))
+			sout() << "Compiler run successful. Artifact(s) can be found in directory " << m_args.at(g_argOutputDir).as<string>() << "." << endl;
+		else
+			serr() << "Compiler run successful, no output requested." << endl;
+	}
 }
 
 void CommandLineInterface::executeOyente()

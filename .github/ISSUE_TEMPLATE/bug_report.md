@@ -21,6 +21,7 @@ about: Bug reports about the Solidity Compiler.
 ## Environment
 
 - Compiler version:
+- Target EVM version (as per compiler settings):
 - Framework/IDE (e.g. Truffle or Remix):
 - EVM execution environment / backend / blockchain client:
 - Operating system:
@@ -32,7 +33,7 @@ Please provide a *minimal* source code example to trigger the bug you have found
 Please also mention any command line flags that are necessary for triggering the bug.
 Provide as much information as necessary to reproduce the bug.
 
-```
+```solidity
 // Some *minimal* Solidity source code to reproduce the bug.
 // ...
 ```

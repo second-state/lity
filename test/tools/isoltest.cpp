@@ -16,12 +16,13 @@
 */
 
 #include <libdevcore/CommonIO.h>
+#include <libdevcore/AnsiColorized.h>
 
 #include <test/Common.h>
+#include <test/tools/IsolTestOptions.h>
 #include <test/libsolidity/AnalysisFramework.h>
-#include <test/libsolidity/SyntaxTest.h>
-#include <test/libsolidity/ASTJSONTest.h>
-#include <test/libyul/YulOptimizerTest.h>
+#include <test/InteractiveTests.h>
+#include <test/EVMHost.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -32,6 +33,7 @@
 #include <iostream>
 #include <fstream>
 #include <queue>
+#include <regex>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -40,49 +42,83 @@
 using namespace dev;
 using namespace dev::solidity;
 using namespace dev::solidity::test;
-using namespace dev::solidity::test::formatting;
+using namespace dev::formatting;
 using namespace std;
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
 
+using TestCreator = TestCase::TestCaseCreator;
+using TestOptions = dev::test::IsolTestOptions;
+
 struct TestStats
 {
-	int successCount;
-	int testCount;
-	operator bool() const { return successCount == testCount; }
+	int successCount = 0;
+	int testCount = 0;
+	int skippedCount = 0;
+	operator bool() const noexcept { return successCount + skippedCount == testCount; }
 	TestStats& operator+=(TestStats const& _other) noexcept
 	{
 		successCount += _other.successCount;
 		testCount += _other.testCount;
+		skippedCount += _other.skippedCount;
 		return *this;
 	}
+};
+
+class TestFilter
+{
+public:
+	explicit TestFilter(string const& _filter): m_filter(_filter)
+	{
+		string filter{m_filter};
+
+		boost::replace_all(filter, "/", "\\/");
+		boost::replace_all(filter, "*", ".*");
+
+		m_filterExpression = regex{"(" + filter + "(\\.sol|\\.yul))"};
+	}
+
+	bool matches(string const& _name) const
+	{
+		return regex_match(_name, m_filterExpression);
+	}
+
+private:
+	string m_filter;
+	regex m_filterExpression;
 };
 
 class TestTool
 {
 public:
 	TestTool(
-		TestCase::TestCaseCreator _testCaseCreator,
-		string const& _name,
+		TestCreator _testCaseCreator,
+		TestOptions const& _options,
 		fs::path const& _path,
-		bool _formatted
-	): m_testCaseCreator(_testCaseCreator), m_formatted(_formatted), m_name(_name), m_path(_path)
+		string const& _name
+	):
+		m_testCaseCreator(_testCaseCreator),
+		m_options(_options),
+		m_filter(TestFilter{_options.testFilter}),
+		m_path(_path),
+		m_name(_name)
 	{}
 
 	enum class Result
 	{
 		Success,
 		Failure,
-		Exception
+		Exception,
+		Skipped
 	};
 
 	Result process();
 
 	static TestStats processPath(
-		TestCase::TestCaseCreator _testCaseCreator,
+		TestCreator _testCaseCreator,
+		TestOptions const& _options,
 		fs::path const& _basepath,
-		fs::path const& _path,
-		bool const _formatted
+		fs::path const& _path
 	);
 
 	static string editor;
@@ -94,13 +130,16 @@ private:
 		Quit
 	};
 
-	Request handleResponse(bool const _exception);
+	Request handleResponse(bool _exception);
 
-	TestCase::TestCaseCreator m_testCaseCreator;
-	bool const m_formatted = false;
-	string const m_name;
+	TestCreator m_testCaseCreator;
+	TestOptions const& m_options;
+	TestFilter m_filter;
 	fs::path const m_path;
+	string const m_name;
+
 	unique_ptr<TestCase> m_test;
+
 	static bool m_exitRequested;
 };
 
@@ -109,53 +148,64 @@ bool TestTool::m_exitRequested = false;
 
 TestTool::Result TestTool::process()
 {
-	bool success;
+	bool formatted{!m_options.noColor};
 	std::stringstream outputMessages;
-
-	(FormattedScope(cout, m_formatted, {BOLD}) << m_name << ": ").flush();
 
 	try
 	{
-		m_test = m_testCaseCreator(m_path.string());
-		success = m_test->run(outputMessages, "  ", m_formatted);
+		if (m_filter.matches(m_name))
+		{
+			(AnsiColorized(cout, formatted, {BOLD}) << m_name << ": ").flush();
+
+			m_test = m_testCaseCreator(TestCase::Config{m_path.string(), m_options.evmVersion()});
+			if (m_test->validateSettings(m_options.evmVersion()))
+				switch (TestCase::TestResult result = m_test->run(outputMessages, "  ", formatted))
+				{
+					case TestCase::TestResult::Success:
+						AnsiColorized(cout, formatted, {BOLD, GREEN}) << "OK" << endl;
+						return Result::Success;
+					default:
+						AnsiColorized(cout, formatted, {BOLD, RED}) << "FAIL" << endl;
+
+						AnsiColorized(cout, formatted, {BOLD, CYAN}) << "  Contract:" << endl;
+						m_test->printSource(cout, "    ", formatted);
+						m_test->printUpdatedSettings(cout, "    ", formatted);
+
+						cout << endl << outputMessages.str() << endl;
+						return result == TestCase::TestResult::FatalError ? Result::Exception : Result::Failure;
+				}
+			else
+			{
+				AnsiColorized(cout, formatted, {BOLD, YELLOW}) << "NOT RUN" << endl;
+				return Result::Skipped;
+			}
+		}
+		else
+			return Result::Skipped;
 	}
-	catch(boost::exception const& _e)
+	catch (boost::exception const& _e)
 	{
-		FormattedScope(cout, m_formatted, {BOLD, RED}) <<
-			"Exception during syntax test: " << boost::diagnostic_information(_e) << endl;
+		AnsiColorized(cout, formatted, {BOLD, RED}) <<
+			"Exception during test: " << boost::diagnostic_information(_e) << endl;
 		return Result::Exception;
 	}
 	catch (std::exception const& _e)
 	{
-		FormattedScope(cout, m_formatted, {BOLD, RED}) <<
-			"Exception during syntax test: " << _e.what() << endl;
+		AnsiColorized(cout, formatted, {BOLD, RED}) <<
+			"Exception during test" <<
+			(_e.what() ? ": " + string(_e.what()) : ".") <<
+			endl;
 		return Result::Exception;
 	}
 	catch (...)
 	{
-		FormattedScope(cout, m_formatted, {BOLD, RED}) <<
-			"Unknown exception during syntax test." << endl;
+		AnsiColorized(cout, formatted, {BOLD, RED}) <<
+			"Unknown exception during test." << endl;
 		return Result::Exception;
-	}
-
-	if (success)
-	{
-		FormattedScope(cout, m_formatted, {BOLD, GREEN}) << "OK" << endl;
-		return Result::Success;
-	}
-	else
-	{
-		FormattedScope(cout, m_formatted, {BOLD, RED}) << "FAIL" << endl;
-
-		FormattedScope(cout, m_formatted, {BOLD, CYAN}) << "  Contract:" << endl;
-		m_test->printSource(cout, "    ", m_formatted);
-
-		cout << endl << outputMessages.str() << endl;
-		return Result::Failure;
 	}
 }
 
-TestTool::Request TestTool::handleResponse(bool const _exception)
+TestTool::Request TestTool::handleResponse(bool _exception)
 {
 	if (_exception)
 		cout << "(e)dit/(s)kip/(q)uit? ";
@@ -178,6 +228,7 @@ TestTool::Request TestTool::handleResponse(bool const _exception)
 				cout << endl;
 				ofstream file(m_path.string(), ios::trunc);
 				m_test->printSource(file);
+				m_test->printUpdatedSettings(file);
 				file << "// ----" << endl;
 				m_test->printUpdatedExpectations(file, "// ");
 				return Request::Rerun;
@@ -197,16 +248,17 @@ TestTool::Request TestTool::handleResponse(bool const _exception)
 }
 
 TestStats TestTool::processPath(
-	TestCase::TestCaseCreator _testCaseCreator,
+	TestCreator _testCaseCreator,
+	TestOptions const& _options,
 	fs::path const& _basepath,
-	fs::path const& _path,
-	bool const _formatted
+	fs::path const& _path
 )
 {
 	std::queue<fs::path> paths;
 	paths.push(_path);
 	int successCount = 0;
 	int testCount = 0;
+	int skippedCount = 0;
 
 	while (!paths.empty())
 	{
@@ -231,7 +283,12 @@ TestStats TestTool::processPath(
 		else
 		{
 			++testCount;
-			TestTool testTool(_testCaseCreator, currentPath.string(), fullpath, _formatted);
+			TestTool testTool(
+				_testCaseCreator,
+				_options,
+				fullpath,
+				currentPath.generic_path().string()
+			);
 			auto result = testTool.process();
 
 			switch(result)
@@ -250,6 +307,7 @@ TestStats TestTool::processPath(
 					break;
 				case Request::Skip:
 					paths.pop();
+					++skippedCount;
 					break;
 				}
 				break;
@@ -257,11 +315,15 @@ TestStats TestTool::processPath(
 				paths.pop();
 				++successCount;
 				break;
+			case Result::Skipped:
+				paths.pop();
+				++skippedCount;
+				break;
 			}
 		}
 	}
 
-	return { successCount, testCount };
+	return { successCount, testCount, skippedCount };
 
 }
 
@@ -289,14 +351,15 @@ void setupTerminal()
 }
 
 boost::optional<TestStats> runTestSuite(
-	string const& _name,
+	TestCreator _testCaseCreator,
+	TestOptions const& _options,
 	fs::path const& _basePath,
 	fs::path const& _subdirectory,
-	TestCase::TestCaseCreator _testCaseCreator,
-	bool _formatted
+	string const& _name
 )
 {
-	fs::path testPath = _basePath / _subdirectory;
+	fs::path testPath{_basePath / _subdirectory};
+	bool formatted{!_options.noColor};
 
 	if (!fs::exists(testPath) || !fs::is_directory(testPath))
 	{
@@ -304,67 +367,46 @@ boost::optional<TestStats> runTestSuite(
 		return {};
 	}
 
-	TestStats stats = TestTool::processPath(_testCaseCreator, _basePath, _subdirectory, _formatted);
+	TestStats stats = TestTool::processPath(
+		_testCaseCreator,
+		_options,
+		_basePath,
+		_subdirectory
+	);
 
-	cout << endl << _name << " Test Summary: ";
-	FormattedScope(cout, _formatted, {BOLD, stats ? GREEN : RED}) <<
-		stats.successCount <<
-		"/" <<
-		stats.testCount;
-	cout << " tests successful." << endl << endl;
-
+	if (stats.skippedCount != stats.testCount)
+	{
+		cout << endl << _name << " Test Summary: ";
+		AnsiColorized(cout, formatted, {BOLD, stats ? GREEN : RED}) <<
+			stats.successCount <<
+			"/" <<
+			stats.testCount;
+		cout << " tests successful";
+		if (stats.skippedCount > 0)
+		{
+			cout << " (";
+			AnsiColorized(cout, formatted, {BOLD, YELLOW}) << stats.skippedCount;
+			cout<< " tests skipped)";
+		}
+		cout << "." << endl << endl;
+	}
 	return stats;
 }
 
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char const *argv[])
 {
 	setupTerminal();
 
-	if (getenv("EDITOR"))
-		TestTool::editor = getenv("EDITOR");
-	else if (fs::exists("/usr/bin/editor"))
-		TestTool::editor = "/usr/bin/editor";
+	dev::test::IsolTestOptions options(&TestTool::editor);
 
-	fs::path testPath;
-	bool disableSMT = false;
-	bool formatted = true;
-	po::options_description options(
-		R"(isoltest, tool for interactively managing test contracts.
-Usage: isoltest [Options] --testpath path
-Interactively validates test contracts.
-
-Allowed options)",
-		po::options_description::m_default_line_length,
-		po::options_description::m_default_line_length - 23);
-	options.add_options()
-		("help", "Show this help screen.")
-		("testpath", po::value<fs::path>(&testPath), "path to test files")
-		("no-smt", "disable SMT checker")
-		("no-color", "don't use colors")
-		("editor", po::value<string>(&TestTool::editor), "editor for opening contracts");
-
-	po::variables_map arguments;
 	try
 	{
-		po::command_line_parser cmdLineParser(argc, argv);
-		cmdLineParser.options(options);
-		po::store(cmdLineParser.run(), arguments);
-
-		if (arguments.count("help"))
-		{
-			cout << options << endl;
-			return 0;
-		}
-
-		if (arguments.count("no-color"))
-			formatted = false;
-
-		po::notify(arguments);
-
-		if (arguments.count("no-smt"))
-			disableSMT = true;
+		if (options.parse(argc, argv))
+			options.validate();
+		else
+			return 1;
 	}
 	catch (std::exception const& _exception)
 	{
@@ -372,52 +414,55 @@ Allowed options)",
 		return 1;
 	}
 
-	if (testPath.empty())
-		testPath = dev::test::discoverTestPath();
+	bool disableSemantics = !dev::test::EVMHost::getVM(options.evmonePath.string());
+	if (disableSemantics)
+	{
+		cout << "Unable to find " << dev::test::evmoneFilename << ". Please provide the path using --evmonepath <path>." << endl;
+		cout << "You can download it at" << endl;
+		cout << dev::test::evmoneDownloadLink << endl;
+		cout << endl << "--- SKIPPING ALL SEMANTICS TESTS ---" << endl << endl;
+	}
 
 	TestStats global_stats{0, 0};
+	cout << "Running tests..." << endl << endl;
 
 	// Actually run the tests.
-	// If you add new tests here, you also have to add them in boostTest.cpp
-	if (auto stats = runTestSuite("Syntax", testPath / "libsolidity", "syntaxTests", SyntaxTest::create, formatted))
-		global_stats += *stats;
-	else
-		return 1;
-
-	if (auto stats = runTestSuite("JSON AST", testPath / "libsolidity", "ASTJSON", ASTJSONTest::create, formatted))
-		global_stats += *stats;
-	else
-		return 1;
-
-	if (auto stats = runTestSuite(
-		"Yul Optimizer",
-		testPath / "libyul",
-		"yulOptimizerTests",
-		yul::test::YulOptimizerTest::create,
-		formatted
-	))
-		global_stats += *stats;
-	else
-		return 1;
-
-	if (!disableSMT)
+	// Interactive tests are added in InteractiveTests.h
+	for (auto const& ts: g_interactiveTestsuites)
 	{
-		if (auto stats = runTestSuite(
-			"SMT Checker",
-			testPath / "libsolidity",
-			"smtCheckerTests",
-			SyntaxTest::create,
-			formatted
-		))
+		if (ts.needsVM && disableSemantics)
+			continue;
+
+		if (ts.smt && options.disableSMT)
+			continue;
+
+		auto stats = runTestSuite(
+			ts.testCaseCreator,
+			options,
+			options.testPath / ts.path,
+			ts.subpath,
+			ts.title
+		);
+		if (stats)
 			global_stats += *stats;
 		else
 			return 1;
 	}
 
 	cout << endl << "Summary: ";
-	FormattedScope(cout, formatted, {BOLD, global_stats ? GREEN : RED}) <<
+	AnsiColorized(cout, !options.noColor, {BOLD, global_stats ? GREEN : RED}) <<
 		 global_stats.successCount << "/" << global_stats.testCount;
-	cout << " tests successful." << endl;
+	cout << " tests successful";
+	if (global_stats.skippedCount > 0)
+	{
+		cout << " (";
+		AnsiColorized(cout, !options.noColor, {BOLD, YELLOW}) << global_stats.skippedCount;
+		cout << " tests skipped)";
+	}
+	cout << "." << endl;
+
+	if (disableSemantics)
+		cout << "\nNOTE: Skipped semantics tests because " << dev::test::evmoneFilename << " could not be found.\n" << endl;
 
 	return global_stats ? 0 : 1;
 }

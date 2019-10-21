@@ -22,24 +22,29 @@
 
 #pragma once
 
+#include <libdevcore/Common.h>
 #include <libdevcore/CommonData.h>
 
 #include <functional>
+#include <memory>
+
+namespace langutil
+{
+struct SourceLocation;
+}
 
 namespace dev
 {
-struct SourceLocation;
-namespace solidity
+namespace eth
 {
 enum class Instruction: uint8_t;
-namespace assembly
+}
+}
+
+namespace yul
 {
 struct Instruction;
 struct Identifier;
-}
-}
-namespace yul
-{
 
 ///
 /// Assembly class that abstracts both the libevmasm assembly and the new Yul assembly.
@@ -48,18 +53,20 @@ class AbstractAssembly
 {
 public:
 	using LabelID = size_t;
+	using SubID = size_t;
 
-	virtual ~AbstractAssembly() {}
+	virtual ~AbstractAssembly() = default;
 
 	/// Set a new source location valid starting from the next instruction.
-	virtual void setSourceLocation(SourceLocation const& _location) = 0;
+	virtual void setSourceLocation(langutil::SourceLocation const& _location) = 0;
 	/// Retrieve the current height of the stack. This does not have to be zero
 	/// at the beginning.
 	virtual int stackHeight() const = 0;
+	virtual void setStackHeight(int height) = 0;
 	/// Append an EVM instruction.
-	virtual void appendInstruction(solidity::Instruction _instruction) = 0;
+	virtual void appendInstruction(dev::eth::Instruction _instruction) = 0;
 	/// Append a constant.
-	virtual void appendConstant(u256 const& _constant) = 0;
+	virtual void appendConstant(dev::u256 const& _constant) = 0;
 	/// Append a label.
 	virtual void appendLabel(LabelID _labelId) = 0;
 	/// Append a label reference.
@@ -94,6 +101,14 @@ public:
 
 	/// Append the assembled size as a constant.
 	virtual void appendAssemblySize() = 0;
+	/// Creates a new sub-assembly, which can be referenced using dataSize and dataOffset.
+	virtual std::pair<std::shared_ptr<AbstractAssembly>, SubID> createSubAssembly() = 0;
+	/// Appends the offset of the given sub-assembly or data.
+	virtual void appendDataOffset(SubID _sub) = 0;
+	/// Appends the size of the given sub-assembly or data.
+	virtual void appendDataSize(SubID _sub) = 0;
+	/// Appends the given data to the assembly and returns its ID.
+	virtual SubID appendData(dev::bytes const& _data) = 0;
 };
 
 enum class IdentifierContext { LValue, RValue };
@@ -102,18 +117,15 @@ enum class IdentifierContext { LValue, RValue };
 /// to inline assembly (not used in standalone assembly mode).
 struct ExternalIdentifierAccess
 {
-	using Resolver = std::function<size_t(solidity::assembly::Identifier const&, IdentifierContext, bool /*_crossesFunctionBoundary*/)>;
+	using Resolver = std::function<size_t(Identifier const&, IdentifierContext, bool /*_crossesFunctionBoundary*/)>;
 	/// Resolve an external reference given by the identifier in the given context.
 	/// @returns the size of the value (number of stack slots) or size_t(-1) if not found.
 	Resolver resolve;
-	using CodeGenerator = std::function<void(solidity::assembly::Identifier const&, IdentifierContext, yul::AbstractAssembly&)>;
+	using CodeGenerator = std::function<void(Identifier const&, IdentifierContext, yul::AbstractAssembly&)>;
 	/// Generate code for retrieving the value (rvalue context) or storing the value (lvalue context)
 	/// of an identifier. The code should be appended to the assembly. In rvalue context, the value is supposed
 	/// to be put onto the stack, in lvalue context, the value is assumed to be at the top of the stack.
 	CodeGenerator generateCode;
 };
 
-
-
-}
 }

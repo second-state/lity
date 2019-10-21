@@ -1,23 +1,141 @@
 # Until we have a clear separation, libyul has to be included here
-file(GLOB_RECURSE sources "*.cpp" "../libyul/*.cpp")
-file(GLOB_RECURSE headers "*.h" "../libyul/*.h")
+set(sources
+	analysis/ConstantEvaluator.cpp
+	analysis/ConstantEvaluator.h
+	analysis/ContractLevelChecker.cpp
+	analysis/ContractLevelChecker.h
+	analysis/ControlFlowAnalyzer.cpp
+	analysis/ControlFlowAnalyzer.h
+	analysis/ControlFlowBuilder.cpp
+	analysis/ControlFlowBuilder.h
+	analysis/ControlFlowGraph.cpp
+	analysis/ControlFlowGraph.h
+	analysis/DeclarationContainer.cpp
+	analysis/DeclarationContainer.h
+	analysis/DocStringAnalyser.cpp
+	analysis/DocStringAnalyser.h
+	analysis/GlobalContext.cpp
+	analysis/GlobalContext.h
+	analysis/NameAndTypeResolver.cpp
+	analysis/NameAndTypeResolver.h
+	analysis/PostTypeChecker.cpp
+	analysis/PostTypeChecker.h
+	analysis/ReferencesResolver.cpp
+	analysis/ReferencesResolver.h
+	analysis/StaticAnalyzer.cpp
+	analysis/StaticAnalyzer.h
+	analysis/SyntaxChecker.cpp
+	analysis/SyntaxChecker.h
+	analysis/TypeChecker.cpp
+	analysis/TypeChecker.h
+	analysis/ViewPureChecker.cpp
+	analysis/ViewPureChecker.h
+	ast/AST.cpp
+	ast/AST.h
+	ast/AST_accept.h
+	ast/ASTAnnotations.cpp
+	ast/ASTAnnotations.h
+	ast/ASTEnums.h
+	ast/ASTForward.h
+	ast/ASTJsonConverter.cpp
+	ast/ASTJsonConverter.h
+	ast/ASTPrinter.cpp
+	ast/ASTPrinter.h
+	ast/ASTVisitor.h
+	ast/ExperimentalFeatures.h
+	ast/Types.cpp
+	ast/Types.h
+	ast/TypeProvider.cpp
+	ast/TypeProvider.h
+	codegen/ABIFunctions.cpp
+	codegen/ABIFunctions.h
+	codegen/ArrayUtils.cpp
+	codegen/ArrayUtils.h
+	codegen/Compiler.cpp
+	codegen/Compiler.h
+	codegen/CompilerContext.cpp
+	codegen/CompilerContext.h
+	codegen/CompilerUtils.cpp
+	codegen/CompilerUtils.h
+	codegen/ContractCompiler.cpp
+	codegen/ContractCompiler.h
+	codegen/ExpressionCompiler.cpp
+	codegen/ExpressionCompiler.h
+	codegen/LValue.cpp
+	codegen/LValue.h
+	codegen/MultiUseYulFunctionCollector.h
+	codegen/MultiUseYulFunctionCollector.cpp
+	codegen/YulUtilFunctions.h
+	codegen/YulUtilFunctions.cpp
+	codegen/ir/IRGenerator.cpp
+	codegen/ir/IRGenerator.h
+	codegen/ir/IRGeneratorForStatements.cpp
+	codegen/ir/IRGeneratorForStatements.h
+	codegen/ir/IRGenerationContext.cpp
+	codegen/ir/IRGenerationContext.h
+	codegen/ir/IRLValue.cpp
+	codegen/ir/IRLValue.h
+	formal/BMC.cpp
+	formal/BMC.h
+	formal/CHC.cpp
+	formal/CHC.h
+	formal/CHCSolverInterface.h
+	formal/EncodingContext.cpp
+	formal/EncodingContext.h
+	formal/ModelChecker.cpp
+	formal/ModelChecker.h
+	formal/SMTEncoder.cpp
+	formal/SMTEncoder.h
+	formal/SMTLib2Interface.cpp
+	formal/SMTLib2Interface.h
+	formal/SMTPortfolio.cpp
+	formal/SMTPortfolio.h
+	formal/SolverInterface.h
+	formal/SSAVariable.cpp
+	formal/SSAVariable.h
+	formal/SymbolicTypes.cpp
+	formal/SymbolicTypes.h
+	formal/SymbolicVariables.cpp
+	formal/SymbolicVariables.h
+	formal/VariableUsage.cpp
+	formal/VariableUsage.h
+	interface/ABI.cpp
+	interface/ABI.h
+	interface/CompilerStack.cpp
+	interface/CompilerStack.h
+	interface/GasEstimator.cpp
+	interface/GasEstimator.h
+	interface/Natspec.cpp
+	interface/Natspec.h
+	interface/OptimiserSettings.h
+	interface/ReadFile.h
+	interface/StandardCompiler.cpp
+	interface/StandardCompiler.h
+	interface/Version.cpp
+	interface/Version.h
+	parsing/DocStringParser.cpp
+	parsing/DocStringParser.h
+	parsing/Parser.cpp
+	parsing/Parser.h
+	parsing/Token.h
+)
 
-find_package(Z3 QUIET)
+find_package(Z3 4.6.0)
 if (${Z3_FOUND})
-  include_directories(${Z3_INCLUDE_DIR})
   add_definitions(-DHAVE_Z3)
   message("Z3 SMT solver found. This enables optional SMT checking with Z3.")
+  set(z3_SRCS formal/Z3Interface.cpp formal/Z3Interface.h formal/Z3CHCInterface.cpp formal/Z3CHCInterface.h)
 else()
-  list(REMOVE_ITEM sources "${CMAKE_CURRENT_SOURCE_DIR}/formal/Z3Interface.cpp")
+  set(z3_SRCS)
 endif()
 
 find_package(CVC4 QUIET)
 if (${CVC4_FOUND})
-  include_directories(${CVC4_INCLUDE_DIR})
   add_definitions(-DHAVE_CVC4)
   message("CVC4 SMT solver found. This enables optional SMT checking with CVC4.")
+  set(cvc4_SRCS formal/CVC4Interface.cpp formal/CVC4Interface.h)
 else()
-  list(REMOVE_ITEM sources "${CMAKE_CURRENT_SOURCE_DIR}/formal/CVC4Interface.cpp")
+  set(cvc4_SRCS)
 endif()
 
 if (NOT (${Z3_FOUND} OR ${CVC4_FOUND}))
@@ -25,13 +143,13 @@ if (NOT (${Z3_FOUND} OR ${CVC4_FOUND}))
   \nPlease install Z3 or CVC4 or remove the option disabling them (USE_Z3, USE_CVC4).")
 endif()
 
-add_library(lity ${sources} ${headers})
-target_link_libraries(lity PUBLIC evmasm devcore ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
+add_library(lity ${sources} ${z3_SRCS} ${cvc4_SRRCS})
+target_link_libraries(lity PUBLIC yul evmasm langutil devcore Boost::boost Boost::filesystem Boost::system)
 
 if (${Z3_FOUND})
-  target_link_libraries(lity PUBLIC ${Z3_LIBRARY})
+  target_link_libraries(lity PUBLIC z3::libz3)
 endif()
 
 if (${CVC4_FOUND})
-  target_link_libraries(lity PUBLIC ${CVC4_LIBRARIES})
+  target_link_libraries(lity PUBLIC CVC4::CVC4)
 endif()

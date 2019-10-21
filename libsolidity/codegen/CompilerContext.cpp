@@ -21,19 +21,26 @@
  */
 
 #include <libsolidity/codegen/CompilerContext.h>
-#include <libsolidity/codegen/CompilerUtils.h>
+
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/codegen/Compiler.h>
 #include <libsolidity/codegen/ENIHandler.h>
+#include <libsolidity/codegen/CompilerUtils.h>
 #include <libsolidity/interface/Version.h>
-#include <libsolidity/interface/ErrorReporter.h>
-#include <libsolidity/interface/SourceReferenceFormatter.h>
-#include <libsolidity/parsing/Scanner.h>
-#include <libsolidity/inlineasm/AsmParser.h>
-#include <libsolidity/inlineasm/AsmCodeGen.h>
-#include <libsolidity/inlineasm/AsmAnalysis.h>
-#include <libsolidity/inlineasm/AsmAnalysisInfo.h>
+
+#include <libyul/AsmParser.h>
+#include <libyul/AsmAnalysis.h>
+#include <libyul/AsmAnalysisInfo.h>
+#include <libyul/backends/evm/AsmCodeGen.h>
+#include <libyul/backends/evm/EVMDialect.h>
+#include <libyul/backends/evm/EVMMetrics.h>
+#include <libyul/optimiser/Suite.h>
+#include <libyul/Object.h>
 #include <libyul/YulString.h>
+
+#include <liblangutil/ErrorReporter.h>
+#include <liblangutil/Scanner.h>
+#include <liblangutil/SourceReferenceFormatter.h>
 
 #include <boost/algorithm/string/replace.hpp>
 
@@ -43,16 +50,15 @@
 // Change to "define" to output all intermediate code
 #undef SOL_OUTPUT_ASM
 #ifdef SOL_OUTPUT_ASM
-#include <libsolidity/inlineasm/AsmPrinter.h>
+#include <libyul/AsmPrinter.h>
 #endif
 
 
 using namespace std;
-
-namespace dev
-{
-namespace solidity
-{
+using namespace langutil;
+using namespace dev::eth;
+using namespace dev;
+using namespace dev::solidity;
 
 void CompilerContext::addStateVariable(
 	VariableDeclaration const& _declaration,
@@ -125,8 +131,10 @@ void CompilerContext::appendMissingLowLevelFunctions()
 	}
 }
 
-void CompilerContext::addVariable(VariableDeclaration const& _declaration,
-								  unsigned _offsetToCurrent)
+void CompilerContext::addVariable(
+	VariableDeclaration const& _declaration,
+	unsigned _offsetToCurrent
+)
 {
 	solAssert(m_asm->deposit() >= 0 && unsigned(m_asm->deposit()) >= _offsetToCurrent, "");
 	unsigned sizeOnStack = _declaration.annotation().type->sizeOnStack();
@@ -176,11 +184,18 @@ unsigned CompilerContext::numberOfLocalVariables() const
 	return m_localVariables.size();
 }
 
-eth::Assembly const& CompilerContext::compiledContract(const ContractDefinition& _contract) const
+shared_ptr<eth::Assembly> CompilerContext::compiledContract(ContractDefinition const& _contract) const
 {
-	auto ret = m_compiledContracts.find(&_contract);
-	solAssert(ret != m_compiledContracts.end(), "Compiled contract not found.");
-	return *ret->second;
+	auto ret = m_otherCompilers.find(&_contract);
+	solAssert(ret != m_otherCompilers.end(), "Compiled contract not found.");
+	return ret->second->assemblyPtr();
+}
+
+shared_ptr<eth::Assembly> CompilerContext::compiledContractRuntime(ContractDefinition const& _contract) const
+{
+	auto ret = m_otherCompilers.find(&_contract);
+	solAssert(ret != m_otherCompilers.end(), "Compiled contract not found.");
+	return ret->second->runtimeAssemblyPtr();
 }
 
 bool CompilerContext::isLocalVariable(Declaration const* _declaration) const
@@ -274,7 +289,7 @@ unsigned CompilerContext::currentToBaseStackOffset(unsigned _offset) const
 	return m_asm->deposit() - _offset - 1;
 }
 
-pair<u256, unsigned> CompilerContext::storageLocationOfVariable(const Declaration& _declaration) const
+pair<u256, unsigned> CompilerContext::storageLocationOfVariable(Declaration const& _declaration) const
 {
 	auto it = m_stateVariables.find(&_declaration);
 	solAssert(it != m_stateVariables.end(), "Variable not found in storage.");
@@ -345,24 +360,33 @@ void CompilerContext::resetVisitedNodes(ASTNode const* _node)
 void CompilerContext::appendInlineAssembly(
 	string const& _assembly,
 	vector<string> const& _localVariables,
-	set<string> const&,
-	bool _system
+	set<string> const& _externallyUsedFunctions,
+	bool _system,
+	OptimiserSettings const& _optimiserSettings
 )
 {
 	int startStackHeight = stackHeight();
 
+	set<yul::YulString> externallyUsedIdentifiers;
+	for (auto const& fun: _externallyUsedFunctions)
+		externallyUsedIdentifiers.insert(yul::YulString(fun));
+	for (auto const& var: _localVariables)
+		externallyUsedIdentifiers.insert(yul::YulString(var));
+
 	yul::ExternalIdentifierAccess identifierAccess;
 	identifierAccess.resolve = [&](
-		assembly::Identifier const& _identifier,
+		yul::Identifier const& _identifier,
 		yul::IdentifierContext,
-		bool
-	)
+		bool _insideFunction
+	) -> size_t
 	{
+		if (_insideFunction)
+			return size_t(-1);
 		auto it = std::find(_localVariables.begin(), _localVariables.end(), _identifier.name.str());
 		return it == _localVariables.end() ? size_t(-1) : 1;
 	};
 	identifierAccess.generateCode = [&](
-		assembly::Identifier const& _identifier,
+		yul::Identifier const& _identifier,
 		yul::IdentifierContext _context,
 		yul::AbstractAssembly& _assembly
 	)
@@ -390,42 +414,79 @@ void CompilerContext::appendInlineAssembly(
 
 	ErrorList errors;
 	ErrorReporter errorReporter(errors);
-	auto scanner = make_shared<Scanner>(CharStream(_assembly), "--CODEGEN--");
-	auto parserResult = assembly::Parser(errorReporter, assembly::AsmFlavour::Strict).parse(scanner, false);
+	auto scanner = make_shared<langutil::Scanner>(langutil::CharStream(_assembly, "--CODEGEN--"));
+	yul::EVMDialect const& dialect = yul::EVMDialect::strictAssemblyForEVM(m_evmVersion);
+	auto parserResult = yul::Parser(errorReporter, dialect).parse(scanner, false);
 #ifdef SOL_OUTPUT_ASM
-	cout << assembly::AsmPrinter()(*parserResult) << endl;
+	cout << yul::AsmPrinter()(*parserResult) << endl;
 #endif
-	assembly::AsmAnalysisInfo analysisInfo;
-	bool analyzerResult = false;
-	if (parserResult)
-		analyzerResult = assembly::AsmAnalyzer(
-			analysisInfo,
-			errorReporter,
-			m_evmVersion,
-			boost::none,
-			assembly::AsmFlavour::Strict,
-			identifierAccess.resolve
-		).analyze(*parserResult);
-	if (!parserResult || !errorReporter.errors().empty() || !analyzerResult)
+
+	auto reportError = [&](string const& _context)
 	{
 		string message =
-			"Error parsing/analyzing inline assembly block:\n"
+			"Error parsing/analyzing inline assembly block:\n" +
+			_context + "\n"
 			"------------------ Input: -----------------\n" +
 			_assembly + "\n"
 			"------------------ Errors: ----------------\n";
 		for (auto const& error: errorReporter.errors())
-			message += SourceReferenceFormatter::formatExceptionInformation(
-				*error,
-				error->typeNameCstr(),
-				[&](string const&) -> Scanner const& { return *scanner; }
-			);
+			message += SourceReferenceFormatter::formatErrorInformation(*error);
 		message += "-------------------------------------------\n";
 
 		solAssert(false, message);
+	};
+
+	yul::AsmAnalysisInfo analysisInfo;
+	bool analyzerResult = false;
+	if (parserResult)
+		analyzerResult = yul::AsmAnalyzer(
+			analysisInfo,
+			errorReporter,
+			boost::none,
+			dialect,
+			identifierAccess.resolve
+		).analyze(*parserResult);
+	if (!parserResult || !errorReporter.errors().empty() || !analyzerResult)
+		reportError("Invalid assembly generated by code generator.");
+
+	// Several optimizer steps cannot handle externally supplied stack variables,
+	// so we essentially only optimize the ABI functions.
+	if (_optimiserSettings.runYulOptimiser && _localVariables.empty())
+	{
+		bool const isCreation = m_runtimeContext != nullptr;
+		yul::GasMeter meter(dialect, isCreation, _optimiserSettings.expectedExecutionsPerDeployment);
+		yul::Object obj;
+		obj.code = parserResult;
+		obj.analysisInfo = make_shared<yul::AsmAnalysisInfo>(analysisInfo);
+		yul::OptimiserSuite::run(
+			dialect,
+			&meter,
+			obj,
+			_optimiserSettings.optimizeStackAllocation,
+			externallyUsedIdentifiers
+		);
+		analysisInfo = std::move(*obj.analysisInfo);
+		parserResult = std::move(obj.code);
+
+#ifdef SOL_OUTPUT_ASM
+		cout << "After optimizer: " << endl;
+		cout << yul::AsmPrinter()(*parserResult) << endl;
+#endif
 	}
 
+	if (!errorReporter.errors().empty())
+		reportError("Failed to analyze inline assembly block.");
+
 	solAssert(errorReporter.errors().empty(), "Failed to analyze inline assembly block.");
-	assembly::CodeGenerator::assemble(*parserResult, analysisInfo, *m_asm, identifierAccess, _system);
+	yul::CodeGenerator::assemble(
+		*parserResult,
+		analysisInfo,
+		*m_asm,
+		m_evmVersion,
+		identifierAccess,
+		_system,
+		_optimiserSettings.optimizeStackAllocation
+	);
 
 	// Reset the source location to the one of the node (instead of the CODEGEN source location)
 	updateSourceLocation();
@@ -444,7 +505,7 @@ FunctionDefinition const& CompilerContext::resolveVirtualFunction(
 			if (
 				function->name() == name &&
 				!function->isConstructor() &&
-				FunctionType(*function).hasEqualParameterTypes(functionType)
+				FunctionType(*function).asCallableFunction(false)->hasEqualParameterTypes(functionType)
 			)
 				return *function;
 	solAssert(false, "Super function " + name + " not found.");
@@ -462,6 +523,21 @@ vector<ContractDefinition const*>::const_iterator CompilerContext::superContract
 void CompilerContext::updateSourceLocation()
 {
 	m_asm->setSourceLocation(m_visitedNodes.empty() ? SourceLocation() : m_visitedNodes.top()->location());
+}
+
+eth::Assembly::OptimiserSettings CompilerContext::translateOptimiserSettings(OptimiserSettings const& _settings)
+{
+	// Constructing it this way so that we notice changes in the fields.
+	eth::Assembly::OptimiserSettings asmSettings{false, false, false, false, false, false, m_evmVersion, 0};
+	asmSettings.isCreation = true;
+	asmSettings.runJumpdestRemover = _settings.runJumpdestRemover;
+	asmSettings.runPeephole = _settings.runPeephole;
+	asmSettings.runDeduplicate = _settings.runDeduplicate;
+	asmSettings.runCSE = _settings.runCSE;
+	asmSettings.runConstantOptimiser = _settings.runConstantOptimiser;
+	asmSettings.expectedExecutionsPerDeployment = _settings.expectedExecutionsPerDeployment;
+	asmSettings.evmVersion = m_evmVersion;
+	return asmSettings;
 }
 
 eth::AssemblyItem CompilerContext::FunctionCompilationQueue::entryLabel(
@@ -518,7 +594,4 @@ void CompilerContext::FunctionCompilationQueue::startFunction(Declaration const&
 	if (!m_functionsToCompile.empty() && m_functionsToCompile.front() == &_function)
 		m_functionsToCompile.pop();
 	m_alreadyCompiledFunctions.insert(&_function);
-}
-
-}
 }
