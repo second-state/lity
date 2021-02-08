@@ -1,18 +1,18 @@
 /*
-    This file is part of solidity.
+	This file is part of solidity.
 
-    solidity is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	solidity is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    solidity is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	solidity is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with solidity.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
 /**
  * @date 2017
@@ -20,13 +20,18 @@
  */
 
 #include <libsolidity/ast/ASTJsonConverter.h>
-#include <boost/algorithm/string/join.hpp>
-#include <libdevcore/UTF8.h>
+
 #include <libsolidity/ast/AST.h>
-#include <libsolidity/inlineasm/AsmData.h>
-#include <libsolidity/inlineasm/AsmPrinter.h>
+#include <libyul/AsmData.h>
+#include <libyul/AsmPrinter.h>
+#include <libdevcore/UTF8.h>
+#include <boost/algorithm/string/join.hpp>
+
+#include <vector>
+#include <algorithm>
 
 using namespace std;
+using namespace langutil;
 
 namespace dev
 {
@@ -121,8 +126,8 @@ void ASTJsonConverter::setJsonNode(
 string ASTJsonConverter::sourceLocationToString(SourceLocation const& _location) const
 {
 	int sourceIndex{-1};
-	if (_location.sourceName && m_sourceIndices.count(*_location.sourceName))
-		sourceIndex = m_sourceIndices.at(*_location.sourceName);
+	if (_location.source && m_sourceIndices.count(_location.source->name()))
+		sourceIndex = m_sourceIndices.at(_location.source->name());
 	int length = -1;
 	if (_location.start >= 0 && _location.end >= 0)
 		length = _location.end - _location.start;
@@ -142,12 +147,12 @@ Json::Value ASTJsonConverter::typePointerToJson(TypePointer _tp, bool _short)
 	return typeDescriptions;
 
 }
-Json::Value ASTJsonConverter::typePointerToJson(std::shared_ptr<std::vector<TypePointer>> _tps)
+Json::Value ASTJsonConverter::typePointerToJson(boost::optional<FuncCallArguments> const& _tps)
 {
 	if (_tps)
 	{
 		Json::Value arguments(Json::arrayValue);
-		for (auto const& tp: *_tps)
+		for (auto const& tp: _tps->types)
 			appendMove(arguments, typePointerToJson(tp));
 		return arguments;
 	}
@@ -166,12 +171,12 @@ void ASTJsonConverter::appendExpressionAttributes(
 		make_pair("isPure", _annotation.isPure),
 		make_pair("isLValue", _annotation.isLValue),
 		make_pair("lValueRequested", _annotation.lValueRequested),
-		make_pair("argumentTypes", typePointerToJson(_annotation.argumentTypes))
+		make_pair("argumentTypes", typePointerToJson(_annotation.arguments))
 	};
 	_attributes += exprAttributes;
 }
 
-Json::Value ASTJsonConverter::inlineAssemblyIdentifierToJson(pair<assembly::Identifier const* ,InlineAssemblyAnnotation::ExternalIdentifierInfo> _info) const
+Json::Value ASTJsonConverter::inlineAssemblyIdentifierToJson(pair<yul::Identifier const* ,InlineAssemblyAnnotation::ExternalIdentifierInfo> _info) const
 {
 	Json::Value tuple(Json::objectValue);
 	tuple["src"] = sourceLocationToString(_info.first->location);
@@ -233,17 +238,17 @@ bool ASTJsonConverter::visit(ImportDirective const& _node)
 		make_pair(m_legacy ? "SourceUnit" : "sourceUnit", nodeId(*_node.annotation().sourceUnit)),
 		make_pair("scope", idOrNull(_node.scope()))
 	};
-	attributes.push_back(make_pair("unitAlias", _node.name()));
+	attributes.emplace_back("unitAlias", _node.name());
 	Json::Value symbolAliases(Json::arrayValue);
 	for (auto const& symbolAlias: _node.symbolAliases())
 	{
 		Json::Value tuple(Json::objectValue);
-		solAssert(symbolAlias.first, "");
-		tuple["foreign"] = nodeId(*symbolAlias.first);
-		tuple["local"] =  symbolAlias.second ? Json::Value(*symbolAlias.second) : Json::nullValue;
+		solAssert(symbolAlias.symbol, "");
+		tuple["foreign"] = nodeId(*symbolAlias.symbol);
+		tuple["local"] =  symbolAlias.alias ? Json::Value(*symbolAlias.alias) : Json::nullValue;
 		symbolAliases.append(tuple);
 	}
-	attributes.push_back(make_pair("symbolAliases", std::move(symbolAliases)));
+	attributes.emplace_back("symbolAliases", std::move(symbolAliases));
 	setJsonNode(_node, "ImportDirective", std::move(attributes));
 	return false;
 }
@@ -257,7 +262,7 @@ bool ASTJsonConverter::visit(ContractDefinition const& _node)
 		make_pair("fullyImplemented", _node.annotation().unimplementedFunctions.empty()),
 		make_pair("linearizedBaseContracts", getContainerIds(_node.annotation().linearizedBaseContracts)),
 		make_pair("baseContracts", toJson(_node.baseContracts())),
-		make_pair("contractDependencies", getContainerIds(_node.annotation().contractDependencies)),
+		make_pair("contractDependencies", getContainerIds(_node.annotation().contractDependencies, true)),
 		make_pair("nodes", toJson(_node.subNodes())),
 		make_pair("scope", idOrNull(_node.scope()))
 	});
@@ -356,7 +361,7 @@ bool ASTJsonConverter::visit(VariableDeclaration const& _node)
 		make_pair("typeDescriptions", typePointerToJson(_node.annotation().type, true))
 	};
 	if (m_inEvent)
-		attributes.push_back(make_pair("indexed", _node.isIndexed()));
+		attributes.emplace_back("indexed", _node.isIndexed());
 	setJsonNode(_node, "VariableDeclaration", std::move(attributes));
 	return false;
 }
@@ -454,17 +459,15 @@ bool ASTJsonConverter::visit(ArrayTypeName const& _node)
 bool ASTJsonConverter::visit(InlineAssembly const& _node)
 {
 	Json::Value externalReferences(Json::arrayValue);
-	for (auto const& it : _node.annotation().externalReferences)
-	{
+	for (auto const& it: _node.annotation().externalReferences)
 		if (it.first)
 		{
 			Json::Value tuple(Json::objectValue);
 			tuple[it.first->name.str()] = inlineAssemblyIdentifierToJson(it);
 			externalReferences.append(tuple);
 		}
-	}
 	setJsonNode(_node, "InlineAssembly", {
-		make_pair("operations", Json::Value(assembly::AsmPrinter()(_node.operations()))),
+		make_pair("operations", Json::Value(yul::AsmPrinter()(_node.operations()))),
 		make_pair("externalReferences", std::move(externalReferences))
 	});
 	return false;
@@ -646,11 +649,11 @@ bool ASTJsonConverter::visit(FunctionCall const& _node)
 	};
 	if (m_legacy)
 	{
-		attributes.push_back(make_pair("isStructConstructorCall", _node.annotation().kind == FunctionCallKind::StructConstructorCall));
-		attributes.push_back(make_pair("type_conversion", _node.annotation().kind == FunctionCallKind::TypeConversion));
+		attributes.emplace_back("isStructConstructorCall", _node.annotation().kind == FunctionCallKind::StructConstructorCall);
+		attributes.emplace_back("type_conversion", _node.annotation().kind == FunctionCallKind::TypeConversion);
 	}
 	else
-		attributes.push_back(make_pair("kind", functionCallKind(_node.annotation().kind)));
+		attributes.emplace_back("kind", functionCallKind(_node.annotation().kind));
 	appendExpressionAttributes(attributes, _node.annotation());
 	setJsonNode(_node, "FunctionCall", std::move(attributes));
 	return false;
@@ -699,7 +702,7 @@ bool ASTJsonConverter::visit(Identifier const& _node)
 		make_pair("referencedDeclaration", idOrNull(_node.annotation().referencedDeclaration)),
 		make_pair("overloadedDeclarations", overloads),
 		make_pair("typeDescriptions", typePointerToJson(_node.annotation().type)),
-		make_pair("argumentTypes", typePointerToJson(_node.annotation().argumentTypes))
+		make_pair("argumentTypes", typePointerToJson(_node.annotation().arguments))
 	});
 	return false;
 }
@@ -723,7 +726,7 @@ bool ASTJsonConverter::visit(Literal const& _node)
 	std::vector<pair<string, Json::Value>> attributes = {
 		make_pair(m_legacy ? "token" : "kind", literalTokenKind(_node.token())),
 		make_pair("value", value),
-		make_pair(m_legacy ? "hexvalue" : "hexValue", toHex(_node.value())),
+		make_pair(m_legacy ? "hexvalue" : "hexValue", toHex(asBytes(_node.value()))),
 		make_pair(
 			"subdenomination",
 			subdenomination == Token::Illegal ?

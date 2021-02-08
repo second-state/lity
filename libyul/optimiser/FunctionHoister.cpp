@@ -21,16 +21,14 @@
  */
 
 #include <libyul/optimiser/FunctionHoister.h>
-#include <libyul/optimiser/Utilities.h>
-
-#include <libsolidity/inlineasm/AsmData.h>
+#include <libyul/optimiser/OptimizerUtilities.h>
+#include <libyul/AsmData.h>
 
 #include <libdevcore/CommonData.h>
 
 using namespace std;
 using namespace dev;
-using namespace dev::yul;
-using namespace dev::solidity;
+using namespace yul;
 
 void FunctionHoister::operator()(Block& _block)
 {

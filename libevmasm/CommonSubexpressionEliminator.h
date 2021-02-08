@@ -34,6 +34,11 @@
 #include <libevmasm/SemanticInformation.h>
 #include <libevmasm/KnownState.h>
 
+namespace langutil
+{
+struct SourceLocation;
+}
+
 namespace dev
 {
 namespace eth
@@ -137,14 +142,14 @@ private:
 	bool removeStackTopIfPossible();
 
 	/// Appends a dup instruction to m_generatedItems to retrieve the element at the given stack position.
-	void appendDup(int _fromPosition, SourceLocation const& _location);
+	void appendDup(int _fromPosition, langutil::SourceLocation const& _location);
 	/// Appends a swap instruction to m_generatedItems to retrieve the element at the given stack position.
 	/// @note this might also remove the last item if it exactly the same swap instruction.
-	void appendOrRemoveSwap(int _fromPosition, SourceLocation const& _location);
+	void appendOrRemoveSwap(int _fromPosition, langutil::SourceLocation const& _location);
 	/// Appends the given assembly item.
 	void appendItem(AssemblyItem const& _item);
 
-	static const int c_invalidPosition = -0x7fffffff;
+	static int const c_invalidPosition = -0x7fffffff;
 
 	AssemblyItems m_generatedItems;
 	/// Current height of the stack relative to the start.
@@ -156,7 +161,7 @@ private:
 	/// Current positions of equivalence classes, equal to the empty set if already deleted.
 	std::map<Id, std::set<int>> m_classPositions;
 
-	/// The actual eqivalence class items and how to compute them.
+	/// The actual equivalence class items and how to compute them.
 	ExpressionClasses& m_expressionClasses;
 	/// Keeps information about which storage or memory slots were written to by which operations.
 	/// The operations are sorted ascendingly by sequence number.

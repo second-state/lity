@@ -23,12 +23,11 @@
 #include <libyul/optimiser/ASTCopier.h>
 #include <libyul/optimiser/ASTWalker.h>
 #include <libyul/optimiser/NameCollector.h>
-#include <libyul/optimiser/Utilities.h>
+#include <libyul/optimiser/OptimizerUtilities.h>
 #include <libyul/optimiser/Metrics.h>
 #include <libyul/optimiser/SSAValueTracker.h>
 #include <libyul/Exceptions.h>
-
-#include <libsolidity/inlineasm/AsmData.h>
+#include <libyul/AsmData.h>
 
 #include <libdevcore/CommonData.h>
 #include <libdevcore/Visitor.h>
@@ -37,8 +36,12 @@
 
 using namespace std;
 using namespace dev;
-using namespace dev::yul;
-using namespace dev::solidity;
+using namespace yul;
+
+void FullInliner::run(OptimiserStepContext& _context, Block& _ast)
+{
+	FullInliner{_ast, _context.dispenser}.run();
+}
 
 FullInliner::FullInliner(Block& _ast, NameDispenser& _dispenser):
 	m_ast(_ast), m_nameDispenser(_dispenser)
@@ -50,6 +53,8 @@ FullInliner::FullInliner(Block& _ast, NameDispenser& _dispenser):
 		if (ssaValue.second && ssaValue.second->type() == typeid(Literal))
 			m_constants.emplace(ssaValue.first);
 
+	// Store size of global statements.
+	m_functionSizes[YulString{}] = CodeSize::codeSize(_ast);
 	map<YulString, size_t> references = ReferencesCounter::countReferences(m_ast);
 	for (auto& statement: m_ast.statements)
 	{
@@ -59,7 +64,7 @@ FullInliner::FullInliner(Block& _ast, NameDispenser& _dispenser):
 		m_functions[fun.name] = &fun;
 		// Always inline functions that are only called once.
 		if (references[fun.name] == 1)
-			m_alwaysInline.emplace(fun.name);
+			m_singleUse.emplace(fun.name);
 		updateCodeSize(fun);
 	}
 }
@@ -79,24 +84,29 @@ void FullInliner::run()
 	}
 }
 
-void FullInliner::updateCodeSize(FunctionDefinition& fun)
-{
-	m_functionSizes[fun.name] = CodeSize::codeSize(fun.body);
-}
-
-void FullInliner::handleBlock(YulString _currentFunctionName, Block& _block)
-{
-	InlineModifier{*this, m_nameDispenser, _currentFunctionName}(_block);
-}
-
 bool FullInliner::shallInline(FunctionCall const& _funCall, YulString _callSite)
 {
 	// No recursive inlining
 	if (_funCall.functionName.name == _callSite)
 		return false;
 
-	FunctionDefinition& calledFunction = function(_funCall.functionName.name);
-	if (m_alwaysInline.count(calledFunction.name))
+	FunctionDefinition* calledFunction = function(_funCall.functionName.name);
+	if (!calledFunction)
+		return false;
+
+	if (recursive(*calledFunction))
+		return false;
+
+	// Inline really, really tiny functions
+	size_t size = m_functionSizes.at(calledFunction->name);
+	if (size <= 1)
+		return true;
+
+	// Do not inline into already big functions.
+	if (m_functionSizes.at(_callSite) > 45)
+		return false;
+
+	if (m_singleUse.count(calledFunction->name))
 		return true;
 
 	// Constant arguments might provide a means for further optimization, so they cause a bonus.
@@ -111,10 +121,29 @@ bool FullInliner::shallInline(FunctionCall const& _funCall, YulString _callSite)
 			break;
 		}
 
-	size_t size = m_functionSizes.at(calledFunction.name);
-	return (size < 10 || (constantArg && size < 50));
+	return (size < 6 || (constantArg && size < 12));
 }
 
+void FullInliner::tentativelyUpdateCodeSize(YulString _function, YulString _callSite)
+{
+	m_functionSizes.at(_callSite) += m_functionSizes.at(_function);
+}
+
+void FullInliner::updateCodeSize(FunctionDefinition const& _fun)
+{
+	m_functionSizes[_fun.name] = CodeSize::codeSize(_fun.body);
+}
+
+void FullInliner::handleBlock(YulString _currentFunctionName, Block& _block)
+{
+	InlineModifier{*this, m_nameDispenser, _currentFunctionName}(_block);
+}
+
+bool FullInliner::recursive(FunctionDefinition const& _fun) const
+{
+	map<YulString, size_t> references = ReferencesCounter::countReferences(_fun);
+	return references[_fun.name] > 0;
+}
 
 void InlineModifier::operator()(Block& _block)
 {
@@ -150,25 +179,30 @@ vector<Statement> InlineModifier::performInline(Statement& _statement, FunctionC
 	vector<Statement> newStatements;
 	map<YulString, YulString> variableReplacements;
 
-	FunctionDefinition& function = m_driver.function(_funCall.functionName.name);
+	FunctionDefinition* function = m_driver.function(_funCall.functionName.name);
+	assertThrow(!!function, OptimizerException, "Attempt to inline invalid function.");
+
+	m_driver.tentativelyUpdateCodeSize(function->name, m_currentFunction);
 
 	// helper function to create a new variable that is supposed to model
 	// an existing variable.
 	auto newVariable = [&](TypedName const& _existingVariable, Expression* _value) {
-		YulString newName = m_nameDispenser.newName(_existingVariable.name, function.name);
+		YulString newName = m_nameDispenser.newName(_existingVariable.name);
 		variableReplacements[_existingVariable.name] = newName;
 		VariableDeclaration varDecl{_funCall.location, {{_funCall.location, newName, _existingVariable.type}}, {}};
 		if (_value)
-			varDecl.value = make_shared<Expression>(std::move(*_value));
+			varDecl.value = make_unique<Expression>(std::move(*_value));
+		else
+			varDecl.value = make_unique<Expression>(Literal{{}, LiteralKind::Number, YulString{"0"}, {}});
 		newStatements.emplace_back(std::move(varDecl));
 	};
 
 	for (size_t i = 0; i < _funCall.arguments.size(); ++i)
-		newVariable(function.parameters[i], &_funCall.arguments[i]);
-	for (auto const& var: function.returnVariables)
+		newVariable(function->parameters[i], &_funCall.arguments[i]);
+	for (auto const& var: function->returnVariables)
 		newVariable(var, nullptr);
 
-	Statement newBody = BodyCopier(m_nameDispenser, function.name, variableReplacements)(function.body);
+	Statement newBody = BodyCopier(m_nameDispenser, variableReplacements)(function->body);
 	newStatements += std::move(boost::get<Block>(newBody).statements);
 
 	boost::apply_visitor(GenericFallbackVisitor<Assignment, VariableDeclaration>{
@@ -178,9 +212,9 @@ vector<Statement> InlineModifier::performInline(Statement& _statement, FunctionC
 				newStatements.emplace_back(Assignment{
 					_assignment.location,
 					{_assignment.variableNames[i]},
-					make_shared<Expression>(Identifier{
+					make_unique<Expression>(Identifier{
 						_assignment.location,
-						variableReplacements.at(function.returnVariables[i].name)
+						variableReplacements.at(function->returnVariables[i].name)
 					})
 				});
 		},
@@ -190,9 +224,9 @@ vector<Statement> InlineModifier::performInline(Statement& _statement, FunctionC
 				newStatements.emplace_back(VariableDeclaration{
 					_varDecl.location,
 					{std::move(_varDecl.variables[i])},
-					make_shared<Expression>(Identifier{
+					make_unique<Expression>(Identifier{
 						_varDecl.location,
-						variableReplacements.at(function.returnVariables[i].name)
+						variableReplacements.at(function->returnVariables[i].name)
 					})
 				});
 		}
@@ -204,14 +238,14 @@ vector<Statement> InlineModifier::performInline(Statement& _statement, FunctionC
 Statement BodyCopier::operator()(VariableDeclaration const& _varDecl)
 {
 	for (auto const& var: _varDecl.variables)
-		m_variableReplacements[var.name] = m_nameDispenser.newName(var.name, m_varNamePrefix);
+		m_variableReplacements[var.name] = m_nameDispenser.newName(var.name);
 	return ASTCopier::operator()(_varDecl);
 }
 
-Statement BodyCopier::operator()(FunctionDefinition const& _funDef)
+Statement BodyCopier::operator()(FunctionDefinition const&)
 {
 	assertThrow(false, OptimizerException, "Function hoisting has to be done before function inlining.");
-	return _funDef;
+	return {};
 }
 
 YulString BodyCopier::translateIdentifier(YulString _name)

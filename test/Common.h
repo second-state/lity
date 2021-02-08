@@ -17,19 +17,55 @@
 
 #pragma once
 
+#include <libdevcore/Exceptions.h>
+#include <liblangutil/EVMVersion.h>
+
 #include <boost/filesystem/path.hpp>
+#include <boost/program_options.hpp>
+#include <boost/noncopyable.hpp>
 
 namespace dev
 {
+
 namespace test
 {
 
-/// Tries to find a path that contains the directories "libsolidity/syntaxTests"
-/// and returns it if found.
-/// The routine searches in the current directory, and inside the "test" directory
-/// starting from the current directory and up to three levels up.
-/// @returns the path of the first match or an empty path if not found.
-boost::filesystem::path discoverTestPath();
+#ifdef _WIN32
+static constexpr auto evmoneFilename = "evmone.dll";
+static constexpr auto evmoneDownloadLink = "https://github.com/ethereum/evmone/releases/download/v0.1.0/evmone-0.1.0-windows-amd64.zip";
+#elif defined(__APPLE__)
+static constexpr auto evmoneFilename = "libevmone.dylib";
+static constexpr auto evmoneDownloadLink = "https://github.com/ethereum/evmone/releases/download/v0.1.0/evmone-0.1.0-darwin-x86_64.tar.gz";
+#else
+static constexpr auto evmoneFilename = "libevmone.so";
+static constexpr auto evmoneDownloadLink = "https://github.com/ethereum/evmone/releases/download/v0.1.0/evmone-0.1.0-linux-x86_64.tar.gz";
+#endif
+
+
+struct ConfigException : public Exception {};
+
+struct CommonOptions: boost::noncopyable
+{
+	boost::filesystem::path evmonePath;
+	boost::filesystem::path testPath;
+	bool optimize = false;
+	bool optimizeYul = false;
+	bool disableSMT = false;
+
+	langutil::EVMVersion evmVersion() const;
+
+	virtual bool parse(int argc, char const* const* argv);
+	// Throws a ConfigException on error
+	virtual void validate() const;
+
+protected:
+	CommonOptions(std::string caption = "");
+
+	boost::program_options::options_description options;
+
+private:
+	std::string evmVersionString;
+};
 
 }
 }

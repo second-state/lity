@@ -19,7 +19,11 @@
  * @date 2018
  */
 
-#include "JSON.h"
+#include <libdevcore/JSON.h>
+
+#include <libdevcore/CommonIO.h>
+
+#include <boost/algorithm/string/replace.hpp>
 
 #include <sstream>
 #include <map>
@@ -42,9 +46,9 @@ namespace
 class StreamWriterBuilder: public Json::StreamWriterBuilder
 {
 public:
-	explicit StreamWriterBuilder(map<string, string> const& _settings)
+	explicit StreamWriterBuilder(map<string, Json::Value> const& _settings)
 	{
-		for (auto const& iter :_settings)
+		for (auto const& iter: _settings)
 			this->settings_[iter.first] = iter.second;
 	}
 };
@@ -87,14 +91,16 @@ bool parse(Json::CharReaderBuilder& _builder, string const& _input, Json::Value&
 
 string jsonPrettyPrint(Json::Value const& _input)
 {
-	static map<string, string> settings{{"indentation", "  "}};
+	static map<string, Json::Value> settings{{"indentation", "  "}, {"enableYAMLCompatibility", true}};
 	static StreamWriterBuilder writerBuilder(settings);
-	return print(_input, writerBuilder);
+	string result = print(_input, writerBuilder);
+	boost::replace_all(result, " \n", "\n");
+	return result;
 }
 
 string jsonCompactPrint(Json::Value const& _input)
 {
-	static map<string, string> settings{{"indentation", ""}};
+	static map<string, Json::Value> settings{{"indentation", ""}};
 	static StreamWriterBuilder writerBuilder(settings);
 	return print(_input, writerBuilder);
 }
@@ -110,5 +116,11 @@ bool jsonParse(string const& _input, Json::Value& _json, string *_errs /* = null
 	static Json::CharReaderBuilder readerBuilder;
 	return parse(readerBuilder, _input, _json, _errs);
 }
+
+bool jsonParseFile(string const& _fileName, Json::Value& _json, string *_errs /* = nullptr */)
+{
+	return jsonParse(readFileAsString(_fileName), _json, _errs);
+}
+
 
 } // namespace dev

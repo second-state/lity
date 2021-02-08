@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include <libyul/ASTDataForward.h>
+#include <libyul/AsmDataForward.h>
 
 #include <libyul/YulString.h>
 
@@ -31,8 +31,6 @@
 #include <set>
 #include <memory>
 
-namespace dev
-{
 namespace yul
 {
 
@@ -60,6 +58,8 @@ public:
 	virtual Statement operator()(Switch const& _switch) = 0;
 	virtual Statement operator()(FunctionDefinition const&) = 0;
 	virtual Statement operator()(ForLoop const&) = 0;
+	virtual Statement operator()(Break const&) = 0;
+	virtual Statement operator()(Continue const&) = 0;
 	virtual Statement operator()(Block const& _block) = 0;
 };
 
@@ -71,21 +71,23 @@ class ASTCopier: public ExpressionCopier, public StatementCopier
 {
 public:
 	virtual ~ASTCopier() = default;
-	virtual Expression operator()(Literal const& _literal) override;
-	virtual Statement operator()(Instruction const& _instruction) override;
-	virtual Expression operator()(Identifier const& _identifier) override;
-	virtual Expression operator()(FunctionalInstruction const& _instr) override;
-	virtual Expression operator()(FunctionCall const&) override;
-	virtual Statement operator()(ExpressionStatement const& _statement) override;
-	virtual Statement operator()(Label const& _label) override;
-	virtual Statement operator()(StackAssignment const& _assignment) override;
-	virtual Statement operator()(Assignment const& _assignment) override;
-	virtual Statement operator()(VariableDeclaration const& _varDecl) override;
-	virtual Statement operator()(If const& _if) override;
-	virtual Statement operator()(Switch const& _switch) override;
-	virtual Statement operator()(FunctionDefinition const&) override;
-	virtual Statement operator()(ForLoop const&) override;
-	virtual Statement operator()(Block const& _block) override;
+	Expression operator()(Literal const& _literal) override;
+	Statement operator()(Instruction const& _instruction) override;
+	Expression operator()(Identifier const& _identifier) override;
+	Expression operator()(FunctionalInstruction const& _instr) override;
+	Expression operator()(FunctionCall const&) override;
+	Statement operator()(ExpressionStatement const& _statement) override;
+	Statement operator()(Label const& _label) override;
+	Statement operator()(StackAssignment const& _assignment) override;
+	Statement operator()(Assignment const& _assignment) override;
+	Statement operator()(VariableDeclaration const& _varDecl) override;
+	Statement operator()(If const& _if) override;
+	Statement operator()(Switch const& _switch) override;
+	Statement operator()(FunctionDefinition const&) override;
+	Statement operator()(ForLoop const&) override;
+	Statement operator()(Break const&) override;
+	Statement operator()(Continue const&) override;
+	Statement operator()(Block const& _block) override;
 
 	virtual Expression translate(Expression const& _expression);
 	virtual Statement translate(Statement const& _statement);
@@ -95,13 +97,14 @@ protected:
 	std::vector<T> translateVector(std::vector<T> const& _values);
 
 	template <typename T>
-	std::shared_ptr<T> translate(std::shared_ptr<T> const& _v)
+	std::unique_ptr<T> translate(std::unique_ptr<T> const& _v)
 	{
-		return _v ? std::make_shared<T>(translate(*_v)) : nullptr;
+		return _v ? std::make_unique<T>(translate(*_v)) : nullptr;
 	}
+
 	Block translate(Block const& _block);
 	Case translate(Case const& _case);
-	Identifier translate(Identifier const& _identifier);
+	virtual Identifier translate(Identifier const& _identifier);
 	Literal translate(Literal const& _literal);
 	TypedName translate(TypedName const& _typedName);
 
@@ -122,5 +125,4 @@ std::vector<T> ASTCopier::translateVector(std::vector<T> const& _values)
 }
 
 
-}
 }

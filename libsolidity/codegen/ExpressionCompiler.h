@@ -23,14 +23,15 @@
 
 #pragma once
 
-#include <functional>
-#include <memory>
-#include <boost/noncopyable.hpp>
-#include <libdevcore/Common.h>
-#include <libevmasm/SourceLocation.h>
 #include <libsolidity/ast/ASTVisitor.h>
 #include <libsolidity/codegen/LValue.h>
-#include <libsolidity/interface/Exceptions.h>
+#include <liblangutil/Exceptions.h>
+#include <liblangutil/SourceLocation.h>
+#include <libdevcore/Common.h>
+
+#include <boost/noncopyable.hpp>
+#include <functional>
+#include <memory>
 
 namespace dev {
 namespace eth
@@ -54,11 +55,8 @@ class ArrayType;
 class ExpressionCompiler: private ASTConstVisitor
 {
 public:
-	/// Appends code for a State Variable accessor function
-	static void appendStateVariableAccessor(CompilerContext& _context, VariableDeclaration const& _varDecl, bool _optimize = false);
-
-	explicit ExpressionCompiler(CompilerContext& _compilerContext, bool _optimize = false):
-		m_optimize(_optimize), m_context(_compilerContext) {}
+	explicit ExpressionCompiler(CompilerContext& _compilerContext, bool _optimiseOrderLiterals):
+		m_optimiseOrderLiterals(_optimiseOrderLiterals), m_context(_compilerContext) {}
 
 	/// Compile the given @a _expression and leave its value on the stack.
 	void compile(Expression const& _expression);
@@ -70,21 +68,21 @@ public:
 	void appendStateVariableAccessor(VariableDeclaration const& _varDecl);
 
 	/// Appends code for a Constant State Variable accessor function
-	void appendConstStateVariableAccessor(const VariableDeclaration& _varDecl);
+	void appendConstStateVariableAccessor(VariableDeclaration const& _varDecl);
 
 private:
 	friend class RuleEngineCompiler;
-	virtual bool visit(Conditional const& _condition) override;
-	virtual bool visit(Assignment const& _assignment) override;
-	virtual bool visit(TupleExpression const& _tuple) override;
-	virtual bool visit(UnaryOperation const& _unaryOperation) override;
-	virtual bool visit(BinaryOperation const& _binaryOperation) override;
-	virtual bool visit(FunctionCall const& _functionCall) override;
-	virtual bool visit(NewExpression const& _newExpression) override;
-	virtual bool visit(MemberAccess const& _memberAccess) override;
-	virtual bool visit(IndexAccess const& _indexAccess) override;
-	virtual void endVisit(Identifier const& _identifier) override;
-	virtual void endVisit(Literal const& _literal) override;
+	bool visit(Conditional const& _condition) override;
+	bool visit(Assignment const& _assignment) override;
+	bool visit(TupleExpression const& _tuple) override;
+	bool visit(UnaryOperation const& _unaryOperation) override;
+	bool visit(BinaryOperation const& _binaryOperation) override;
+	bool visit(FunctionCall const& _functionCall) override;
+	bool visit(NewExpression const& _newExpression) override;
+	bool visit(MemberAccess const& _memberAccess) override;
+	bool visit(IndexAccess const& _indexAccess) override;
+	void endVisit(Identifier const& _identifier) override;
+	void endVisit(Literal const& _literal) override;
 
 	///@{
 	///@name Append code for various operator types
@@ -127,10 +125,12 @@ private:
 	/// operation.
 	static bool cleanupNeededForOp(Type::Category _type, Token _op);
 
+	void acceptAndConvert(Expression const& _expression, Type const& _type, bool _cleanupNeeded = false);
+
 	/// @returns the CompilerUtils object containing the current context.
 	CompilerUtils utils();
 
-	bool m_optimize;
+	bool m_optimiseOrderLiterals;
 	CompilerContext& m_context;
 	std::unique_ptr<LValue> m_currentLValue;
 

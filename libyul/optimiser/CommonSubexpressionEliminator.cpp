@@ -23,22 +23,54 @@
 
 #include <libyul/optimiser/Metrics.h>
 #include <libyul/optimiser/SyntacticalEquality.h>
+#include <libyul/optimiser/CallGraphGenerator.h>
+#include <libyul/optimiser/Semantics.h>
+#include <libyul/SideEffects.h>
 #include <libyul/Exceptions.h>
-
-#include <libsolidity/inlineasm/AsmData.h>
+#include <libyul/AsmData.h>
+#include <libyul/Dialect.h>
 
 using namespace std;
 using namespace dev;
-using namespace dev::yul;
+using namespace yul;
+
+void CommonSubexpressionEliminator::run(OptimiserStepContext& _context, Block& _ast)
+{
+	CommonSubexpressionEliminator cse{
+		_context.dialect,
+		SideEffectsPropagator::sideEffects(_context.dialect, CallGraphGenerator::callGraph(_ast))
+	};
+	cse(_ast);
+}
+
+CommonSubexpressionEliminator::CommonSubexpressionEliminator(
+	Dialect const& _dialect,
+	map<YulString, SideEffects> _functionSideEffects
+):
+	DataFlowAnalyzer(_dialect, std::move(_functionSideEffects))
+{
+}
 
 void CommonSubexpressionEliminator::visit(Expression& _e)
 {
+	bool descend = true;
+	// If this is a function call to a function that requires literal arguments,
+	// do not try to simplify there.
+	if (_e.type() == typeid(FunctionCall))
+		if (BuiltinFunction const* builtin = m_dialect.builtin(boost::get<FunctionCall>(_e).functionName.name))
+			if (builtin->literalArguments)
+				// We should not modify function arguments that have to be literals
+				// Note that replacing the function call entirely is fine,
+				// if the function call is movable.
+				descend = false;
+
 	// We visit the inner expression first to first simplify inner expressions,
 	// which hopefully allows more matches.
 	// Note that the DataFlowAnalyzer itself only has code for visiting Statements,
 	// so this basically invokes the AST walker directly and thus post-visiting
 	// is also fine with regards to data flow analysis.
-	DataFlowAnalyzer::visit(_e);
+	if (descend)
+		DataFlowAnalyzer::visit(_e);
 
 	if (_e.type() == typeid(Identifier))
 	{
@@ -62,7 +94,7 @@ void CommonSubexpressionEliminator::visit(Expression& _e)
 		{
 			assertThrow(var.second, OptimizerException, "");
 			assertThrow(inScope(var.first), OptimizerException, "");
-			if (SyntacticalEqualityChecker::equal(_e, *var.second))
+			if (SyntacticallyEqual{}(_e, *var.second))
 			{
 				_e = Identifier{locationOf(_e), var.first};
 				break;

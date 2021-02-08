@@ -1,18 +1,18 @@
 /*
-    This file is part of solidity.
+	This file is part of solidity.
 
-    solidity is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	solidity is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    solidity is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	solidity is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with solidity.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
 /**
  * @author Christian <c@ethdev.com>
@@ -20,15 +20,21 @@
  * Solidity parser.
  */
 
+#include <libsolidity/parsing/Parser.h>
+
+#include <libsolidity/interface/Version.h>
+#include <libyul/AsmParser.h>
+#include <libyul/backends/evm/EVMDialect.h>
+#include <liblangutil/ErrorReporter.h>
+#include <liblangutil/Scanner.h>
+#include <liblangutil/SemVerHandler.h>
+#include <liblangutil/SourceLocation.h>
+#include <libyul/backends/evm/EVMDialect.h>
 #include <cctype>
 #include <vector>
-#include <libevmasm/SourceLocation.h>
-#include <libsolidity/parsing/Parser.h>
-#include <libsolidity/parsing/Scanner.h>
-#include <libsolidity/inlineasm/AsmParser.h>
-#include <libsolidity/interface/ErrorReporter.h>
 
 using namespace std;
+using namespace langutil;
 
 namespace dev
 {
@@ -41,9 +47,9 @@ class Parser::ASTNodeFactory
 {
 public:
 	explicit ASTNodeFactory(Parser const& _parser):
-		m_parser(_parser), m_location(_parser.position(), -1, _parser.sourceName()) {}
+		m_parser(_parser), m_location{_parser.position(), -1, _parser.source()} {}
 	ASTNodeFactory(Parser const& _parser, ASTPointer<ASTNode> const& _childNode):
-		m_parser(_parser), m_location(_childNode->location()) {}
+		m_parser(_parser), m_location{_childNode->location()} {}
 
 	void markEndPosition() { m_location.end = m_parser.endPosition(); }
 	void setLocation(SourceLocation const& _location) { m_location = _location; }
@@ -54,11 +60,13 @@ public:
 	template <class NodeType, typename... Args>
 	ASTPointer<NodeType> createNode(Args&& ... _args)
 	{
-		solAssert(m_location.sourceName, "");
+		solAssert(m_location.source, "");
 		if (m_location.end < 0)
 			markEndPosition();
 		return make_shared<NodeType>(m_location, std::forward<Args>(_args)...);
 	}
+
+	SourceLocation const& location() const noexcept { return m_location; }
 
 private:
 	Parser const& m_parser;
@@ -103,6 +111,24 @@ ASTPointer<SourceUnit> Parser::parse(shared_ptr<Scanner> const& _scanner)
 	}
 }
 
+void Parser::parsePragmaVersion(SourceLocation const& _location, vector<Token> const& _tokens, vector<string> const& _literals)
+{
+	SemVerMatchExpressionParser parser(_tokens, _literals);
+	auto matchExpression = parser.parse();
+	static SemVerVersion const currentVersion{string(VersionString)};
+	// FIXME: only match for major version incompatibility
+	if (!matchExpression.matches(currentVersion))
+		// If m_parserErrorRecovery is true, the same message will appear from SyntaxChecker::visit(),
+		// so we don't need to report anything here.
+		if (!m_parserErrorRecovery)
+			m_errorReporter.fatalParserError(
+				_location,
+				"Source file requires different compiler version (current compiler is " +
+				string(VersionString) + " - note that nightly builds are considered to be "
+				"strictly less than the released version"
+			);
+}
+
 ASTPointer<PragmaDirective> Parser::parsePragmaDirective()
 {
 	RecursionGuard recursionGuard(*this);
@@ -132,6 +158,16 @@ ASTPointer<PragmaDirective> Parser::parsePragmaDirective()
 	while (m_scanner->currentToken() != Token::Semicolon && m_scanner->currentToken() != Token::EOS);
 	nodeFactory.markEndPosition();
 	expectToken(Token::Semicolon);
+
+	if (literals.size() >= 2 && literals[0] == "solidity")
+	{
+		parsePragmaVersion(
+			nodeFactory.location(),
+			vector<Token>(tokens.begin() + 1, tokens.end()),
+			vector<string>(literals.begin() + 1, literals.end())
+		);
+	}
+
 	return nodeFactory.createNode<PragmaDirective>(tokens, literals);
 }
 
@@ -145,7 +181,7 @@ ASTPointer<ImportDirective> Parser::parseImportDirective()
 	expectToken(Token::Import);
 	ASTPointer<ASTString> path;
 	ASTPointer<ASTString> unitAlias = make_shared<string>();
-	vector<pair<ASTPointer<Identifier>, ASTPointer<ASTString>>> symbolAliases;
+	ImportDirective::SymbolAliasList symbolAliases;
 
 	if (m_scanner->currentToken() == Token::StringLiteral)
 	{
@@ -163,14 +199,16 @@ ASTPointer<ImportDirective> Parser::parseImportDirective()
 			m_scanner->next();
 			while (true)
 			{
-				ASTPointer<Identifier> id = parseIdentifier();
 				ASTPointer<ASTString> alias;
+				SourceLocation aliasLocation = SourceLocation{position(), endPosition(), source()};
+				ASTPointer<Identifier> id = parseIdentifier();
 				if (m_scanner->currentToken() == Token::As)
 				{
 					expectToken(Token::As);
+					aliasLocation = SourceLocation{position(), endPosition(), source()};
 					alias = expectIdentifierToken();
 				}
-				symbolAliases.push_back(make_pair(move(id), move(alias)));
+				symbolAliases.emplace_back(ImportDirective::SymbolAlias{move(id), move(alias), aliasLocation});
 				if (m_scanner->currentToken() != Token::Comma)
 					break;
 				m_scanner->next();
@@ -194,6 +232,8 @@ ASTPointer<ImportDirective> Parser::parseImportDirective()
 			fatalParserError("Expected import path.");
 		path = getLiteralAndAdvance();
 	}
+	if (path->empty())
+		fatalParserError("Import path cannot be empty.");
 	nodeFactory.markEndPosition();
 	expectToken(Token::Semicolon);
 	return nodeFactory.createNode<ImportDirective>(path, unitAlias, move(symbolAliases));
@@ -224,59 +264,79 @@ ASTPointer<ContractDefinition> Parser::parseContractDefinition()
 {
 	RecursionGuard recursionGuard(*this);
 	ASTNodeFactory nodeFactory(*this);
+	ASTPointer<ASTString> name =  nullptr;
 	ASTPointer<ASTString> docString;
-	if (m_scanner->currentCommentLiteral() != "")
-		docString = make_shared<ASTString>(m_scanner->currentCommentLiteral());
-	ContractDefinition::ContractKind contractKind = parseContractKind();
-	ASTPointer<ASTString> name = expectIdentifierToken();
 	vector<ASTPointer<InheritanceSpecifier>> baseContracts;
-	if (m_scanner->currentToken() == Token::Is)
-		do
-		{
-			m_scanner->next();
-			baseContracts.push_back(parseInheritanceSpecifier());
-		}
-		while (m_scanner->currentToken() == Token::Comma);
 	vector<ASTPointer<ASTNode>> subNodes;
-	expectToken(Token::LBrace);
-	while (true)
+	ContractDefinition::ContractKind contractKind = ContractDefinition::ContractKind::Contract;
+	try
 	{
-		Token currentTokenValue = m_scanner->currentToken();
-		if (currentTokenValue == Token::RBrace)
-			break;
-		else if (currentTokenValue == Token::Function || currentTokenValue == Token::Constructor)
-			// This can be a function or a state variable of function type (especially
-			// complicated to distinguish fallback function from function type state variable)
-			subNodes.push_back(parseFunctionDefinitionOrFunctionTypeStateVariable());
-		else if (currentTokenValue == Token::Struct)
-			subNodes.push_back(parseStructDefinition());
-		else if (currentTokenValue == Token::Enum)
-			subNodes.push_back(parseEnumDefinition());
-		else if (
-			currentTokenValue == Token::Identifier ||
-			currentTokenValue == Token::Mapping ||
-			TokenTraits::isElementaryTypeName(currentTokenValue)
-		)
+		if (m_scanner->currentCommentLiteral() != "")
+			docString = make_shared<ASTString>(m_scanner->currentCommentLiteral());
+		contractKind = parseContractKind();
+		name = expectIdentifierToken();
+		if (m_scanner->currentToken() == Token::Is)
+			do
+			{
+				m_scanner->next();
+				baseContracts.push_back(parseInheritanceSpecifier());
+			}
+			while (m_scanner->currentToken() == Token::Comma);
+		expectToken(Token::LBrace);
+		while (true)
 		{
-			VarDeclParserOptions options;
-			options.isStateVariable = true;
-			options.allowInitialValue = true;
-			subNodes.push_back(parseVariableDeclaration(options));
-			expectToken(Token::Semicolon);
+			Token currentTokenValue = m_scanner->currentToken();
+			if (currentTokenValue == Token::RBrace)
+				break;
+			else if (currentTokenValue == Token::Function || currentTokenValue == Token::Constructor)
+				// This can be a function or a state variable of function type (especially
+				// complicated to distinguish fallback function from function type state variable)
+				subNodes.push_back(parseFunctionDefinitionOrFunctionTypeStateVariable());
+			else if (currentTokenValue == Token::Struct)
+				subNodes.push_back(parseStructDefinition());
+			else if (currentTokenValue == Token::Enum)
+				subNodes.push_back(parseEnumDefinition());
+			else if (
+					currentTokenValue == Token::Identifier ||
+					currentTokenValue == Token::Mapping ||
+					TokenTraits::isElementaryTypeName(currentTokenValue)
+					)
+			{
+				VarDeclParserOptions options;
+				options.isStateVariable = true;
+				options.allowInitialValue = true;
+				subNodes.push_back(parseVariableDeclaration(options));
+				expectToken(Token::Semicolon);
+			}
+			else if (currentTokenValue == Token::Modifier)
+				subNodes.push_back(parseModifierDefinition());
+			else if (currentTokenValue == Token::Event)
+				subNodes.push_back(parseEventDefinition());
+			else if (currentTokenValue == Token::Using)
+				subNodes.push_back(parseUsingDirective());
+			else
+				fatalParserError(string("Function, variable, struct or modifier declaration expected."));
 		}
-		else if (currentTokenValue == Token::Modifier)
-			subNodes.push_back(parseModifierDefinition());
-		else if (currentTokenValue == Token::Event)
-			subNodes.push_back(parseEventDefinition());
-		else if (currentTokenValue == Token::Using)
-			subNodes.push_back(parseUsingDirective());
 		else if (currentTokenValue == Token::Rule)
 			subNodes.push_back(parseRule());
 		else
 			fatalParserError(string("Function, variable, struct or modifier declaration expected."));
 	}
+	catch (FatalError const&)
+	{
+		if (
+			!m_errorReporter.hasErrors() ||
+			!m_parserErrorRecovery ||
+			m_errorReporter.hasExcessiveErrors()
+		)
+			BOOST_THROW_EXCEPTION(FatalError()); /* Don't try to recover here. */
+		m_inParserRecovery = true;
+	}
 	nodeFactory.markEndPosition();
-	expectToken(Token::RBrace);
+	if (m_inParserRecovery)
+		expectTokenOrConsumeUntil(Token::RBrace, "ContractDefinition");
+	else
+		expectToken(Token::RBrace);
 	return nodeFactory.createNode<ContractDefinition>(
 		name,
 		docString,
@@ -935,10 +995,26 @@ ASTPointer<Block> Parser::parseBlock(ASTPointer<ASTString> const& _docString)
 	ASTNodeFactory nodeFactory(*this);
 	expectToken(Token::LBrace);
 	vector<ASTPointer<Statement>> statements;
-	while (m_scanner->currentToken() != Token::RBrace)
-		statements.push_back(parseStatement());
-	nodeFactory.markEndPosition();
-	expectToken(Token::RBrace);
+	try
+	{
+		while (m_scanner->currentToken() != Token::RBrace)
+			statements.push_back(parseStatement());
+		nodeFactory.markEndPosition();
+	}
+	catch (FatalError const&)
+	{
+		if (
+			!m_errorReporter.hasErrors() ||
+			!m_parserErrorRecovery ||
+			m_errorReporter.hasExcessiveErrors()
+		)
+			BOOST_THROW_EXCEPTION(FatalError()); /* Don't try to recover here. */
+		m_inParserRecovery = true;
+	}
+	if (m_parserErrorRecovery)
+		expectTokenOrConsumeUntil(Token::RBrace, "Block");
+	else
+		expectToken(Token::RBrace);
 	return nodeFactory.createNode<Block>(_docString, statements);
 }
 
@@ -946,90 +1022,112 @@ ASTPointer<Statement> Parser::parseStatement()
 {
 	RecursionGuard recursionGuard(*this);
 	ASTPointer<ASTString> docString;
-	if (m_scanner->currentCommentLiteral() != "")
-		docString = make_shared<ASTString>(m_scanner->currentCommentLiteral());
 	ASTPointer<Statement> statement;
-	switch (m_scanner->currentToken())
+	try
 	{
-	case Token::If:
-		return parseIfStatement(docString);
-	case Token::While:
-		return parseWhileStatement(docString);
-	case Token::Do:
-		return parseDoWhileStatement(docString);
-	case Token::For:
-		return parseForStatement(docString);
-	case Token::LBrace:
-		return parseBlock(docString);
-	// starting from here, all statements must be terminated by a semicolon
-	case Token::Continue:
-		statement = ASTNodeFactory(*this).createNode<Continue>(docString);
-		m_scanner->next();
-		break;
-	case Token::Break:
-		statement = ASTNodeFactory(*this).createNode<Break>(docString);
-		m_scanner->next();
-		break;
-	case Token::Return:
-	{
-		ASTNodeFactory nodeFactory(*this);
-		ASTPointer<Expression> expression;
-		if (m_scanner->next() != Token::Semicolon)
+		if (m_scanner->currentCommentLiteral() != "")
+			docString = make_shared<ASTString>(m_scanner->currentCommentLiteral());
+		switch (m_scanner->currentToken())
 		{
-			expression = parseExpression();
-			nodeFactory.setEndPositionFromNode(expression);
-		}
-		statement = nodeFactory.createNode<Return>(docString, expression);
-		break;
-	}
-	case Token::Throw:
-	{
-		statement = ASTNodeFactory(*this).createNode<Throw>(docString);
-		m_scanner->next();
-		break;
-	}
-	case Token::Assembly:
-		return parseInlineAssembly(docString);
-	case Token::Emit:
-		statement = parseEmitStatement(docString);
-		break;
-	case Token::Identifier:
-		if (m_insideModifier && m_scanner->currentLiteral() == "_")
-		{
-			statement = ASTNodeFactory(*this).createNode<PlaceholderStatement>(docString);
+		case Token::If:
+			return parseIfStatement(docString);
+		case Token::While:
+			return parseWhileStatement(docString);
+		case Token::Do:
+			return parseDoWhileStatement(docString);
+		case Token::For:
+			return parseForStatement(docString);
+		case Token::LBrace:
+			return parseBlock(docString);
+			// starting from here, all statements must be terminated by a semicolon
+		case Token::Continue:
+			statement = ASTNodeFactory(*this).createNode<Continue>(docString);
 			m_scanner->next();
-		}
-		else
+			break;
+		case Token::Break:
+			statement = ASTNodeFactory(*this).createNode<Break>(docString);
+			m_scanner->next();
+			break;
+		case Token::Return:
+		{
+			ASTNodeFactory nodeFactory(*this);
+			ASTPointer<Expression> expression;
+			if (m_scanner->next() != Token::Semicolon)
+				{
+					expression = parseExpression();
+					nodeFactory.setEndPositionFromNode(expression);
+				}
+			statement = nodeFactory.createNode<Return>(docString, expression);
+				break;
+			}
+		case Token::Throw:
+			{
+				statement = ASTNodeFactory(*this).createNode<Throw>(docString);
+				m_scanner->next();
+				break;
+			}
+		case Token::Assembly:
+			return parseInlineAssembly(docString);
+		case Token::Emit:
+			statement = parseEmitStatement(docString);
+			break;
+		case Token::FireAllRules:
+			statement = ASTNodeFactory(*this).createNode<FireAllRulesStatement>(docString);
+			m_scanner->next();
+			break;
+		case Token::Identifier:
+			if (m_insideModifier && m_scanner->currentLiteral() == "_")
+				{
+					statement = ASTNodeFactory(*this).createNode<PlaceholderStatement>(docString);
+					m_scanner->next();
+				}
+			else
+				statement = parseSimpleStatement(docString);
+			break;
+		default:
 			statement = parseSimpleStatement(docString);
-		break;
-	case Token::FireAllRules:
-		statement = ASTNodeFactory(*this).createNode<FireAllRulesStatement>(docString);
-		m_scanner->next();
-		break;
-	default:
-		statement = parseSimpleStatement(docString);
-		break;
+			break;
+		}
 	}
-	expectToken(Token::Semicolon);
+	catch (FatalError const&)
+	{
+		if (
+			!m_errorReporter.hasErrors() ||
+			!m_parserErrorRecovery ||
+			m_errorReporter.hasExcessiveErrors()
+		)
+			BOOST_THROW_EXCEPTION(FatalError()); /* Don't try to recover here. */
+		m_inParserRecovery = true;
+	}
+	if (m_inParserRecovery)
+		expectTokenOrConsumeUntil(Token::Semicolon, "Statement");
+	else
+		expectToken(Token::Semicolon);
 	return statement;
 }
 
 ASTPointer<InlineAssembly> Parser::parseInlineAssembly(ASTPointer<ASTString> const& _docString)
 {
 	RecursionGuard recursionGuard(*this);
-	ASTNodeFactory nodeFactory(*this);
+	SourceLocation location{position(), -1, source()};
+
 	expectToken(Token::Assembly);
+	yul::Dialect const& dialect = yul::EVMDialect::looseAssemblyForEVM(m_evmVersion);
 	if (m_scanner->currentToken() == Token::StringLiteral)
 	{
 		if (m_scanner->currentLiteral() != "evmasm")
 			fatalParserError("Only \"evmasm\" supported.");
+		// This can be used in the future to set the dialect.
 		m_scanner->next();
 	}
 
-	assembly::Parser asmParser(m_errorReporter);
-	shared_ptr<assembly::Block> block = asmParser.parse(m_scanner, true);
-	nodeFactory.markEndPosition();
-	return nodeFactory.createNode<InlineAssembly>(_docString, block);
+	yul::Parser asmParser(m_errorReporter, dialect);
+	shared_ptr<yul::Block> block = asmParser.parse(m_scanner, true);
+	if (block == nullptr)
+		BOOST_THROW_EXCEPTION(FatalError());
+
+	location.end = block->location.end;
+	return make_shared<InlineAssembly>(location, _docString, dialect, block);
 }
 
 ASTPointer<IfStatement> Parser::parseIfStatement(ASTPointer<ASTString> const& _docString)
@@ -1548,6 +1646,12 @@ ASTPointer<Expression> Parser::parsePrimaryExpression()
 		nodeFactory.markEndPosition();
 		expression = nodeFactory.createNode<Identifier>(getLiteralAndAdvance());
 		break;
+	case Token::Type:
+		// Inside expressions "type" is the name of a special, globally-available function.
+		nodeFactory.markEndPosition();
+		m_scanner->next();
+		expression = nodeFactory.createNode<Identifier>(make_shared<ASTString>("type"));
+		break;
 	case Token::LParen:
 	case Token::LBrack:
 	{
@@ -1579,8 +1683,8 @@ ASTPointer<Expression> Parser::parsePrimaryExpression()
 		expression = nodeFactory.createNode<TupleExpression>(components, isArray);
 		break;
 	}
-	case Token::IllegalHex:
-		fatalParserError("Expected even number of hex-nibbles within double-quotes.");
+	case Token::Illegal:
+		fatalParserError(to_string(m_scanner->currentError()));
 		break;
 	default:
 		if (TokenTraits::isElementaryTypeName(token))
@@ -1714,7 +1818,7 @@ Parser::IndexAccessedPath Parser::parseIndexAccessedPath()
 			index = parseExpression();
 		SourceLocation indexLocation = iap.path.front()->location();
 		indexLocation.end = endPosition();
-		iap.indices.push_back(make_pair(index, indexLocation));
+		iap.indices.emplace_back(index, indexLocation);
 		expectToken(Token::RBrack);
 	}
 

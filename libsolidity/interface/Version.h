@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include <string>
 #include <libdevcore/Common.h>
+#include <string>
 
 namespace dev
 {
@@ -43,6 +43,8 @@ extern std::string const LityVersionStringStrict;
 bytes binaryVersion(const std::string& versionString);
 bytes solcBinaryVersion();
 bytes lityBinaryVersion();
+extern bytes const VersionCompactBytes;
+extern bool const VersionIsRelease;
 
 }
 }

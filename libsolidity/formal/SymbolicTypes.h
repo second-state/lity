@@ -17,9 +17,8 @@
 
 #pragma once
 
-#include <libsolidity/formal/SolverInterface.h>
+#include <libsolidity/formal/EncodingContext.h>
 #include <libsolidity/formal/SymbolicVariables.h>
-
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/ast/Types.h>
 
@@ -27,27 +26,50 @@ namespace dev
 {
 namespace solidity
 {
+namespace smt
+{
 
-/// So far int, bool and address are supported.
-/// Returns true if type is supported.
-bool isSupportedType(Type::Category _category);
-bool isSupportedType(Type const& _type);
+/// Returns the SMT sort that models the Solidity type _type.
+SortPointer smtSort(solidity::Type const& _type);
+std::vector<SortPointer> smtSort(std::vector<solidity::TypePointer> const& _types);
+/// Returns the SMT kind that models the Solidity type type category _category.
+Kind smtKind(solidity::Type::Category _category);
 
-bool isInteger(Type::Category _category);
-bool isRational(Type::Category _category);
-bool isFixedBytes(Type::Category _category);
-bool isAddress(Type::Category _category);
-bool isNumber(Type::Category _category);
-bool isBool(Type::Category _category);
-bool isFunction(Type::Category _category);
+/// Returns true if type is fully supported (declaration and operations).
+bool isSupportedType(solidity::Type::Category _category);
+bool isSupportedType(solidity::Type const& _type);
+/// Returns true if type is partially supported (declaration).
+bool isSupportedTypeDeclaration(solidity::Type::Category _category);
+bool isSupportedTypeDeclaration(solidity::Type const& _type);
+
+bool isInteger(solidity::Type::Category _category);
+bool isRational(solidity::Type::Category _category);
+bool isFixedBytes(solidity::Type::Category _category);
+bool isAddress(solidity::Type::Category _category);
+bool isContract(solidity::Type::Category _category);
+bool isEnum(solidity::Type::Category _category);
+bool isNumber(solidity::Type::Category _category);
+bool isBool(solidity::Type::Category _category);
+bool isFunction(solidity::Type::Category _category);
+bool isMapping(solidity::Type::Category _category);
+bool isArray(solidity::Type::Category _category);
+bool isTuple(solidity::Type::Category _category);
+bool isStringLiteral(solidity::Type::Category _category);
 
 /// Returns a new symbolic variable, according to _type.
 /// Also returns whether the type is abstract or not,
 /// which is true for unsupported types.
-std::pair<bool, std::shared_ptr<SymbolicVariable>> newSymbolicVariable(Type const& _type, std::string const& _uniqueName, smt::SolverInterface& _solver);
+std::pair<bool, std::shared_ptr<SymbolicVariable>> newSymbolicVariable(solidity::Type const& _type, std::string const& _uniqueName, EncodingContext& _context);
 
-smt::Expression minValue(IntegerType const& _type);
-smt::Expression maxValue(IntegerType const& _type);
+Expression minValue(solidity::IntegerType const& _type);
+Expression maxValue(solidity::IntegerType const& _type);
+Expression zeroValue(solidity::TypePointer const& _type);
 
+void setSymbolicZeroValue(SymbolicVariable const& _variable, EncodingContext& _context);
+void setSymbolicZeroValue(Expression _expr, solidity::TypePointer const& _type, EncodingContext& _context);
+void setSymbolicUnknownValue(SymbolicVariable const& _variable, EncodingContext& _context);
+void setSymbolicUnknownValue(Expression _expr, solidity::TypePointer const& _type, EncodingContext& _context);
+
+}
 }
 }

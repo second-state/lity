@@ -1,6 +1,5 @@
 =====
 Types
-=====
 
 .. _types-fixed-point-numbers:
 

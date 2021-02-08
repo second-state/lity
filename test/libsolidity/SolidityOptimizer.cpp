@@ -20,6 +20,7 @@
  * Tests for the Solidity optimizer.
  */
 
+#include <test/Metadata.h>
 #include <test/libsolidity/SolidityExecutionFramework.h>
 
 #include <libevmasm/Instruction.h>
@@ -45,8 +46,6 @@ namespace test
 class OptimizerTestFramework: public SolidityExecutionFramework
 {
 public:
-	OptimizerTestFramework() { }
-
 	bytes const& compileAndRunWithOptimizer(
 		std::string const& _sourceCode,
 		u256 const& _value = 0,
@@ -55,13 +54,13 @@ public:
 		unsigned const _optimizeRuns = 200
 	)
 	{
-		bool const c_optimize = m_optimize;
-		unsigned const c_optimizeRuns = m_optimizeRuns;
-		m_optimize = _optimize;
-		m_optimizeRuns = _optimizeRuns;
+		OptimiserSettings previousSettings = std::move(m_optimiserSettings);
+		// This uses "none" / "full" while most other test frameworks use
+		// "minimal" / "standard".
+		m_optimiserSettings = _optimize ? OptimiserSettings::full() : OptimiserSettings::none();
+		m_optimiserSettings.expectedExecutionsPerDeployment = _optimizeRuns;
 		bytes const& ret = compileAndRun(_sourceCode, _value, _contractName);
-		m_optimize = c_optimize;
-		m_optimizeRuns = c_optimizeRuns;
+		m_optimiserSettings = std::move(previousSettings);
 		return ret;
 	}
 
@@ -107,13 +106,10 @@ public:
 	/// into account.
 	size_t numInstructions(bytes const& _bytecode, boost::optional<Instruction> _which = boost::optional<Instruction>{})
 	{
-		BOOST_REQUIRE(_bytecode.size() > 5);
-		size_t metadataSize = (_bytecode[_bytecode.size() - 2] << 8) + _bytecode[_bytecode.size() - 1];
-		BOOST_REQUIRE_MESSAGE(metadataSize == 0x29, "Invalid metadata size");
-		BOOST_REQUIRE(_bytecode.size() >= metadataSize + 2);
-		bytes realCode = bytes(_bytecode.begin(), _bytecode.end() - metadataSize - 2);
+		bytes realCode = bytecodeSansMetadata(_bytecode);
+		BOOST_REQUIRE_MESSAGE(!realCode.empty(), "Invalid or missing metadata in bytecode.");
 		size_t instructions = 0;
-		solidity::eachInstruction(realCode, [&](Instruction _instr, u256 const&) {
+		dev::eth::eachInstruction(realCode, [&](Instruction _instr, u256 const&) {
 			if (!_which || *_which == _instr)
 				instructions++;
 		});
@@ -489,7 +485,18 @@ BOOST_AUTO_TEST_CASE(constant_optimization_early_exit)
 	auto start = std::chrono::steady_clock::now();
 	compileBothVersions(sourceCode);
 	double duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
-	BOOST_CHECK_MESSAGE(duration < 20, "Compilation of constants took longer than 20 seconds.");
+	// Since run time on an ASan build is not really realistic, we disable this test for those builds.
+	size_t maxDuration = 20;
+#if !defined(__SANITIZE_ADDRESS__) && defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define __SANITIZE_ADDRESS__ 1
+#endif
+#endif
+#if __SANITIZE_ADDRESS__
+	maxDuration = size_t(-1);
+	BOOST_TEST_MESSAGE("Disabled constant optimizer run time check for address sanitizer build.");
+#endif
+	BOOST_CHECK_MESSAGE(duration <= maxDuration, "Compilation of constants took longer than 20 seconds.");
 	compareVersions("hexEncodeTest(address)", u256(0x123456789));
 }
 
@@ -631,6 +638,79 @@ BOOST_AUTO_TEST_CASE(optimise_multi_stores)
 	BOOST_CHECK_EQUAL(numInstructions(m_nonOptimizedBytecode, Instruction::SSTORE), 9);
 	BOOST_CHECK_EQUAL(numInstructions(m_optimizedBytecode, Instruction::SSTORE), 8);
 }
+
+BOOST_AUTO_TEST_CASE(optimise_constant_to_codecopy)
+{
+	char const* sourceCode = R"(
+		contract C {
+			// We use the state variable so that the functions won't be deemed identical
+			// and be optimised out to the same implementation.
+			uint a;
+			function f() public returns (uint) {
+				a = 1;
+				// This cannot be represented well with the `CalculateMethod`,
+				// hence the decision will be between `LiteralMethod` and `CopyMethod`.
+				return 0x1234123412431234123412412342112341234124312341234124;
+			}
+			function g() public returns (uint) {
+				a = 2;
+				return 0x1234123412431234123412412342112341234124312341234124;
+			}
+			function h() public returns (uint) {
+				a = 3;
+				return 0x1234123412431234123412412342112341234124312341234124;
+			}
+			function i() public returns (uint) {
+				a = 4;
+				return 0x1234123412431234123412412342112341234124312341234124;
+			}
+		}
+	)";
+	compileBothVersions(sourceCode, 0, "C", 50);
+	compareVersions("f()");
+	compareVersions("g()");
+	compareVersions("h()");
+	compareVersions("i()");
+	// This is counting in the deployed code.
+	BOOST_CHECK_EQUAL(numInstructions(m_nonOptimizedBytecode, Instruction::CODECOPY), 0);
+	BOOST_CHECK_EQUAL(numInstructions(m_optimizedBytecode, Instruction::CODECOPY), 4);
+}
+
+BOOST_AUTO_TEST_CASE(byte_access)
+{
+	char const* sourceCode = R"(
+		contract C
+		{
+			function f(bytes32 x) public returns (byte r)
+			{
+				assembly { r := and(byte(x, 31), 0xff) }
+			}
+		}
+	)";
+	compileBothVersions(sourceCode);
+	compareVersions("f(bytes32)", u256("0x1223344556677889900112233445566778899001122334455667788990011223"));
+}
+
+BOOST_AUTO_TEST_CASE(shift_optimizer_bug)
+{
+	char const* sourceCode = R"(
+		contract C
+		{
+			function f(uint x) public returns (uint)
+			{
+				return (x << 1) << uint(-1);
+			}
+			function g(uint x) public returns (uint)
+			{
+				return (x >> 1) >> uint(-1);
+			}
+		}
+	)";
+	compileBothVersions(sourceCode);
+	compareVersions("f(uint256)", 7);
+	compareVersions("g(uint256)", u256(-1));
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 

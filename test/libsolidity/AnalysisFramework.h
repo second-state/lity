@@ -35,8 +35,8 @@ namespace solidity
 
 class Type;
 class FunctionType;
-using TypePointer = std::shared_ptr<Type const>;
-using FunctionTypePointer = std::shared_ptr<FunctionType const>;
+using TypePointer = Type const*;
+using FunctionTypePointer = FunctionType const*;
 
 namespace test
 {
@@ -45,21 +45,22 @@ class AnalysisFramework
 {
 
 protected:
-	virtual std::pair<SourceUnit const*, ErrorList>
+	virtual std::pair<SourceUnit const*, langutil::ErrorList>
 	parseAnalyseAndReturnError(
 		std::string const& _source,
 		bool _reportWarnings = false,
 		bool _insertVersionPragma = true,
-		bool _allowMultipleErrors = false
+		bool _allowMultipleErrors = false,
+		bool _allowRecoveryErrors = false
 	);
 	virtual ~AnalysisFramework() = default;
 
 	SourceUnit const* parseAndAnalyse(std::string const& _source);
 	bool success(std::string const& _source);
-	ErrorList expectError(std::string const& _source, bool _warning = false, bool _allowMultiple = false);
+	langutil::ErrorList expectError(std::string const& _source, bool _warning = false, bool _allowMultiple = false);
 
 	std::string formatErrors() const;
-	std::string formatError(Error const& _error) const;
+	std::string formatError(langutil::Error const& _error) const;
 
 	static ContractDefinition const* retrieveContractByName(SourceUnit const& _source, std::string const& _name);
 	static FunctionTypePointer retrieveFunctionBySignature(
@@ -68,10 +69,28 @@ protected:
 	);
 
 	// filter out the warnings in m_warningsToFilter or all warnings if _includeWarnings is false
-	ErrorList filterErrors(ErrorList const& _errorList, bool _includeWarnings) const;
+	langutil::ErrorList filterErrors(langutil::ErrorList const& _errorList, bool _includeWarnings) const;
 
 	std::vector<std::string> m_warningsToFilter = {"This is a pre-release compiler version"};
-	dev::solidity::CompilerStack m_compiler;
+
+	/// @returns reference to lazy-instanciated CompilerStack.
+	dev::solidity::CompilerStack& compiler()
+	{
+		if (!m_compiler)
+			m_compiler = std::make_unique<dev::solidity::CompilerStack>();
+		return *m_compiler;
+	}
+
+	/// @returns reference to lazy-instanciated CompilerStack.
+	dev::solidity::CompilerStack const& compiler() const
+	{
+		if (!m_compiler)
+			m_compiler = std::make_unique<dev::solidity::CompilerStack>();
+		return *m_compiler;
+	}
+
+private:
+	mutable std::unique_ptr<dev::solidity::CompilerStack> m_compiler;
 };
 
 // Asserts that the compilation down to typechecking
@@ -143,6 +162,19 @@ do \
 	if (!sourceAndError.second.empty()) \
 		message = formatErrors();\
 	BOOST_CHECK_MESSAGE(sourceAndError.second.empty(), message); \
+} \
+while(0)
+
+#define CHECK_SUCCESS_OR_WARNING(text, substring) \
+do \
+{ \
+	auto sourceAndError = parseAnalyseAndReturnError((text), true); \
+	auto const& errors = sourceAndError.second; \
+	if (!errors.empty()) \
+	{ \
+		auto message = searchErrors(errors, {{(Error::Type::Warning), (substring)}}); \
+		BOOST_CHECK_MESSAGE(message.empty(), message); \
+	} \
 } \
 while(0)
 

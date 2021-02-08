@@ -16,16 +16,16 @@
 */
 
 #include <libsolidity/analysis/ViewPureChecker.h>
-
-#include <libevmasm/SemanticInformation.h>
-
-#include <libsolidity/inlineasm/AsmData.h>
 #include <libsolidity/ast/ExperimentalFeatures.h>
-
+#include <libyul/AsmData.h>
+#include <libyul/backends/evm/EVMDialect.h>
+#include <liblangutil/ErrorReporter.h>
+#include <libevmasm/SemanticInformation.h>
 #include <functional>
 
 using namespace std;
 using namespace dev;
+using namespace langutil;
 using namespace dev::solidity;
 
 namespace
@@ -34,51 +34,60 @@ namespace
 class AssemblyViewPureChecker: public boost::static_visitor<void>
 {
 public:
-	explicit AssemblyViewPureChecker(std::function<void(StateMutability, SourceLocation const&)> _reportMutability):
+	explicit AssemblyViewPureChecker(
+		yul::Dialect const& _dialect,
+		std::function<void(StateMutability, SourceLocation const&)> _reportMutability
+	):
+		m_dialect(_dialect),
 		m_reportMutability(_reportMutability) {}
 
-	void operator()(assembly::Label const&) { }
-	void operator()(assembly::Instruction const& _instruction)
+	void operator()(yul::Label const&) { }
+	void operator()(yul::Instruction const& _instruction)
 	{
 		checkInstruction(_instruction.location, _instruction.instruction);
 	}
-	void operator()(assembly::Literal const&) {}
-	void operator()(assembly::Identifier const&) {}
-	void operator()(assembly::FunctionalInstruction const& _instr)
+	void operator()(yul::Literal const&) {}
+	void operator()(yul::Identifier const&) {}
+	void operator()(yul::FunctionalInstruction const& _instr)
 	{
 		checkInstruction(_instr.location, _instr.instruction);
 		for (auto const& arg: _instr.arguments)
 			boost::apply_visitor(*this, arg);
 	}
-	void operator()(assembly::ExpressionStatement const& _expr)
+	void operator()(yul::ExpressionStatement const& _expr)
 	{
 		boost::apply_visitor(*this, _expr.expression);
 	}
-	void operator()(assembly::StackAssignment const&) {}
-	void operator()(assembly::Assignment const& _assignment)
+	void operator()(yul::StackAssignment const&) {}
+	void operator()(yul::Assignment const& _assignment)
 	{
 		boost::apply_visitor(*this, *_assignment.value);
 	}
-	void operator()(assembly::VariableDeclaration const& _varDecl)
+	void operator()(yul::VariableDeclaration const& _varDecl)
 	{
 		if (_varDecl.value)
 			boost::apply_visitor(*this, *_varDecl.value);
 	}
-	void operator()(assembly::FunctionDefinition const& _funDef)
+	void operator()(yul::FunctionDefinition const& _funDef)
 	{
 		(*this)(_funDef.body);
 	}
-	void operator()(assembly::FunctionCall const& _funCall)
+	void operator()(yul::FunctionCall const& _funCall)
 	{
+		if (yul::EVMDialect const* dialect = dynamic_cast<decltype(dialect)>(&m_dialect))
+			if (yul::BuiltinFunctionForEVM const* fun = dialect->builtin(_funCall.functionName.name))
+				if (fun->instruction)
+					checkInstruction(_funCall.location, *fun->instruction);
+
 		for (auto const& arg: _funCall.arguments)
 			boost::apply_visitor(*this, arg);
 	}
-	void operator()(assembly::If const& _if)
+	void operator()(yul::If const& _if)
 	{
 		boost::apply_visitor(*this, *_if.condition);
 		(*this)(_if.body);
 	}
-	void operator()(assembly::Switch const& _switch)
+	void operator()(yul::Switch const& _switch)
 	{
 		boost::apply_visitor(*this, *_switch.expression);
 		for (auto const& _case: _switch.cases)
@@ -88,28 +97,36 @@ public:
 			(*this)(_case.body);
 		}
 	}
-	void operator()(assembly::ForLoop const& _for)
+	void operator()(yul::ForLoop const& _for)
 	{
 		(*this)(_for.pre);
 		boost::apply_visitor(*this, *_for.condition);
 		(*this)(_for.body);
 		(*this)(_for.post);
 	}
-	void operator()(assembly::Block const& _block)
+	void operator()(yul::Break const&)
+	{
+	}
+	void operator()(yul::Continue const&)
+	{
+	}
+	void operator()(yul::Block const& _block)
 	{
 		for (auto const& s: _block.statements)
 			boost::apply_visitor(*this, s);
 	}
 
 private:
-	std::function<void(StateMutability, SourceLocation const&)> m_reportMutability;
-	void checkInstruction(SourceLocation _location, solidity::Instruction _instruction)
+	void checkInstruction(SourceLocation _location, dev::eth::Instruction _instruction)
 	{
 		if (eth::SemanticInformation::invalidInViewFunctions(_instruction))
 			m_reportMutability(StateMutability::NonPayable, _location);
 		else if (eth::SemanticInformation::invalidInPureFunctions(_instruction))
 			m_reportMutability(StateMutability::View, _location);
 	}
+
+	yul::Dialect const& m_dialect;
+	std::function<void(StateMutability, SourceLocation const&)> m_reportMutability;
 };
 
 }
@@ -153,6 +170,7 @@ void ViewPureChecker::endVisit(FunctionDefinition const& _funDef)
 		m_bestMutabilityAndLocation.mutability < _funDef.stateMutability() &&
 		_funDef.stateMutability() != StateMutability::Payable &&
 		_funDef.isImplemented() &&
+		!_funDef.body().statements().empty() &&
 		!_funDef.isConstructor() &&
 		!_funDef.isFallback() &&
 		!_funDef.annotation().superFunction
@@ -215,6 +233,7 @@ void ViewPureChecker::endVisit(Identifier const& _identifier)
 void ViewPureChecker::endVisit(InlineAssembly const& _inlineAssembly)
 {
 	AssemblyViewPureChecker{
+		_inlineAssembly.dialect(),
 		[=](StateMutability _mutability, SourceLocation const& _location) { reportMutability(_mutability, _location); }
 	}(_inlineAssembly.operations());
 }
@@ -264,13 +283,13 @@ void ViewPureChecker::reportMutability(
 			if (_nestedLocation)
 				m_errorReporter.typeError(
 					_location,
-					SecondarySourceLocation().append("\"msg.value\" appears here inside the modifier.", *_nestedLocation),
-					"This modifier uses \"msg.value\" and thus the function has to be payable or internal."
+					SecondarySourceLocation().append("\"msg.value\" or \"callvalue()\" appear here inside the modifier.", *_nestedLocation),
+					"This modifier uses \"msg.value\" or \"callvalue()\" and thus the function has to be payable or internal."
 				);
 			else
 				m_errorReporter.typeError(
 					_location,
-					"\"msg.value\" can only be used in payable public functions. Make the function "
+					"\"msg.value\" and \"callvalue()\" can only be used in payable public functions. Make the function "
 					"\"payable\" or use an internal function to avoid this error."
 				);
 			m_errors = true;
@@ -338,7 +357,10 @@ void ViewPureChecker::endVisit(MemberAccess const& _memberAccess)
 			{MagicType::Kind::ABI, "encodeWithSignature"},
 			{MagicType::Kind::Block, "blockhash"},
 			{MagicType::Kind::Message, "data"},
-			{MagicType::Kind::Message, "sig"}
+			{MagicType::Kind::Message, "sig"},
+			{MagicType::Kind::MetaType, "creationCode"},
+			{MagicType::Kind::MetaType, "runtimeCode"},
+			{MagicType::Kind::MetaType, "name"},
 		};
 		set<MagicMember> static const payableMembers{
 			{MagicType::Kind::Message, "value"}
@@ -367,7 +389,14 @@ void ViewPureChecker::endVisit(MemberAccess const& _memberAccess)
 		break;
 	}
 	default:
+	{
+		if (VariableDeclaration const* varDecl = dynamic_cast<VariableDeclaration const*>(
+			_memberAccess.annotation().referencedDeclaration
+		))
+			if (varDecl->isStateVariable() && !varDecl->isConstant())
+				mutability = writes ? StateMutability::NonPayable : StateMutability::View;
 		break;
+	}
 	}
 	reportMutability(mutability, _memberAccess.location());
 }

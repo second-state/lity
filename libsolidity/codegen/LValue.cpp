@@ -21,18 +21,21 @@
  */
 
 #include <libsolidity/codegen/LValue.h>
-#include <libevmasm/Instruction.h>
-#include <libsolidity/ast/Types.h>
+
 #include <libsolidity/ast/AST.h>
+#include <libsolidity/ast/Types.h>
 #include <libsolidity/codegen/CompilerUtils.h>
+#include <libevmasm/Instruction.h>
 
 using namespace std;
 using namespace dev;
-using namespace solidity;
+using namespace dev::eth;
+using namespace dev::solidity;
+using namespace langutil;
 
 
 StackVariable::StackVariable(CompilerContext& _compilerContext, VariableDeclaration const& _declaration):
-	LValue(_compilerContext, _declaration.annotation().type.get()),
+	LValue(_compilerContext, _declaration.annotation().type),
 	m_baseStackOffset(m_context.baseStackOffsetOfVariable(_declaration)),
 	m_size(m_dataType->sizeOnStack())
 {
@@ -200,6 +203,12 @@ void StorageItem::retrieveValue(SourceLocation const&, bool _remove) const
 				CompilerUtils(m_context).splitExternalFunctionType(false);
 				cleaned = true;
 			}
+			else if (fun->kind() == FunctionType::Kind::Internal)
+			{
+				m_context << Instruction::DUP1 << Instruction::ISZERO;
+				CompilerUtils(m_context).pushZeroValue(*fun);
+				m_context << Instruction::MUL << Instruction::OR;
+			}
 		}
 		if (!cleaned)
 		{
@@ -282,7 +291,8 @@ void StorageItem::storeValue(Type const& _sourceType, SourceLocation const& _loc
 	{
 		solAssert(
 			_sourceType.category() == m_dataType->category(),
-			"Wrong type conversation for assignment.");
+			"Wrong type conversation for assignment."
+		);
 		if (m_dataType->category() == Type::Category::Array)
 		{
 			m_context << Instruction::POP; // remove byte offset
@@ -307,9 +317,9 @@ void StorageItem::storeValue(Type const& _sourceType, SourceLocation const& _loc
 			solAssert(sourceType.location() != DataLocation::CallData, "Structs in calldata not supported.");
 			for (auto const& member: structType.members(nullptr))
 			{
-				// assign each member that is not a mapping
+				// assign each member that can live outside of storage
 				TypePointer const& memberType = member.type;
-				if (memberType->category() == Type::Category::Mapping)
+				if (!memberType->canLiveOutsideStorage())
 					continue;
 				TypePointer sourceMemberType = sourceType.memberType(member.name);
 				if (sourceType.location() == DataLocation::Storage)
@@ -413,11 +423,8 @@ void StorageItem::setToZero(SourceLocation const&, bool _removeReference) const
 	}
 }
 
-/// Used in StorageByteArrayElement
-static FixedBytesType byteType(1);
-
 StorageByteArrayElement::StorageByteArrayElement(CompilerContext& _compilerContext):
-	LValue(_compilerContext, &byteType)
+	LValue(_compilerContext, TypeProvider::byte())
 {
 }
 
@@ -468,8 +475,8 @@ void StorageByteArrayElement::setToZero(SourceLocation const&, bool _removeRefer
 	m_context << Instruction::SWAP1 << Instruction::SSTORE;
 }
 
-StorageArrayLength::StorageArrayLength(CompilerContext& _compilerContext, const ArrayType& _arrayType):
-	LValue(_compilerContext, _arrayType.memberType("length").get()),
+StorageArrayLength::StorageArrayLength(CompilerContext& _compilerContext, ArrayType const& _arrayType):
+	LValue(_compilerContext, _arrayType.memberType("length")),
 	m_arrayType(_arrayType)
 {
 	solAssert(m_arrayType.isDynamicallySized(), "");

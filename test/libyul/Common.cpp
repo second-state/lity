@@ -23,73 +23,62 @@
 
 #include <test/Options.h>
 
+#include <liblangutil/SourceReferenceFormatter.h>
+
 #include <libyul/optimiser/Disambiguator.h>
+#include <libyul/AsmParser.h>
+#include <libyul/AsmAnalysis.h>
+#include <libyul/AsmPrinter.h>
+#include <libyul/AssemblyStack.h>
+#include <libyul/backends/evm/EVMDialect.h>
 
-#include <libsolidity/parsing/Scanner.h>
-
-#include <libsolidity/inlineasm/AsmParser.h>
-#include <libsolidity/inlineasm/AsmAnalysis.h>
-#include <libsolidity/inlineasm/AsmPrinter.h>
-
-#include <libsolidity/interface/SourceReferenceFormatter.h>
-#include <libsolidity/interface/ErrorReporter.h>
+#include <liblangutil/Scanner.h>
+#include <liblangutil/ErrorReporter.h>
 
 #include <boost/test/unit_test.hpp>
 
 using namespace std;
-using namespace dev::yul;
-using namespace dev::solidity;
+using namespace langutil;
+using namespace yul;
 
-void dev::yul::test::printErrors(ErrorList const& _errors, Scanner const& _scanner)
+namespace
 {
-	SourceReferenceFormatter formatter(cout, [&](std::string const&) -> Scanner const& { return _scanner; });
+Dialect const& defaultDialect(bool _yul)
+{
+	return _yul ? yul::Dialect::yul() : yul::EVMDialect::strictAssemblyForEVM(dev::test::Options::get().evmVersion());
+}
+}
+
+void yul::test::printErrors(ErrorList const& _errors)
+{
+	SourceReferenceFormatter formatter(cout);
 
 	for (auto const& error: _errors)
-		formatter.printExceptionInformation(
-			*error,
-			error->typeNameCstr()
-		);
+		formatter.printErrorInformation(*error);
 }
 
 
-pair<shared_ptr<Block>, shared_ptr<assembly::AsmAnalysisInfo>> dev::yul::test::parse(string const& _source, bool _yul)
+pair<shared_ptr<Block>, shared_ptr<yul::AsmAnalysisInfo>> yul::test::parse(string const& _source, bool _yul)
 {
-	auto flavour = _yul ? assembly::AsmFlavour::Yul : assembly::AsmFlavour::Strict;
-	ErrorList errors;
-	ErrorReporter errorReporter(errors);
-	auto scanner = make_shared<Scanner>(CharStream(_source), "");
-	auto parserResult = assembly::Parser(errorReporter, flavour).parse(scanner, false);
-	if (parserResult)
-	{
-		BOOST_REQUIRE(errorReporter.errors().empty());
-		auto analysisInfo = make_shared<assembly::AsmAnalysisInfo>();
-		assembly::AsmAnalyzer analyzer(
-			*analysisInfo,
-			errorReporter,
-			dev::test::Options::get().evmVersion(),
-			boost::none,
-			flavour
-		);
-		if (analyzer.analyze(*parserResult))
-		{
-			BOOST_REQUIRE(errorReporter.errors().empty());
-			return make_pair(parserResult, analysisInfo);
-		}
-	}
-	printErrors(errors, *scanner);
-	BOOST_FAIL("Invalid source.");
-
-	// Unreachable.
-	return {};
+	AssemblyStack stack(
+		dev::test::Options::get().evmVersion(),
+		_yul ? AssemblyStack::Language::Yul : AssemblyStack::Language::StrictAssembly,
+		dev::test::Options::get().optimize ?
+			dev::solidity::OptimiserSettings::standard() :
+			dev::solidity::OptimiserSettings::minimal()
+	);
+	if (!stack.parseAndAnalyze("", _source) || !stack.errors().empty())
+		BOOST_FAIL("Invalid source.");
+	return make_pair(stack.parserResult()->code, stack.parserResult()->analysisInfo);
 }
 
-assembly::Block dev::yul::test::disambiguate(string const& _source, bool _yul)
+yul::Block yul::test::disambiguate(string const& _source, bool _yul)
 {
 	auto result = parse(_source, _yul);
-	return boost::get<Block>(Disambiguator(*result.second, {})(*result.first));
+	return boost::get<Block>(Disambiguator(defaultDialect(_yul), *result.second, {})(*result.first));
 }
 
-string dev::yul::test::format(string const& _source, bool _yul)
+string yul::test::format(string const& _source, bool _yul)
 {
-	return assembly::AsmPrinter(_yul)(*parse(_source, _yul).first);
+	return yul::AsmPrinter(_yul)(*parse(_source, _yul).first);
 }

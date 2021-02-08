@@ -20,19 +20,156 @@
 
 #include <libyul/backends/evm/EVMCodeTransform.h>
 
-#include <libsolidity/inlineasm/AsmAnalysisInfo.h>
-#include <libsolidity/inlineasm/AsmData.h>
+#include <libyul/optimiser/NameCollector.h>
+#include <libyul/AsmAnalysisInfo.h>
+#include <libyul/AsmData.h>
+#include <libyul/Utilities.h>
 
-#include <libsolidity/interface/Exceptions.h>
+#include <liblangutil/Exceptions.h>
 
 #include <boost/range/adaptor/reversed.hpp>
 
 using namespace std;
 using namespace dev;
-using namespace dev::yul;
-using namespace dev::solidity;
+using namespace yul;
 
-using Scope = dev::solidity::assembly::Scope;
+void VariableReferenceCounter::operator()(Identifier const& _identifier)
+{
+	increaseRefIfFound(_identifier.name);
+}
+
+void VariableReferenceCounter::operator()(FunctionDefinition const& _function)
+{
+	Scope* originalScope = m_scope;
+
+	solAssert(m_info.virtualBlocks.at(&_function), "");
+	m_scope = m_info.scopes.at(m_info.virtualBlocks.at(&_function).get()).get();
+	solAssert(m_scope, "Variable scope does not exist.");
+
+	for (auto const& v: _function.returnVariables)
+		increaseRefIfFound(v.name);
+
+	VariableReferenceCounter{m_context, m_info}(_function.body);
+
+	m_scope = originalScope;
+}
+
+void VariableReferenceCounter::operator()(ForLoop const& _forLoop)
+{
+	Scope* originalScope = m_scope;
+	// Special scoping rules.
+	m_scope = m_info.scopes.at(&_forLoop.pre).get();
+
+	walkVector(_forLoop.pre.statements);
+	visit(*_forLoop.condition);
+	(*this)(_forLoop.body);
+	(*this)(_forLoop.post);
+
+	m_scope = originalScope;
+}
+
+void VariableReferenceCounter::operator()(Block const& _block)
+{
+	Scope* originalScope = m_scope;
+	m_scope = m_info.scopes.at(&_block).get();
+
+	ASTWalker::operator()(_block);
+
+	m_scope = originalScope;
+}
+
+void VariableReferenceCounter::increaseRefIfFound(YulString _variableName)
+{
+	m_scope->lookup(_variableName, Scope::Visitor(
+		[=](Scope::Variable const& _var)
+		{
+			++m_context.variableReferences[&_var];
+		},
+		[=](Scope::Label const&) { },
+		[=](Scope::Function const&) { }
+	));
+}
+
+CodeTransform::CodeTransform(
+	AbstractAssembly& _assembly,
+	AsmAnalysisInfo& _analysisInfo,
+	Block const& _block,
+	bool _allowStackOpt,
+	EVMDialect const& _dialect,
+	BuiltinContext& _builtinContext,
+	bool _evm15,
+	ExternalIdentifierAccess const& _identifierAccess,
+	bool _useNamedLabelsForFunctions,
+	int _stackAdjustment,
+	shared_ptr<Context> _context
+):
+	m_assembly(_assembly),
+	m_info(_analysisInfo),
+	m_dialect(_dialect),
+	m_builtinContext(_builtinContext),
+	m_allowStackOpt(_allowStackOpt),
+	m_evm15(_evm15),
+	m_useNamedLabelsForFunctions(_useNamedLabelsForFunctions),
+	m_identifierAccess(_identifierAccess),
+	m_stackAdjustment(_stackAdjustment),
+	m_context(_context)
+{
+	if (!m_context)
+	{
+		// initialize
+		m_context = make_shared<Context>();
+		if (m_allowStackOpt)
+			VariableReferenceCounter{*m_context, m_info}(_block);
+	}
+}
+
+void CodeTransform::decreaseReference(YulString, Scope::Variable const& _var)
+{
+	if (!m_allowStackOpt)
+		return;
+
+	unsigned& ref = m_context->variableReferences.at(&_var);
+	solAssert(ref >= 1, "");
+	--ref;
+	if (ref == 0)
+		m_variablesScheduledForDeletion.insert(&_var);
+}
+
+bool CodeTransform::unreferenced(Scope::Variable const& _var) const
+{
+	return !m_context->variableReferences.count(&_var) || m_context->variableReferences[&_var] == 0;
+}
+
+void CodeTransform::freeUnusedVariables()
+{
+	if (!m_allowStackOpt)
+		return;
+
+	for (auto const& identifier: m_scope->identifiers)
+		if (identifier.second.type() == typeid(Scope::Variable))
+		{
+			Scope::Variable const& var = boost::get<Scope::Variable>(identifier.second);
+			if (m_variablesScheduledForDeletion.count(&var))
+				deleteVariable(var);
+		}
+
+	while (m_unusedStackSlots.count(m_assembly.stackHeight() - 1))
+	{
+		solAssert(m_unusedStackSlots.erase(m_assembly.stackHeight() - 1), "");
+		m_assembly.appendInstruction(dev::eth::Instruction::POP);
+		--m_stackAdjustment;
+	}
+}
+
+void CodeTransform::deleteVariable(Scope::Variable const& _var)
+{
+	solAssert(m_allowStackOpt, "");
+	solAssert(m_context->variableStackHeights.count(&_var) > 0, "");
+	m_unusedStackSlots.insert(m_context->variableStackHeights[&_var]);
+	m_context->variableStackHeights.erase(&_var);
+	m_context->variableReferences.erase(&_var);
+	m_variablesScheduledForDeletion.erase(&_var);
+}
 
 void CodeTransform::operator()(VariableDeclaration const& _varDecl)
 {
@@ -51,12 +188,55 @@ void CodeTransform::operator()(VariableDeclaration const& _varDecl)
 		while (variablesLeft--)
 			m_assembly.appendConstant(u256(0));
 	}
-	for (auto const& variable: _varDecl.variables)
+
+	bool atTopOfStack = true;
+	for (int varIndex = numVariables - 1; varIndex >= 0; --varIndex)
 	{
-		auto& var = boost::get<Scope::Variable>(m_scope->identifiers.at(variable.name));
-		m_context->variableStackHeights[&var] = height++;
+		YulString varName = _varDecl.variables[varIndex].name;
+		auto& var = boost::get<Scope::Variable>(m_scope->identifiers.at(varName));
+		m_context->variableStackHeights[&var] = height + varIndex;
+		if (!m_allowStackOpt)
+			continue;
+
+		if (unreferenced(var))
+		{
+			if (atTopOfStack)
+			{
+				m_context->variableStackHeights.erase(&var);
+				m_assembly.setSourceLocation(_varDecl.location);
+				m_assembly.appendInstruction(dev::eth::Instruction::POP);
+				--m_stackAdjustment;
+			}
+			else
+				m_variablesScheduledForDeletion.insert(&var);
+		}
+		else if (m_unusedStackSlots.empty())
+			atTopOfStack = false;
+		else
+		{
+			int slot = *m_unusedStackSlots.begin();
+			m_unusedStackSlots.erase(m_unusedStackSlots.begin());
+			m_context->variableStackHeights[&var] = slot;
+			m_assembly.setSourceLocation(_varDecl.location);
+			if (int heightDiff = variableHeightDiff(var, varName, true))
+				m_assembly.appendInstruction(dev::eth::swapInstruction(heightDiff - 1));
+			m_assembly.appendInstruction(dev::eth::Instruction::POP);
+			--m_stackAdjustment;
+		}
 	}
 	checkStackHeight(&_varDecl);
+}
+
+void CodeTransform::stackError(StackTooDeepError _error, int _targetStackHeight)
+{
+	m_assembly.appendInstruction(dev::eth::Instruction::INVALID);
+	// Correct the stack.
+	while (m_assembly.stackHeight() > _targetStackHeight)
+		m_assembly.appendInstruction(dev::eth::Instruction::POP);
+	while (m_assembly.stackHeight() < _targetStackHeight)
+		m_assembly.appendConstant(u256(0));
+	// Store error.
+	m_stackErrors.emplace_back(std::move(_error));
 }
 
 void CodeTransform::operator()(Assignment const& _assignment)
@@ -72,6 +252,7 @@ void CodeTransform::operator()(Assignment const& _assignment)
 
 void CodeTransform::operator()(StackAssignment const& _assignment)
 {
+	solAssert(!m_allowStackOpt, "");
 	m_assembly.setSourceLocation(_assignment.location);
 	generateAssignment(_assignment.variableName);
 	checkStackHeight(&_assignment);
@@ -86,6 +267,7 @@ void CodeTransform::operator()(ExpressionStatement const& _statement)
 
 void CodeTransform::operator()(Label const& _label)
 {
+	solAssert(!m_allowStackOpt, "");
 	m_assembly.setSourceLocation(_label.location);
 	solAssert(m_scope, "");
 	solAssert(m_scope->identifiers.count(_label.name), "");
@@ -98,45 +280,56 @@ void CodeTransform::operator()(FunctionCall const& _call)
 {
 	solAssert(m_scope, "");
 
-	m_assembly.setSourceLocation(_call.location);
-	EVMAssembly::LabelID returnLabel(-1); // only used for evm 1.0
-	if (!m_evm15)
+	if (BuiltinFunctionForEVM const* builtin = m_dialect.builtin(_call.functionName.name))
 	{
-		returnLabel = m_assembly.newLabelId();
-		m_assembly.appendLabelReference(returnLabel);
-		m_stackAdjustment++;
+		builtin->generateCode(_call, m_assembly, m_builtinContext, [&]() {
+			for (auto const& arg: _call.arguments | boost::adaptors::reversed)
+				visitExpression(arg);
+			m_assembly.setSourceLocation(_call.location);
+		});
 	}
-
-	Scope::Function* function = nullptr;
-	solAssert(m_scope->lookup(_call.functionName.name, Scope::NonconstVisitor(
-		[=](Scope::Variable&) { solAssert(false, "Expected function name."); },
-		[=](Scope::Label&) { solAssert(false, "Expected function name."); },
-		[&](Scope::Function& _function) { function = &_function; }
-	)), "Function name not found.");
-	solAssert(function, "");
-	solAssert(function->arguments.size() == _call.arguments.size(), "");
-	for (auto const& arg: _call.arguments | boost::adaptors::reversed)
-		visitExpression(arg);
-	m_assembly.setSourceLocation(_call.location);
-	if (m_evm15)
-		m_assembly.appendJumpsub(functionEntryID(_call.functionName.name, *function), function->arguments.size(), function->returns.size());
 	else
 	{
-		m_assembly.appendJumpTo(functionEntryID(_call.functionName.name, *function), function->returns.size() - function->arguments.size() - 1);
-		m_assembly.appendLabel(returnLabel);
-		m_stackAdjustment--;
+		m_assembly.setSourceLocation(_call.location);
+		EVMAssembly::LabelID returnLabel(-1); // only used for evm 1.0
+		if (!m_evm15)
+		{
+			returnLabel = m_assembly.newLabelId();
+			m_assembly.appendLabelReference(returnLabel);
+			m_stackAdjustment++;
+		}
+
+		Scope::Function* function = nullptr;
+		solAssert(m_scope->lookup(_call.functionName.name, Scope::NonconstVisitor(
+			[=](Scope::Variable&) { solAssert(false, "Expected function name."); },
+			[=](Scope::Label&) { solAssert(false, "Expected function name."); },
+			[&](Scope::Function& _function) { function = &_function; }
+		)), "Function name not found.");
+		solAssert(function, "");
+		solAssert(function->arguments.size() == _call.arguments.size(), "");
+		for (auto const& arg: _call.arguments | boost::adaptors::reversed)
+			visitExpression(arg);
+		m_assembly.setSourceLocation(_call.location);
+		if (m_evm15)
+			m_assembly.appendJumpsub(functionEntryID(_call.functionName.name, *function), function->arguments.size(), function->returns.size());
+		else
+		{
+			m_assembly.appendJumpTo(functionEntryID(_call.functionName.name, *function), function->returns.size() - function->arguments.size() - 1);
+			m_assembly.appendLabel(returnLabel);
+			m_stackAdjustment--;
+		}
+		checkStackHeight(&_call);
 	}
-	checkStackHeight(&_call);
 }
 
 void CodeTransform::operator()(FunctionalInstruction const& _instruction)
 {
 	if (m_evm15 && (
-		_instruction.instruction == solidity::Instruction::JUMP ||
-		_instruction.instruction == solidity::Instruction::JUMPI
+		_instruction.instruction == dev::eth::Instruction::JUMP ||
+		_instruction.instruction == dev::eth::Instruction::JUMPI
 	))
 	{
-		bool const isJumpI = _instruction.instruction == solidity::Instruction::JUMPI;
+		bool const isJumpI = _instruction.instruction == dev::eth::Instruction::JUMPI;
 		if (isJumpI)
 		{
 			solAssert(_instruction.arguments.size() == 2, "");
@@ -147,7 +340,7 @@ void CodeTransform::operator()(FunctionalInstruction const& _instruction)
 			solAssert(_instruction.arguments.size() == 1, "");
 		}
 		m_assembly.setSourceLocation(_instruction.location);
-		auto label = labelFromIdentifier(boost::get<assembly::Identifier>(_instruction.arguments.at(0)));
+		auto label = labelFromIdentifier(boost::get<Identifier>(_instruction.arguments.at(0)));
 		if (isJumpI)
 			m_assembly.appendJumpToIf(label);
 		else
@@ -163,7 +356,7 @@ void CodeTransform::operator()(FunctionalInstruction const& _instruction)
 	checkStackHeight(&_instruction);
 }
 
-void CodeTransform::operator()(assembly::Identifier const& _identifier)
+void CodeTransform::operator()(Identifier const& _identifier)
 {
 	m_assembly.setSourceLocation(_identifier.location);
 	// First search internals, then externals.
@@ -171,11 +364,14 @@ void CodeTransform::operator()(assembly::Identifier const& _identifier)
 	if (m_scope->lookup(_identifier.name, Scope::NonconstVisitor(
 		[=](Scope::Variable& _var)
 		{
-			if (int heightDiff = variableHeightDiff(_var, false))
-				m_assembly.appendInstruction(solidity::dupInstruction(heightDiff));
+			// TODO: opportunity for optimization: Do not DUP if this is the last reference
+			// to the top most element of the stack
+			if (int heightDiff = variableHeightDiff(_var, _identifier.name, false))
+				m_assembly.appendInstruction(dev::eth::dupInstruction(heightDiff));
 			else
 				// Store something to balance the stack
 				m_assembly.appendConstant(u256(0));
+			decreaseReference(_identifier.name, _var);
 		},
 		[=](Scope::Label& _label)
 		{
@@ -197,30 +393,19 @@ void CodeTransform::operator()(assembly::Identifier const& _identifier)
 	checkStackHeight(&_identifier);
 }
 
-void CodeTransform::operator()(assembly::Literal const& _literal)
+void CodeTransform::operator()(Literal const& _literal)
 {
 	m_assembly.setSourceLocation(_literal.location);
-	if (_literal.kind == assembly::LiteralKind::Number)
-		m_assembly.appendConstant(u256(_literal.value.str()));
-	else if (_literal.kind == assembly::LiteralKind::Boolean)
-	{
-		if (_literal.value.str() == "true")
-			m_assembly.appendConstant(u256(1));
-		else
-			m_assembly.appendConstant(u256(0));
-	}
-	else
-	{
-		solAssert(_literal.value.str().size() <= 32, "");
-		m_assembly.appendConstant(u256(h256(_literal.value.str(), h256::FromBinary, h256::AlignLeft)));
-	}
+	m_assembly.appendConstant(valueOfLiteral(_literal));
+
 	checkStackHeight(&_literal);
 }
 
-void CodeTransform::operator()(assembly::Instruction const& _instruction)
+void CodeTransform::operator()(yul::Instruction const& _instruction)
 {
-	solAssert(!m_evm15 || _instruction.instruction != solidity::Instruction::JUMP, "Bare JUMP instruction used for EVM1.5");
-	solAssert(!m_evm15 || _instruction.instruction != solidity::Instruction::JUMPI, "Bare JUMPI instruction used for EVM1.5");
+	solAssert(!m_allowStackOpt, "");
+	solAssert(!m_evm15 || _instruction.instruction != dev::eth::Instruction::JUMP, "Bare JUMP instruction used for EVM1.5");
+	solAssert(!m_evm15 || _instruction.instruction != dev::eth::Instruction::JUMPI, "Bare JUMPI instruction used for EVM1.5");
 	m_assembly.setSourceLocation(_instruction.location);
 	m_assembly.appendInstruction(_instruction.instruction);
 	checkStackHeight(&_instruction);
@@ -230,7 +415,7 @@ void CodeTransform::operator()(If const& _if)
 {
 	visitExpression(*_if.condition);
 	m_assembly.setSourceLocation(_if.location);
-	m_assembly.appendInstruction(solidity::Instruction::ISZERO);
+	m_assembly.appendInstruction(dev::eth::Instruction::ISZERO);
 	AbstractAssembly::LabelID end = m_assembly.newLabelId();
 	m_assembly.appendJumpToIf(end);
 	(*this)(_if.body);
@@ -256,8 +441,8 @@ void CodeTransform::operator()(Switch const& _switch)
 			AbstractAssembly::LabelID bodyLabel = m_assembly.newLabelId();
 			caseBodies[&c] = bodyLabel;
 			solAssert(m_assembly.stackHeight() == expressionHeight + 1, "");
-			m_assembly.appendInstruction(solidity::dupInstruction(2));
-			m_assembly.appendInstruction(solidity::Instruction::EQ);
+			m_assembly.appendInstruction(dev::eth::dupInstruction(2));
+			m_assembly.appendInstruction(dev::eth::Instruction::EQ);
 			m_assembly.appendJumpToIf(bodyLabel);
 		}
 		else
@@ -283,7 +468,7 @@ void CodeTransform::operator()(Switch const& _switch)
 
 	m_assembly.setSourceLocation(_switch.location);
 	m_assembly.appendLabel(end);
-	m_assembly.appendInstruction(solidity::Instruction::POP);
+	m_assembly.appendInstruction(dev::eth::Instruction::POP);
 	checkStackHeight(&_switch);
 }
 
@@ -305,19 +490,15 @@ void CodeTransform::operator()(FunctionDefinition const& _function)
 	}
 
 	m_assembly.setSourceLocation(_function.location);
-	int stackHeightBefore = m_assembly.stackHeight();
-	AbstractAssembly::LabelID afterFunction = m_assembly.newLabelId();
+	int const stackHeightBefore = m_assembly.stackHeight();
 
 	if (m_evm15)
-	{
-		m_assembly.appendJumpTo(afterFunction, -stackHeightBefore);
 		m_assembly.appendBeginsub(functionEntryID(_function.name, function), _function.parameters.size());
-	}
 	else
-	{
-		m_assembly.appendJumpTo(afterFunction, -stackHeightBefore + height);
 		m_assembly.appendLabel(functionEntryID(_function.name, function));
-	}
+
+	m_assembly.setStackHeight(height);
+
 	m_stackAdjustment += localStackAdjustment;
 
 	for (auto const& v: _function.returnVariables)
@@ -328,16 +509,33 @@ void CodeTransform::operator()(FunctionDefinition const& _function)
 		m_assembly.appendConstant(u256(0));
 	}
 
-	CodeTransform(
-		m_assembly,
-		m_info,
-		m_yul,
-		m_evm15,
-		m_identifierAccess,
-		m_useNamedLabelsForFunctions,
-		localStackAdjustment,
-		m_context
-	)(_function.body);
+	try
+	{
+		CodeTransform(
+			m_assembly,
+			m_info,
+			_function.body,
+			m_allowStackOpt,
+			m_dialect,
+			m_builtinContext,
+			m_evm15,
+			m_identifierAccess,
+			m_useNamedLabelsForFunctions,
+			localStackAdjustment,
+			m_context
+		)(_function.body);
+	}
+	catch (StackTooDeepError const& _error)
+	{
+		// This exception will be re-thrown after the end of the surrounding block.
+		// It enables us to see which functions compiled successfully and which did not.
+		// Even if we emit actual code, add an illegal instruction to make sure that tests
+		// will catch it.
+		StackTooDeepError error(_error);
+		if (error.functionName.empty())
+			error.functionName = _function.name;
+		stackError(std::move(error), height);
+	}
 
 	{
 		// The stack layout here is:
@@ -352,32 +550,46 @@ void CodeTransform::operator()(FunctionDefinition const& _function)
 		if (!m_evm15)
 			stackLayout.push_back(_function.returnVariables.size()); // Move return label to the top
 		stackLayout += vector<int>(_function.parameters.size(), -1); // discard all arguments
+
 		for (size_t i = 0; i < _function.returnVariables.size(); ++i)
 			stackLayout.push_back(i); // Move return values down, but keep order.
 
-		solAssert(stackLayout.size() <= 17, "Stack too deep");
-		while (!stackLayout.empty() && stackLayout.back() != int(stackLayout.size() - 1))
-			if (stackLayout.back() < 0)
-			{
-				m_assembly.appendInstruction(solidity::Instruction::POP);
-				stackLayout.pop_back();
-			}
-			else
-			{
-				m_assembly.appendInstruction(swapInstruction(stackLayout.size() - stackLayout.back() - 1));
-				swap(stackLayout[stackLayout.back()], stackLayout.back());
-			}
-		for (int i = 0; size_t(i) < stackLayout.size(); ++i)
-			solAssert(i == stackLayout[i], "Error reshuffling stack.");
+		if (stackLayout.size() > 17)
+		{
+			StackTooDeepError error(_function.name, YulString{}, stackLayout.size() - 17);
+			error << errinfo_comment(
+				"The function " +
+				_function.name.str() +
+				" has " +
+				to_string(stackLayout.size() - 17) +
+				" parameters or return variables too many to fit the stack size."
+			);
+			stackError(std::move(error), m_assembly.stackHeight() - _function.parameters.size());
+		}
+		else
+		{
+			while (!stackLayout.empty() && stackLayout.back() != int(stackLayout.size() - 1))
+				if (stackLayout.back() < 0)
+				{
+					m_assembly.appendInstruction(dev::eth::Instruction::POP);
+					stackLayout.pop_back();
+				}
+				else
+				{
+					m_assembly.appendInstruction(dev::eth::swapInstruction(stackLayout.size() - stackLayout.back() - 1));
+					swap(stackLayout[stackLayout.back()], stackLayout.back());
+				}
+			for (int i = 0; size_t(i) < stackLayout.size(); ++i)
+				solAssert(i == stackLayout[i], "Error reshuffling stack.");
+		}
 	}
-
 	if (m_evm15)
 		m_assembly.appendReturnsub(_function.returnVariables.size(), stackHeightBefore);
 	else
 		m_assembly.appendJump(stackHeightBefore - _function.returnVariables.size());
 	m_stackAdjustment -= localStackAdjustment;
-	m_assembly.appendLabel(afterFunction);
 	checkStackHeight(&_function);
+	m_assembly.setStackHeight(stackHeightBefore);
 }
 
 void CodeTransform::operator()(ForLoop const& _forLoop)
@@ -389,20 +601,20 @@ void CodeTransform::operator()(ForLoop const& _forLoop)
 
 	visitStatements(_forLoop.pre.statements);
 
-	// TODO: When we implement break and continue, the labels and the stack heights at that point
-	// have to be stored in a stack.
 	AbstractAssembly::LabelID loopStart = m_assembly.newLabelId();
-	AbstractAssembly::LabelID loopEnd = m_assembly.newLabelId();
 	AbstractAssembly::LabelID postPart = m_assembly.newLabelId();
+	AbstractAssembly::LabelID loopEnd = m_assembly.newLabelId();
 
 	m_assembly.setSourceLocation(_forLoop.location);
 	m_assembly.appendLabel(loopStart);
 
 	visitExpression(*_forLoop.condition);
 	m_assembly.setSourceLocation(_forLoop.location);
-	m_assembly.appendInstruction(solidity::Instruction::ISZERO);
+	m_assembly.appendInstruction(dev::eth::Instruction::ISZERO);
 	m_assembly.appendJumpToIf(loopEnd);
 
+	int const stackHeightBody = m_assembly.stackHeight();
+	m_context->forLoopStack.emplace(Context::ForLoopLabels{ {postPart, stackHeightBody}, {loopEnd, stackHeightBody} });
 	(*this)(_forLoop.body);
 
 	m_assembly.setSourceLocation(_forLoop.location);
@@ -415,7 +627,39 @@ void CodeTransform::operator()(ForLoop const& _forLoop)
 	m_assembly.appendLabel(loopEnd);
 
 	finalizeBlock(_forLoop.pre, stackStartHeight);
+	m_context->forLoopStack.pop();
 	m_scope = originalScope;
+	checkStackHeight(&_forLoop);
+}
+
+int CodeTransform::appendPopUntil(int _targetDepth)
+{
+	int const stackDiffAfter = m_assembly.stackHeight() - _targetDepth;
+	for (int i = 0; i < stackDiffAfter; ++i)
+		m_assembly.appendInstruction(dev::eth::Instruction::POP);
+	return stackDiffAfter;
+}
+
+void CodeTransform::operator()(Break const& _break)
+{
+	yulAssert(!m_context->forLoopStack.empty(), "Invalid break-statement. Requires surrounding for-loop in code generation.");
+	m_assembly.setSourceLocation(_break.location);
+
+	Context::JumpInfo const& jump = m_context->forLoopStack.top().done;
+	m_assembly.appendJumpTo(jump.label, appendPopUntil(jump.targetStackHeight));
+
+	checkStackHeight(&_break);
+}
+
+void CodeTransform::operator()(Continue const& _continue)
+{
+	yulAssert(!m_context->forLoopStack.empty(), "Invalid continue-statement. Requires surrounding for-loop in code generation.");
+	m_assembly.setSourceLocation(_continue.location);
+
+	Context::JumpInfo const& jump = m_context->forLoopStack.top().post;
+	m_assembly.appendJumpTo(jump.label, appendPopUntil(jump.targetStackHeight));
+
+	checkStackHeight(&_continue);
 }
 
 void CodeTransform::operator()(Block const& _block)
@@ -428,6 +672,9 @@ void CodeTransform::operator()(Block const& _block)
 
 	finalizeBlock(_block, blockStartStackHeight);
 	m_scope = originalScope;
+
+	if (!m_stackErrors.empty())
+		BOOST_THROW_EXCEPTION(m_stackErrors.front());
 }
 
 AbstractAssembly::LabelID CodeTransform::labelFromIdentifier(Identifier const& _identifier)
@@ -476,21 +723,59 @@ void CodeTransform::visitExpression(Expression const& _expression)
 
 void CodeTransform::visitStatements(vector<Statement> const& _statements)
 {
+	// Workaround boost bug:
+	// https://www.boost.org/doc/libs/1_63_0/libs/optional/doc/html/boost_optional/tutorial/gotchas/false_positive_with__wmaybe_uninitialized.html
+	boost::optional<AbstractAssembly::LabelID> jumpTarget = boost::make_optional(false, AbstractAssembly::LabelID());
+
 	for (auto const& statement: _statements)
+	{
+		freeUnusedVariables();
+		auto const* functionDefinition = boost::get<FunctionDefinition>(&statement);
+		if (functionDefinition && !jumpTarget)
+		{
+			m_assembly.setSourceLocation(locationOf(statement));
+			jumpTarget = m_assembly.newLabelId();
+			m_assembly.appendJumpTo(*jumpTarget, 0);
+		}
+		else if (!functionDefinition && jumpTarget)
+		{
+			m_assembly.appendLabel(*jumpTarget);
+			jumpTarget = boost::none;
+		}
+
 		boost::apply_visitor(*this, statement);
+	}
+	// we may have a leftover jumpTarget
+	if (jumpTarget)
+		m_assembly.appendLabel(*jumpTarget);
+
+	freeUnusedVariables();
 }
 
 void CodeTransform::finalizeBlock(Block const& _block, int blockStartStackHeight)
 {
 	m_assembly.setSourceLocation(_block.location);
 
+	freeUnusedVariables();
+
 	// pop variables
 	solAssert(m_info.scopes.at(&_block).get() == m_scope, "");
-	for (size_t i = 0; i < m_scope->numberOfVariables(); ++i)
-		m_assembly.appendInstruction(solidity::Instruction::POP);
+	for (auto const& id: m_scope->identifiers)
+		if (id.second.type() == typeid(Scope::Variable))
+		{
+			Scope::Variable const& var = boost::get<Scope::Variable>(id.second);
+			if (m_allowStackOpt)
+			{
+				solAssert(!m_context->variableStackHeights.count(&var), "");
+				solAssert(!m_context->variableReferences.count(&var), "");
+				m_stackAdjustment++;
+			}
+			else
+				m_assembly.appendInstruction(dev::eth::Instruction::POP);
+		}
 
 	int deposit = m_assembly.stackHeight() - blockStartStackHeight;
-	solAssert(deposit == 0, "Invalid stack height at end of block.");
+	solAssert(deposit == 0, "Invalid stack height at end of block: " + to_string(deposit));
 	checkStackHeight(&_block);
 }
 
@@ -504,13 +789,13 @@ void CodeTransform::generateMultiAssignment(vector<Identifier> const& _variableN
 void CodeTransform::generateAssignment(Identifier const& _variableName)
 {
 	solAssert(m_scope, "");
-	auto var = m_scope->lookup(_variableName.name);
-	if (var)
+	if (auto var = m_scope->lookup(_variableName.name))
 	{
 		Scope::Variable const& _var = boost::get<Scope::Variable>(*var);
-		if (int heightDiff = variableHeightDiff(_var, true))
-			m_assembly.appendInstruction(solidity::swapInstruction(heightDiff - 1));
-		m_assembly.appendInstruction(solidity::Instruction::POP);
+		if (int heightDiff = variableHeightDiff(_var, _variableName.name, true))
+			m_assembly.appendInstruction(dev::eth::swapInstruction(heightDiff - 1));
+		m_assembly.appendInstruction(dev::eth::Instruction::POP);
+		decreaseReference(_variableName.name, _var);
 	}
 	else
 	{
@@ -522,19 +807,25 @@ void CodeTransform::generateAssignment(Identifier const& _variableName)
 	}
 }
 
-int CodeTransform::variableHeightDiff(solidity::assembly::Scope::Variable const& _var, bool _forSwap) const
+int CodeTransform::variableHeightDiff(Scope::Variable const& _var, YulString _varName, bool _forSwap)
 {
 	solAssert(m_context->variableStackHeights.count(&_var), "");
 	int heightDiff = m_assembly.stackHeight() - m_context->variableStackHeights[&_var];
-	if (heightDiff <= (_forSwap ? 1 : 0) || heightDiff > (_forSwap ? 17 : 16))
+	solAssert(heightDiff > (_forSwap ? 1 : 0), "Negative stack difference for variable.");
+	int limit = _forSwap ? 17 : 16;
+	if (heightDiff > limit)
 	{
-		solUnimplemented(
-			"Variable inaccessible, too deep inside stack (" + to_string(heightDiff) + ")"
+		m_stackErrors.emplace_back(_varName, heightDiff - limit);
+		m_stackErrors.back() << errinfo_comment(
+			"Variable " +
+			_varName.str() +
+			" is " +
+			to_string(heightDiff - limit) +
+			" slot(s) too deep inside the stack."
 		);
-		return 0;
+		BOOST_THROW_EXCEPTION(m_stackErrors.back());
 	}
-	else
-		return heightDiff;
+	return heightDiff;
 }
 
 void CodeTransform::expectDeposit(int _deposit, int _oldHeight) const

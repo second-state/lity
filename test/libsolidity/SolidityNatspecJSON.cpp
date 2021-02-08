@@ -24,8 +24,10 @@
 #include <string>
 #include <libdevcore/JSON.h>
 #include <libsolidity/interface/CompilerStack.h>
-#include <libsolidity/interface/Exceptions.h>
+#include <liblangutil/Exceptions.h>
 #include <libdevcore/Exceptions.h>
+
+using namespace langutil;
 
 namespace dev
 {
@@ -37,8 +39,6 @@ namespace test
 class DocumentationChecker
 {
 public:
-	DocumentationChecker(): m_compilerStack() {}
-
 	void checkNatspec(
 		std::string const& _code,
 		std::string const& _contractName,
@@ -46,8 +46,8 @@ public:
 		bool _userDocumentation
 	)
 	{
-		m_compilerStack.reset(false);
-		m_compilerStack.addSource("", "pragma solidity >=0.0;\n" + _code);
+		m_compilerStack.reset();
+		m_compilerStack.setSources({{"", "pragma solidity >=0.0;\n" + _code}});
 		m_compilerStack.setEVMVersion(dev::test::Options::get().evmVersion());
 		BOOST_REQUIRE_MESSAGE(m_compilerStack.parseAndAnalyze(), "Parsing contract failed");
 
@@ -67,8 +67,8 @@ public:
 
 	void expectNatspecError(std::string const& _code)
 	{
-		m_compilerStack.reset(false);
-		m_compilerStack.addSource("", "pragma solidity >=0.0;\n" + _code);
+		m_compilerStack.reset();
+		m_compilerStack.setSources({{"", "pragma solidity >=0.0;\n" + _code}});
 		m_compilerStack.setEVMVersion(dev::test::Options::get().evmVersion());
 		BOOST_CHECK(!m_compilerStack.parseAndAnalyze());
 		BOOST_REQUIRE(Error::containsErrorOfType(m_compilerStack.errors(), Error::Type::DocstringParsingError));

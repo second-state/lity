@@ -24,10 +24,11 @@
 #include <memory>
 #include <stdexcept>
 
-using namespace dev;
-using namespace solidity;
+using namespace langutil;
+using namespace dev::solidity;
 using namespace dev::solidity::test;
-using namespace dev::solidity::test::formatting;
+using namespace dev::formatting;
+using namespace dev;
 using namespace std;
 namespace fs = boost::filesystem;
 using namespace boost::unit_test;
@@ -51,30 +52,62 @@ int parseUnsignedInteger(string::iterator& _it, string::iterator _end)
 
 }
 
-SyntaxTest::SyntaxTest(string const& _filename)
+SyntaxTest::SyntaxTest(string const& _filename, langutil::EVMVersion _evmVersion, bool _parserErrorRecovery): m_evmVersion(_evmVersion)
 {
 	ifstream file(_filename);
 	if (!file)
 		BOOST_THROW_EXCEPTION(runtime_error("Cannot open test contract: \"" + _filename + "\"."));
 	file.exceptions(ios::badbit);
 
-	m_source = parseSource(file);
+	m_sources = parseSourcesAndSettings(file);
+
+	if (m_settings.count("optimize-yul"))
+	{
+		m_optimiseYul = true;
+		m_validatedSettings["optimize-yul"] = "true";
+		m_settings.erase("optimize-yul");
+	}
 	m_expectations = parseExpectations(file);
+	m_parserErrorRecovery = _parserErrorRecovery;
 }
 
-bool SyntaxTest::run(ostream& _stream, string const& _linePrefix, bool const _formatted)
+TestCase::TestResult SyntaxTest::run(ostream& _stream, string const& _linePrefix, bool _formatted)
 {
 	string const versionPragma = "pragma solidity >=0.0;\n";
-	m_compiler.reset();
-	m_compiler.addSource("", versionPragma + m_source);
-	m_compiler.setEVMVersion(dev::test::Options::get().evmVersion());
+	compiler().reset();
+	auto sourcesWithPragma = m_sources;
+	for (auto& source: sourcesWithPragma)
+		source.second = versionPragma + source.second;
+	compiler().setSources(sourcesWithPragma);
+	compiler().setEVMVersion(m_evmVersion);
+	compiler().setParserErrorRecovery(m_parserErrorRecovery);
+	compiler().setOptimiserSettings(
+		m_optimiseYul ?
+		OptimiserSettings::full() :
+		OptimiserSettings::minimal()
+	);
+	if (compiler().parse())
+		if (compiler().analyze())
+			try
+			{
+				if (!compiler().compile())
+					BOOST_THROW_EXCEPTION(runtime_error("Compilation failed even though analysis was successful."));
+			}
+			catch (UnimplementedFeatureError const& _e)
+			{
+				m_errorList.emplace_back(SyntaxTestError{
+					"UnimplementedFeatureError",
+					errorMessage(_e),
+					"",
+					-1,
+					-1
+				});
+			}
 
-	if (m_compiler.parse())
-		m_compiler.analyze();
-
-	for (auto const& currentError: filterErrors(m_compiler.errors(), true))
+	for (auto const& currentError: filterErrors(compiler().errors(), true))
 	{
 		int locationStart = -1, locationEnd = -1;
+		string sourceName;
 		if (auto location = boost::get_error_info<errinfo_sourceLocation>(*currentError))
 		{
 			// ignore the version pragma inserted by the testing tool when calculating locations.
@@ -82,103 +115,120 @@ bool SyntaxTest::run(ostream& _stream, string const& _linePrefix, bool const _fo
 				locationStart = location->start - versionPragma.size();
 			if (location->end >= static_cast<int>(versionPragma.size()))
 				locationEnd = location->end - versionPragma.size();
+			if (location->source)
+				sourceName = location->source->name();
 		}
 		m_errorList.emplace_back(SyntaxTestError{
 			currentError->typeName(),
 			errorMessage(*currentError),
+			sourceName,
 			locationStart,
 			locationEnd
 		});
 	}
 
+	return printExpectationAndError(_stream, _linePrefix, _formatted) ? TestResult::Success : TestResult::Failure;
+}
+
+bool SyntaxTest::printExpectationAndError(ostream& _stream, string const& _linePrefix, bool _formatted)
+{
 	if (m_expectations != m_errorList)
 	{
 		string nextIndentLevel = _linePrefix + "  ";
-		FormattedScope(_stream, _formatted, {BOLD, CYAN}) << _linePrefix << "Expected result:" << endl;
+		AnsiColorized(_stream, _formatted, {BOLD, CYAN}) << _linePrefix << "Expected result:" << endl;
 		printErrorList(_stream, m_expectations, nextIndentLevel, _formatted);
-		FormattedScope(_stream, _formatted, {BOLD, CYAN}) << _linePrefix << "Obtained result:" << endl;
+		AnsiColorized(_stream, _formatted, {BOLD, CYAN}) << _linePrefix << "Obtained result:" << endl;
 		printErrorList(_stream, m_errorList, nextIndentLevel, _formatted);
 		return false;
 	}
 	return true;
 }
 
-void SyntaxTest::printSource(ostream& _stream, string const& _linePrefix, bool const _formatted) const
+void SyntaxTest::printSource(ostream& _stream, string const& _linePrefix, bool _formatted) const
 {
+
+	if (m_sources.empty())
+		return;
+
+	bool outputSourceNames = true;
+	if (m_sources.size() == 1 && m_sources.begin()->first.empty())
+		outputSourceNames = false;
+
 	if (_formatted)
 	{
-		if (m_source.empty())
-			return;
-
-		vector<char const*> sourceFormatting(m_source.length(), formatting::RESET);
-		for (auto const& error: m_errorList)
-			if (error.locationStart >= 0 && error.locationEnd >= 0)
-			{
-				assert(static_cast<size_t>(error.locationStart) <= m_source.length());
-				assert(static_cast<size_t>(error.locationEnd) <= m_source.length());
-				bool isWarning = error.type == "Warning";
-				for (int i = error.locationStart; i < error.locationEnd; i++)
-					if (isWarning)
-					{
-						if (sourceFormatting[i] == formatting::RESET)
-							sourceFormatting[i] = formatting::ORANGE_BACKGROUND;
-					}
-					else
-						sourceFormatting[i] = formatting::RED_BACKGROUND;
-			}
-
-		_stream << _linePrefix << sourceFormatting.front() << m_source.front();
-		for (size_t i = 1; i < m_source.length(); i++)
+		for (auto const& [name, source]: m_sources)
 		{
-			if (sourceFormatting[i] != sourceFormatting[i - 1])
-				_stream << sourceFormatting[i];
-			if (m_source[i] != '\n')
-				_stream << m_source[i];
-			else
+			if (outputSourceNames)
+				_stream << _linePrefix << formatting::CYAN << "==== Source: " << name << " ====" << formatting::RESET << endl;
+			vector<char const*> sourceFormatting(source.length(), formatting::RESET);
+			for (auto const& error: m_errorList)
+				if (error.sourceName == name && error.locationStart >= 0 && error.locationEnd >= 0)
+				{
+					assert(static_cast<size_t>(error.locationStart) <= source.length());
+					assert(static_cast<size_t>(error.locationEnd) <= source.length());
+					bool isWarning = error.type == "Warning";
+					for (int i = error.locationStart; i < error.locationEnd; i++)
+						if (isWarning)
+						{
+							if (sourceFormatting[i] == formatting::RESET)
+								sourceFormatting[i] = formatting::ORANGE_BACKGROUND_256;
+						}
+						else
+							sourceFormatting[i] = formatting::RED_BACKGROUND;
+				}
+
+			_stream << _linePrefix << sourceFormatting.front() << source.front();
+			for (size_t i = 1; i < source.length(); i++)
 			{
-				_stream << formatting::RESET << endl;
-				if (i + 1 < m_source.length())
-					_stream << _linePrefix << sourceFormatting[i];
+				if (sourceFormatting[i] != sourceFormatting[i - 1])
+					_stream << sourceFormatting[i];
+				if (source[i] != '\n')
+					_stream << source[i];
+				else
+				{
+					_stream << formatting::RESET << endl;
+					if (i + 1 < source.length())
+						_stream << _linePrefix << sourceFormatting[i];
+				}
 			}
+			_stream << formatting::RESET;
 		}
-		_stream << formatting::RESET;
+
 	}
 	else
-	{
-		stringstream stream(m_source);
-		string line;
-		while (getline(stream, line))
-			_stream << _linePrefix << line << endl;
-	}
+		for (auto const& [name, source]: m_sources)
+		{
+			if (outputSourceNames)
+				_stream << _linePrefix << "==== Source: " + name << " ====" << endl;
+			stringstream stream(source);
+			string line;
+			while (getline(stream, line))
+				_stream << _linePrefix << line << endl;
+		}
 }
 
 void SyntaxTest::printErrorList(
 	ostream& _stream,
 	vector<SyntaxTestError> const& _errorList,
 	string const& _linePrefix,
-	bool const _formatted
+	bool _formatted
 )
 {
 	if (_errorList.empty())
-		FormattedScope(_stream, _formatted, {BOLD, GREEN}) << _linePrefix << "Success" << endl;
+		AnsiColorized(_stream, _formatted, {BOLD, GREEN}) << _linePrefix << "Success" << endl;
 	else
 		for (auto const& error: _errorList)
 		{
 			{
-				const char* color;
-				if (error.type == "Warning")
-					color = YELLOW;
-				else if (error.type == "Info")
-					color = BROWN;
-				else
-					color = RED;
-				FormattedScope scope(_stream, _formatted, {BOLD, color});
+				AnsiColorized scope(_stream, _formatted, {BOLD, (error.type == "Warning") ? YELLOW : RED});
 				_stream << _linePrefix;
 				_stream << error.type << ": ";
 			}
-			if (error.locationStart >= 0 || error.locationEnd >= 0)
+			if (!error.sourceName.empty() || error.locationStart >= 0 || error.locationEnd >= 0)
 			{
 				_stream << "(";
+				if (!error.sourceName.empty())
+					_stream << error.sourceName << ":";
 				if (error.locationStart >= 0)
 					_stream << error.locationStart;
 				_stream << "-";
@@ -223,10 +273,19 @@ vector<SyntaxTestError> SyntaxTest::parseExpectations(istream& _stream)
 
 		int locationStart = -1;
 		int locationEnd = -1;
+		std::string sourceName;
 
 		if (it != line.end() && *it == '(')
 		{
 			++it;
+			if (it != line.end() && !isdigit(*it))
+			{
+				auto sourceNameStart = it;
+				while (it != line.end() && *it != ':')
+					++it;
+				sourceName = std::string(sourceNameStart, it);
+				expect(it, line.end(), ':');
+			}
 			locationStart = parseUnsignedInteger(it, line.end());
 			expect(it, line.end(), '-');
 			locationEnd = parseUnsignedInteger(it, line.end());
@@ -240,6 +299,7 @@ vector<SyntaxTestError> SyntaxTest::parseExpectations(istream& _stream)
 		expectations.emplace_back(SyntaxTestError{
 			move(errorType),
 			move(errorMessage),
+			move(sourceName),
 			locationStart,
 			locationEnd
 		});

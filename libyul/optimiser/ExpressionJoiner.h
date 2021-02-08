@@ -20,18 +20,16 @@
  */
 #pragma once
 
-#include <libyul/ASTDataForward.h>
-
+#include <libyul/AsmDataForward.h>
 #include <libyul/optimiser/ASTWalker.h>
 
 #include <map>
 
-namespace dev
-{
 namespace yul
 {
 
 class NameCollector;
+struct OptimiserStepContext;
 
 
 /**
@@ -73,7 +71,8 @@ class NameCollector;
 class ExpressionJoiner: public ASTModifier
 {
 public:
-	static void run(Block& _ast);
+	static constexpr char const* name{"ExpressionJoiner"};
+	static void run(OptimiserStepContext&, Block& _ast);
 
 private:
 	explicit ExpressionJoiner(Block& _ast);
@@ -98,5 +97,4 @@ private:
 	std::map<YulString, size_t> m_references;	///< Holds reference counts to all variable declarations in current block.
 };
 
-}
 }

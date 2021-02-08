@@ -1,18 +1,18 @@
 /*
-    This file is part of solidity.
+	This file is part of solidity.
 
-    solidity is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	solidity is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    solidity is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	solidity is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with solidity.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
 /**
  * @author Christian <c@ethdev.com>
@@ -22,27 +22,30 @@
 
 #pragma once
 
-
 #include <libsolidity/ast/ASTForward.h>
-#include <libsolidity/parsing/Token.h>
 #include <libsolidity/ast/Types.h>
 #include <libsolidity/ast/ASTAnnotations.h>
 #include <libsolidity/ast/ASTEnums.h>
 #include <libsolidity/codegen/ENIHandler.h>
+#include <libsolidity/parsing/Token.h>
 
-#include <libevmasm/SourceLocation.h>
+#include <liblangutil/SourceLocation.h>
 #include <libevmasm/Instruction.h>
-
 #include <libdevcore/FixedHash.h>
-#include <json/json.h>
 
 #include <boost/noncopyable.hpp>
+#include <json/json.h>
 
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
-#include <iostream>
-#include <algorithm>
+
+namespace yul
+{
+// Forward-declaration to <yul/AsmData.h>
+struct Block;
+struct Dialect;
+}
 
 namespace dev
 {
@@ -61,6 +64,8 @@ class ASTConstVisitor;
 class ASTNode: private boost::noncopyable
 {
 public:
+	using SourceLocation = langutil::SourceLocation;
+
 	explicit ASTNode(SourceLocation const& _location);
 	virtual ~ASTNode();
 
@@ -75,13 +80,15 @@ public:
 	static void listAccept(std::vector<T> const& _list, ASTVisitor& _visitor)
 	{
 		for (T const& element: _list)
-			element->accept(_visitor);
+			if (element)
+				element->accept(_visitor);
 	}
 	template <class T>
 	static void listAccept(std::vector<T> const& _list, ASTConstVisitor& _visitor)
 	{
 		for (T const& element: _list)
-			element->accept(_visitor);
+			if (element)
+				element->accept(_visitor);
 	}
 
 	/// @returns a copy of the vector containing only the nodes which derive from T.
@@ -129,9 +136,9 @@ public:
 	SourceUnit(SourceLocation const& _location, std::vector<ASTPointer<ASTNode>> const& _nodes):
 		ASTNode(_location), m_nodes(_nodes) {}
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
-	virtual SourceUnitAnnotation& annotation() const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
+	SourceUnitAnnotation& annotation() const override;
 
 	std::vector<ASTPointer<ASTNode>> nodes() const { return m_nodes; }
 
@@ -157,6 +164,9 @@ public:
 
 	/// @returns the source unit this scopable is present in.
 	SourceUnit const& sourceUnit() const;
+
+	/// @returns the function or modifier definition this scopable is present in or nullptr.
+	CallableDeclaration const* functionOrModifierDefinition() const;
 
 	/// @returns the source name this scopable is present in.
 	/// Can be combined with annotation().canonicalName (if present) to form a globally unique name.
@@ -262,8 +272,8 @@ public:
 	): ASTNode(_location), m_tokens(_tokens), m_literals(_literals)
 	{}
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	std::vector<Token> const& tokens() const { return m_tokens; }
 	std::vector<ASTString> const& literals() const { return m_literals; }
@@ -288,35 +298,44 @@ private:
 class ImportDirective: public Declaration
 {
 public:
+	struct SymbolAlias
+	{
+		ASTPointer<Identifier> symbol;
+		ASTPointer<ASTString> alias;
+		SourceLocation location;
+	};
+
+	using SymbolAliasList = std::vector<SymbolAlias>;
+
 	ImportDirective(
 		SourceLocation const& _location,
 		ASTPointer<ASTString> const& _path,
 		ASTPointer<ASTString> const& _unitAlias,
-		std::vector<std::pair<ASTPointer<Identifier>, ASTPointer<ASTString>>>&& _symbolAliases
+		SymbolAliasList _symbolAliases
 	):
 		Declaration(_location, _unitAlias),
 		m_path(_path),
-		m_symbolAliases(_symbolAliases)
+		m_symbolAliases(move(_symbolAliases))
 	{ }
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	ASTString const& path() const { return *m_path; }
-	std::vector<std::pair<ASTPointer<Identifier>, ASTPointer<ASTString>>> const& symbolAliases() const
+	SymbolAliasList const& symbolAliases() const
 	{
 		return m_symbolAliases;
 	}
-	virtual ImportAnnotation& annotation() const override;
+	ImportAnnotation& annotation() const override;
 
-	virtual TypePointer type() const override;
+	TypePointer type() const override;
 
 private:
 	ASTPointer<ASTString> m_path;
 	/// The aliases for the specific symbols to import. If non-empty import the specific symbols.
-	/// If the second component is empty, import the identifier unchanged.
+	/// If the `alias` component is empty, import the identifier unchanged.
 	/// If both m_unitAlias and m_symbolAlias are empty, import all symbols into the current scope.
-	std::vector<std::pair<ASTPointer<Identifier>, ASTPointer<ASTString>>> m_symbolAliases;
+	SymbolAliasList m_symbolAliases;
 };
 
 /**
@@ -395,8 +414,8 @@ public:
 		m_contractKind(_contractKind)
 	{}
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	std::vector<ASTPointer<InheritanceSpecifier>> const& baseContracts() const { return m_baseContracts; }
 	std::vector<ASTPointer<ASTNode>> const& subNodes() const { return m_subNodes; }
@@ -404,11 +423,13 @@ public:
 	std::vector<StructDefinition const*> definedStructs() const { return filteredNodes<StructDefinition>(m_subNodes); }
 	std::vector<EnumDefinition const*> definedEnums() const { return filteredNodes<EnumDefinition>(m_subNodes); }
 	std::vector<VariableDeclaration const*> stateVariables() const { return filteredNodes<VariableDeclaration>(m_subNodes); }
+	std::vector<VariableDeclaration const*> stateVariablesIncludingInherited() const;
 	std::vector<ModifierDefinition const*> functionModifiers() const { return filteredNodes<ModifierDefinition>(m_subNodes); }
 	std::vector<FunctionDefinition const*> definedFunctions() const { return filteredNodes<FunctionDefinition>(m_subNodes); }
 	std::vector<EventDefinition const*> events() const { return filteredNodes<EventDefinition>(m_subNodes); }
 	std::vector<Rule const*> rules() const;
 	std::vector<EventDefinition const*> const& interfaceEvents() const;
+	bool isInterface() const { return m_contractKind == ContractKind::Interface; }
 	bool isLibrary() const { return m_contractKind == ContractKind::Library; }
 
 	/// @returns a map of canonical function signatures to FunctionDefinitions
@@ -423,14 +444,18 @@ public:
 	FunctionDefinition const* constructor() const;
 	/// @returns true iff the constructor of this contract is public (or non-existing).
 	bool constructorIsPublic() const;
+	/// @returns true iff the contract can be deployed, i.e. is not abstract and has a
+	/// public constructor.
+	/// Should only be called after the type checker has run.
+	bool canBeDeployed() const;
 	/// Returns the fallback function or nullptr if no fallback function was specified.
 	FunctionDefinition const* fallbackFunction() const;
 
 	std::string fullyQualifiedName() const { return sourceUnitName() + ":" + name(); }
 
-	virtual TypePointer type() const override;
+	TypePointer type() const override;
 
-	virtual ContractDefinitionAnnotation& annotation() const override;
+	ContractDefinitionAnnotation& annotation() const override;
 
 	ContractKind contractKind() const { return m_contractKind; }
 
@@ -454,8 +479,8 @@ public:
 	):
 		ASTNode(_location), m_baseName(_baseName), m_arguments(std::move(_arguments)) {}
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	UserDefinedTypeName const& name() const { return *m_baseName; }
 	// Returns nullptr if no argument list was given (``C``).
@@ -483,8 +508,8 @@ public:
 	):
 		ASTNode(_location), m_libraryName(_libraryName), m_typeName(_typeName) {}
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	UserDefinedTypeName const& libraryName() const { return *m_libraryName; }
 	/// @returns the type name the library is attached to, null for `*`.
@@ -505,14 +530,14 @@ public:
 	):
 		Declaration(_location, _name), m_members(_members) {}
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	std::vector<ASTPointer<VariableDeclaration>> const& members() const { return m_members; }
 
-	virtual TypePointer type() const override;
+	TypePointer type() const override;
 
-	virtual TypeDeclarationAnnotation& annotation() const override;
+	TypeDeclarationAnnotation& annotation() const override;
 
 private:
 	std::vector<ASTPointer<VariableDeclaration>> m_members;
@@ -527,14 +552,14 @@ public:
 		std::vector<ASTPointer<EnumValue>> const& _members
 	):
 		Declaration(_location, _name), m_members(_members) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	std::vector<ASTPointer<EnumValue>> const& members() const { return m_members; }
 
-	virtual TypePointer type() const override;
+	TypePointer type() const override;
 
-	virtual TypeDeclarationAnnotation& annotation() const override;
+	TypeDeclarationAnnotation& annotation() const override;
 
 private:
 	std::vector<ASTPointer<EnumValue>> m_members;
@@ -549,10 +574,10 @@ public:
 	EnumValue(SourceLocation const& _location, ASTPointer<ASTString> const& _name):
 		Declaration(_location, _name) {}
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
-	virtual TypePointer type() const override;
+	TypePointer type() const override;
 };
 
 /**
@@ -568,8 +593,8 @@ public:
 		std::vector<ASTPointer<VariableDeclaration>> const& _parameters
 	):
 		ASTNode(_location), m_parameters(_parameters) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	std::vector<ASTPointer<VariableDeclaration>> const& parameters() const { return m_parameters; }
 
@@ -598,6 +623,7 @@ public:
 	}
 
 	std::vector<ASTPointer<VariableDeclaration>> const& parameters() const { return m_parameters->parameters(); }
+	std::vector<ASTPointer<VariableDeclaration>> const& returnParameters() const { return m_returnParameters->parameters(); }
 	ParameterList const& parameterList() const { return *m_parameters; }
 	ASTPointer<ParameterList> const& returnParameterList() const { return m_returnParameters; }
 
@@ -632,8 +658,8 @@ public:
 		m_body(_body)
 	{}
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	StateMutability stateMutability() const { return m_stateMutability; }
 	bool isConstructor() const { return m_isConstructor; }
@@ -641,13 +667,12 @@ public:
 	bool isPayable() const { return m_stateMutability == StateMutability::Payable; }
 	bool isFreeGas() const { return m_specialModifier == SpecialModifier::FreeGas; }
 	std::vector<ASTPointer<ModifierInvocation>> const& modifiers() const { return m_functionModifiers; }
-	std::vector<ASTPointer<VariableDeclaration>> const& returnParameters() const { return m_returnParameters->parameters(); }
 	Block const& body() const { solAssert(m_body, ""); return *m_body; }
-	virtual bool isVisibleInContract() const override
+	bool isVisibleInContract() const override
 	{
 		return Declaration::isVisibleInContract() && !isConstructor() && !isFallback();
 	}
-	virtual bool isPartOfExternalInterface() const override { return isPublic() && !isConstructor() && !isFallback(); }
+	bool isPartOfExternalInterface() const override { return isPublic() && !isConstructor() && !isFallback(); }
 
 	/// @returns the external signature of the function
 	/// That consists of the name of the function followed by the types of the
@@ -656,13 +681,13 @@ public:
 
 	ContractDefinition::ContractKind inContractKind() const;
 
-	virtual TypePointer type() const override;
+	TypePointer type() const override;
 
 	/// @param _internal false indicates external interface is concerned, true indicates internal interface is concerned.
 	/// @returns null when it is not accessible as a function.
-	virtual FunctionTypePointer functionType(bool /*_internal*/) const override;
+	FunctionTypePointer functionType(bool /*_internal*/) const override;
 
-	virtual FunctionDefinitionAnnotation& annotation() const override;
+	FunctionDefinitionAnnotation& annotation() const override;
 
 private:
 	SpecialModifier m_specialModifier;
@@ -701,14 +726,14 @@ public:
 		m_location(_referenceLocation) {
 		}
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	TypeName* typeName() const { return m_typeName.get(); }
 	ASTPointer<Expression> const& value() const { return m_value; }
 
-	virtual bool isLValue() const override;
-	virtual bool isPartOfExternalInterface() const override { return isPublic(); }
+	bool isLValue() const override;
+	bool isPartOfExternalInterface() const override { return isPublic(); }
 
 	/// @returns true iff this variable is the parameter (or return parameter) of a function
 	/// (or function type name or event) or declared inside a function body.
@@ -742,13 +767,13 @@ public:
 	/// @returns a set of allowed storage locations for the variable.
 	std::set<Location> allowedDataLocations() const;
 
-	virtual TypePointer type() const override;
+	TypePointer type() const override;
 
 	/// @param _internal false indicates external interface is concerned, true indicates internal interface is concerned.
 	/// @returns null when it is not accessible as a function.
-	virtual FunctionTypePointer functionType(bool /*_internal*/) const override;
+	FunctionTypePointer functionType(bool /*_internal*/) const override;
 
-	virtual VariableDeclarationAnnotation& annotation() const override;
+	VariableDeclarationAnnotation& annotation() const override;
 
 protected:
 	Visibility defaultVisibility() const override { return Visibility::Internal; }
@@ -783,14 +808,14 @@ public:
 	{
 	}
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	Block const& body() const { return *m_body; }
 
-	virtual TypePointer type() const override;
+	TypePointer type() const override;
 
-	virtual ModifierDefinitionAnnotation& annotation() const override;
+	ModifierDefinitionAnnotation& annotation() const override;
 
 private:
 	ASTPointer<Block> m_body;
@@ -809,8 +834,8 @@ public:
 	):
 		ASTNode(_location), m_modifierName(_name), m_arguments(std::move(_arguments)) {}
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	ASTPointer<Identifier> const& name() const { return m_modifierName; }
 	// Returns nullptr if no argument list was given (``mod``).
@@ -842,15 +867,15 @@ public:
 	{
 	}
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	bool isAnonymous() const { return m_anonymous; }
 
-	virtual TypePointer type() const override;
-	virtual FunctionTypePointer functionType(bool /*_internal*/) const override;
+	TypePointer type() const override;
+	FunctionTypePointer functionType(bool /*_internal*/) const override;
 
-	virtual EventDefinitionAnnotation& annotation() const override;
+	EventDefinitionAnnotation& annotation() const override;
 
 private:
 	bool m_anonymous = false;
@@ -863,26 +888,27 @@ private:
 class MagicVariableDeclaration: public Declaration
 {
 public:
-	MagicVariableDeclaration(ASTString const& _name, std::shared_ptr<Type const> const& _type):
+	MagicVariableDeclaration(ASTString const& _name, Type const* _type):
 		Declaration(SourceLocation(), std::make_shared<ASTString>(_name)), m_type(_type) {}
-	virtual void accept(ASTVisitor&) override
+
+	void accept(ASTVisitor&) override
 	{
 		solAssert(false, "MagicVariableDeclaration used inside real AST.");
 	}
-	virtual void accept(ASTConstVisitor&) const override
+	void accept(ASTConstVisitor&) const override
 	{
 		solAssert(false, "MagicVariableDeclaration used inside real AST.");
 	}
 
-	virtual FunctionTypePointer functionType(bool) const override
+	FunctionType const* functionType(bool) const override
 	{
 		solAssert(m_type->category() == Type::Category::Function, "");
-		return std::dynamic_pointer_cast<FunctionType const>(m_type);
+		return dynamic_cast<FunctionType const*>(m_type);
 	}
-	virtual TypePointer type() const override { return m_type; }
+	TypePointer type() const override { return m_type; }
 
 private:
-	std::shared_ptr<Type const> m_type;
+	Type const* m_type;
 };
 
 /// Types
@@ -897,7 +923,7 @@ protected:
 	explicit TypeName(SourceLocation const& _location): ASTNode(_location) {}
 
 public:
-	virtual TypeNameAnnotation& annotation() const override;
+	TypeNameAnnotation& annotation() const override;
 };
 
 /**
@@ -916,8 +942,8 @@ public:
 		solAssert(!_stateMutability.is_initialized() || _elem.token() == Token::Address, "");
 	}
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	ElementaryTypeNameToken const& typeName() const { return m_type; }
 
@@ -936,12 +962,12 @@ class UserDefinedTypeName: public TypeName
 public:
 	UserDefinedTypeName(SourceLocation const& _location, std::vector<ASTString> const& _namePath):
 		TypeName(_location), m_namePath(_namePath) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	std::vector<ASTString> const& namePath() const { return m_namePath; }
 
-	virtual UserDefinedTypeNameAnnotation& annotation() const override;
+	UserDefinedTypeNameAnnotation& annotation() const override;
 
 private:
 	std::vector<ASTString> m_namePath;
@@ -964,8 +990,8 @@ public:
 		TypeName(_location), m_parameterTypes(_parameterTypes), m_returnTypes(_returnTypes),
 		m_visibility(_visibility), m_specialModifier(_specialModifier), m_stateMutability(_stateMutability)
 	{}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	std::vector<ASTPointer<VariableDeclaration>> const& parameterTypes() const { return m_parameterTypes->parameters(); }
 	std::vector<ASTPointer<VariableDeclaration>> const& returnParameterTypes() const { return m_returnTypes->parameters(); }
@@ -1004,8 +1030,8 @@ public:
 		ASTPointer<TypeName> const& _valueType
 	):
 		TypeName(_location), m_keyType(_keyType), m_valueType(_valueType) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	ElementaryTypeName const& keyType() const { return *m_keyType; }
 	TypeName const& valueType() const { return *m_valueType; }
@@ -1027,8 +1053,8 @@ public:
 		ASTPointer<Expression> const& _length
 	):
 		TypeName(_location), m_baseType(_baseType), m_length(_length) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	TypeName const& baseType() const { return *m_baseType; }
 	Expression const* length() const { return m_length.get(); }
@@ -1056,14 +1082,8 @@ public:
 	): ASTNode(_location), Documented(_docString) {
 	}
 
-	virtual StatementAnnotation& annotation() const override;
+	StatementAnnotation& annotation() const override;
 };
-
-namespace assembly
-{
-// Forward-declaration to AsmData.h
-struct Block;
-}
 
 /**
  * Inline assembly.
@@ -1074,18 +1094,21 @@ public:
 	InlineAssembly(
 		SourceLocation const& _location,
 		ASTPointer<ASTString> const& _docString,
-		std::shared_ptr<assembly::Block> const& _operations
+		yul::Dialect const& _dialect,
+		std::shared_ptr<yul::Block> const& _operations
 	):
-		Statement(_location, _docString), m_operations(_operations) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+		Statement(_location, _docString), m_dialect(_dialect), m_operations(_operations) {}
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
-	assembly::Block const& operations() const { return *m_operations; }
+	yul::Dialect const& dialect() const { return m_dialect; }
+	yul::Block const& operations() const { return *m_operations; }
 
-	virtual InlineAssemblyAnnotation& annotation() const override;
+	InlineAssemblyAnnotation& annotation() const override;
 
 private:
-	std::shared_ptr<assembly::Block> m_operations;
+	yul::Dialect const& m_dialect;
+	std::shared_ptr<yul::Block> m_operations;
 };
 
 /**
@@ -1100,8 +1123,8 @@ public:
 		std::vector<ASTPointer<Statement>> const& _statements
 	):
 		Statement(_location, _docString), m_statements(_statements) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	std::vector<ASTPointer<Statement>> const& statements() const { return m_statements; }
 
@@ -1121,8 +1144,8 @@ public:
 		ASTPointer<ASTString> const& _docString
 	): Statement(_location, _docString) {}
 
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 };
 
 /**
@@ -1144,8 +1167,8 @@ public:
 		m_trueBody(_trueBody),
 		m_falseBody(_falseBody)
 	{}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	Expression const& condition() const { return *m_condition; }
 	Statement const& trueStatement() const { return *m_trueBody; }
@@ -1182,8 +1205,8 @@ public:
 	):
 		BreakableStatement(_location, _docString), m_condition(_condition), m_body(_body),
 		m_isDoWhile(_isDoWhile) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	Expression const& condition() const { return *m_condition; }
 	Statement const& body() const { return *m_body; }
@@ -1215,8 +1238,8 @@ public:
 		m_loopExpression(_loopExpression),
 		m_body(_body)
 	{}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	Statement const* initializationExpression() const { return m_initExpression.get(); }
 	Expression const* condition() const { return m_condExpression.get(); }
@@ -1256,10 +1279,10 @@ public:
 class Continue: public Statement
 {
 public:
-	explicit Continue(SourceLocation const& _location, 	ASTPointer<ASTString> const& _docString):
+	explicit Continue(SourceLocation const& _location, ASTPointer<ASTString> const& _docString):
 		Statement(_location, _docString) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 };
 
 class Break: public Statement
@@ -1267,8 +1290,8 @@ class Break: public Statement
 public:
 	explicit Break(SourceLocation const& _location, ASTPointer<ASTString> const& _docString):
 		Statement(_location, _docString) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 };
 
 class Return: public Statement
@@ -1279,12 +1302,12 @@ public:
 		ASTPointer<ASTString> const& _docString,
 		ASTPointer<Expression> _expression
 	): Statement(_location, _docString), m_expression(_expression) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	Expression const* expression() const { return m_expression.get(); }
 
-	virtual ReturnAnnotation& annotation() const override;
+	ReturnAnnotation& annotation() const override;
 
 private:
 	ASTPointer<Expression> m_expression; ///< value to return, optional
@@ -1298,8 +1321,8 @@ class Throw: public Statement
 public:
 	explicit Throw(SourceLocation const& _location, ASTPointer<ASTString> const& _docString):
 		Statement(_location, _docString) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 };
 
 /**
@@ -1314,8 +1337,8 @@ public:
 		ASTPointer<FunctionCall> const& _functionCall
 	):
 		Statement(_location, _docString), m_eventCall(_functionCall) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	FunctionCall const& eventCall() const { return *m_eventCall; }
 
@@ -1340,10 +1363,9 @@ public:
 		std::vector<ASTPointer<VariableDeclaration>> const& _variables,
 		ASTPointer<Expression> const& _initialValue
 	):
-		Statement(_location, _docString), m_variables(_variables), m_initialValue(_initialValue) {
-		}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+		Statement(_location, _docString), m_variables(_variables), m_initialValue(_initialValue) {}
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	std::vector<ASTPointer<VariableDeclaration>> const& declarations() const { return m_variables; }
 	Expression const* initialValue() const { return m_initialValue.get(); }
@@ -1369,10 +1391,9 @@ public:
 		ASTPointer<ASTString> const& _docString,
 		ASTPointer<Expression> _expression
 	):
-		Statement(_location, _docString), m_expression(_expression) {
-		}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+		Statement(_location, _docString), m_expression(_expression) {}
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	Expression const& expression() const { return *m_expression; }
 
@@ -1417,8 +1438,8 @@ public:
 		m_trueExpression(_trueExpression),
 		m_falseExpression(_falseExpression)
 	{}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	Expression const& condition() const { return *m_condition; }
 	Expression const& trueExpression() const { return *m_trueExpression; }
@@ -1457,8 +1478,8 @@ public:
 	{
 		solAssert(TokenTraits::isAssignmentOp(_assignmentOperator), "");
 	}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	Expression const& leftHandSide() const { return *m_leftHandSide; }
 	Token assignmentOperator() const { return m_assigmentOperator; }
@@ -1494,8 +1515,8 @@ public:
 		Expression(_location),
 		m_components(_components),
 		m_isArray(_isArray) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	std::vector<ASTPointer<Expression>> const& components() const { return m_components; }
 	bool isInlineArray() const { return m_isArray; }
@@ -1531,8 +1552,8 @@ public:
 	{
 		solAssert(TokenTraits::isUnaryOp(_operator), "");
 	}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	Token getOperator() const { return m_operator; }
 	bool isPrefixOperation() const { return m_isPrefix; }
@@ -1568,8 +1589,8 @@ public:
 	{
 		solAssert(TokenTraits::isBinaryOp(_operator) || TokenTraits::isCompareOp(_operator), "");
 	}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	Expression const& leftExpression() const { return *m_left; }
 	Expression const& rightExpression() const { return *m_right; }
@@ -1604,16 +1625,14 @@ public:
 		std::vector<ASTPointer<ASTString>> const& _names
 	):
 		Expression(_location), m_expression(_expression), m_arguments(_arguments), m_names(_names) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	Expression const& expression() const { return *m_expression; }
 	std::vector<ASTPointer<Expression const>> arguments() const { return {m_arguments.begin(), m_arguments.end()}; }
 	std::vector<ASTPointer<ASTString>> const& names() const { return m_names; }
 
-	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
-
-	virtual FunctionCallAnnotation& annotation() const override;
+	FunctionCallAnnotation& annotation() const override;
 
 	virtual ASTPointer<Expression> deepCopy() const override
 	{
@@ -1649,8 +1668,8 @@ public:
 		ASTPointer<TypeName> const& _typeName
 	):
 		Expression(_location), m_typeName(_typeName) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	TypeName const& typeName() const { return *m_typeName; }
 
@@ -1676,16 +1695,12 @@ public:
 		ASTPointer<ASTString> const& _memberName
 	):
 		Expression(_location), m_expression(_expression), m_memberName(_memberName) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
-
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 	Expression const& expression() const { return *m_expression; }
 	ASTString const& memberName() const { return *m_memberName; }
 
-	void setExpression(ASTPointer<Expression> _expression) { m_expression = _expression; }
-	virtual void replaceChild(Expression *oldExp, ASTPointer<Expression> newExp) override;
-
-	virtual MemberAccessAnnotation& annotation() const override;
+	MemberAccessAnnotation& annotation() const override;
 
 	virtual ASTPointer<Expression> deepCopy() const override
 	{
@@ -1699,7 +1714,7 @@ private:
 };
 
 /**
- * Index access to an array. Example: a[2]
+ * Index access to an array or mapping. Example: a[2]
  */
 class IndexAccess: public Expression
 {
@@ -1710,8 +1725,8 @@ public:
 		ASTPointer<Expression> const& _index
 	):
 		Expression(_location), m_base(_base), m_index(_index) {}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	Expression const& baseExpression() const { return *m_base; }
 	Expression const* indexExpression() const { return m_index.get(); }
@@ -1753,14 +1768,13 @@ public:
 		SourceLocation const& _location,
 		ASTPointer<ASTString> const& _name
 	):
-		PrimaryExpression(_location), m_name(_name) {
-		}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+		PrimaryExpression(_location), m_name(_name) {}
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	ASTString const& name() const { return *m_name; }
 
-	virtual IdentifierAnnotation& annotation() const override;
+	IdentifierAnnotation& annotation() const override;
 
 	bool saveToENISection(ENIHandler&, CompilerContext&) const override;
 
@@ -1783,8 +1797,8 @@ public:
 	ElementaryTypeNameExpression(SourceLocation const& _location, ElementaryTypeNameToken const& _type):
 		PrimaryExpression(_location), m_typeToken(_type)
 	{}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	ElementaryTypeNameToken const& typeName() const { return m_typeToken; }
 
@@ -1822,10 +1836,9 @@ public:
 		ASTPointer<ASTString> const& _value,
 		SubDenomination _sub = SubDenomination::None
 	):
-		PrimaryExpression(_location), m_token(_token), m_value(_value), m_subDenomination(_sub) {
-		}
-	virtual void accept(ASTVisitor& _visitor) override;
-	virtual void accept(ASTConstVisitor& _visitor) const override;
+		PrimaryExpression(_location), m_token(_token), m_value(_value), m_subDenomination(_sub) {}
+	void accept(ASTVisitor& _visitor) override;
+	void accept(ASTConstVisitor& _visitor) const override;
 
 	Token token() const { return m_token; }
 	/// @returns the non-parsed value of the literal

@@ -22,8 +22,10 @@
 #include <libyul/optimiser/ExpressionSplitter.h>
 
 #include <libyul/optimiser/ASTWalker.h>
+#include <libyul/optimiser/OptimiserStep.h>
 
-#include <libsolidity/inlineasm/AsmData.h>
+#include <libyul/AsmData.h>
+#include <libyul/Dialect.h>
 
 #include <libdevcore/CommonData.h>
 
@@ -31,8 +33,13 @@
 
 using namespace std;
 using namespace dev;
-using namespace dev::yul;
-using namespace dev::solidity;
+using namespace langutil;
+using namespace yul;
+
+void ExpressionSplitter::run(OptimiserStepContext& _context, Block& _ast)
+{
+	ExpressionSplitter{_context.dialect, _context.dispenser}(_ast);
+}
 
 void ExpressionSplitter::operator()(FunctionalInstruction& _instruction)
 {
@@ -42,6 +49,11 @@ void ExpressionSplitter::operator()(FunctionalInstruction& _instruction)
 
 void ExpressionSplitter::operator()(FunctionCall& _funCall)
 {
+	if (BuiltinFunction const* builtin = m_dialect.builtin(_funCall.functionName.name))
+		if (builtin->literalArguments)
+			// We cannot outline function arguments that have to be literals
+			return;
+
 	for (auto& arg: _funCall.arguments | boost::adaptors::reversed)
 		outlineExpression(arg);
 }
@@ -99,7 +111,7 @@ void ExpressionSplitter::outlineExpression(Expression& _expr)
 	m_statementsToPrefix.emplace_back(VariableDeclaration{
 		location,
 		{{TypedName{location, var, {}}}},
-		make_shared<Expression>(std::move(_expr))
+		make_unique<Expression>(std::move(_expr))
 	});
 	_expr = Identifier{location, var};
 }

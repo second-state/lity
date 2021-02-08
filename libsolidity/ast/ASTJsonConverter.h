@@ -1,18 +1,18 @@
 /*
-    This file is part of solidity.
+	This file is part of solidity.
 
-    solidity is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	solidity is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    solidity is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	solidity is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with solidity.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
 /**
  * @author Lefteris <lefteris@ethdev.com>
@@ -22,12 +22,20 @@
 
 #pragma once
 
+#include <libsolidity/ast/ASTAnnotations.h>
+#include <libsolidity/ast/ASTVisitor.h>
+#include <liblangutil/Exceptions.h>
+
+#include <json/json.h>
 #include <ostream>
 #include <stack>
-#include <libsolidity/ast/ASTVisitor.h>
-#include <libsolidity/interface/Exceptions.h>
-#include <libsolidity/ast/ASTAnnotations.h>
-#include <json/json.h>
+#include <vector>
+#include <algorithm>
+
+namespace langutil
+{
+struct SourceLocation;
+}
 
 namespace dev
 {
@@ -120,7 +128,7 @@ private:
 		std::string const& _nodeName,
 		std::vector<std::pair<std::string, Json::Value>>&& _attributes
 	);
-	std::string sourceLocationToString(SourceLocation const& _location) const;
+	std::string sourceLocationToString(langutil::SourceLocation const& _location) const;
 	static std::string namePathToString(std::vector<ASTString> const& _namePath);
 	static Json::Value idOrNull(ASTNode const* _pt)
 	{
@@ -130,7 +138,7 @@ private:
 	{
 		return _node ? toJson(*_node) : Json::nullValue;
 	}
-	Json::Value inlineAssemblyIdentifierToJson(std::pair<assembly::Identifier const* , InlineAssemblyAnnotation::ExternalIdentifierInfo> _info) const;
+	Json::Value inlineAssemblyIdentifierToJson(std::pair<yul::Identifier const* , InlineAssemblyAnnotation::ExternalIdentifierInfo> _info) const;
 	static std::string location(VariableDeclaration::Location _location);
 	static std::string contractKind(ContractDefinition::ContractKind _kind);
 	static std::string functionCallKind(FunctionCallKind _kind);
@@ -142,18 +150,26 @@ private:
 		return _node.id();
 	}
 	template<class Container>
-	static Json::Value getContainerIds(Container const& container)
+	static Json::Value getContainerIds(Container const& _container, bool _order = false)
 	{
-		Json::Value tmp(Json::arrayValue);
-		for (auto const& element: container)
+		std::vector<int> tmp;
+
+		for (auto const& element: _container)
 		{
 			solAssert(element, "");
-			tmp.append(nodeId(*element));
+			tmp.push_back(nodeId(*element));
 		}
-		return tmp;
+		if (_order)
+			std::sort(tmp.begin(), tmp.end());
+		Json::Value json(Json::arrayValue);
+
+		for (int val: tmp)
+			json.append(val);
+
+		return json;
 	}
 	static Json::Value typePointerToJson(TypePointer _tp, bool _short = false);
-	static Json::Value typePointerToJson(std::shared_ptr<std::vector<TypePointer>> _tps);
+	static Json::Value typePointerToJson(boost::optional<FuncCallArguments> const& _tps);
 	void appendExpressionAttributes(
 		std::vector<std::pair<std::string, Json::Value>> &_attributes,
 		ExpressionAnnotation const& _annotation

@@ -30,11 +30,19 @@
 set -ev
 
 echo -en 'travis_fold:start:installing_dependencies\\r'
-test -e boost_1_57_0 -a -e boost_1_57_0/boost || (
-wget 'https://sourceforge.net/projects/boost/files/boost/1.57.0/boost_1_57_0.tar.gz/download'\
- -O - | tar xz
-cd boost_1_57_0
-./bootstrap.sh --with-toolset=gcc --with-libraries=thread,system,regex,date_time,chrono,filesystem,program_options,random
+test -e boost_1_70_0_install/include/boost/version.hpp || (
+rm -rf boost_1_70_0
+rm -f boost.tar.gz
+wget -q 'https://sourceforge.net/projects/boost/files/boost/1.70.0/boost_1_70_0.tar.gz/download'\
+ -O boost.tar.gz
+test "$(shasum boost.tar.gz)" = "7804c782deb00f36ac80b1000b71a3707eadb620  boost.tar.gz"
+tar -xzf boost.tar.gz
+rm boost.tar.gz
+cd boost_1_70_0
+./bootstrap.sh
+wget -q 'https://raw.githubusercontent.com/tee3/boost-build-emscripten/master/emscripten.jam'
+test "$(shasum emscripten.jam)" = "a7e13fc2c1e53b0e079ef440622f879aa6da3049  emscripten.jam"
+echo "using emscripten : : em++ ;" >> project-config.jam
 )
 cd ..
 echo -en 'travis_fold:end:installing_dependencies\\r'

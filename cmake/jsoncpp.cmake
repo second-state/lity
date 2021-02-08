@@ -15,11 +15,18 @@ set(JSONCPP_INCLUDE_DIR "${prefix}/include")
 # versions used in the CI runs.
 if(EMSCRIPTEN)
     # Do not include all flags in CMAKE_CXX_FLAGS for emscripten,
-    # but only use -std=c++11. Using all flags causes build failures
+    # but only use -std=c++17. Using all flags causes build failures
     # at the moment.
-    set(JSONCPP_CXX_FLAGS -std=c++11)
+    set(JSONCPP_CXX_FLAGS -std=c++17)
 else()
-    set(JSONCPP_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+    # jsoncpp uses implicit casts for comparing integer and
+    # floating point numbers. This causes clang-10 (used by ossfuzz builder)
+    # to error on the implicit conversions. Here, we request jsoncpp
+    # to unconditionally use static casts for these conversions by defining the
+    # JSON_USE_INT64_DOUBLE_CONVERSION preprocessor macro. Doing so,
+    # not only gets rid of the implicit conversion error that clang-10 produces
+    # but also forces safer behavior in general.
+    set(JSONCPP_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DJSON_USE_INT64_DOUBLE_CONVERSION")
 endif()
 
 set(byproducts "")
@@ -35,7 +42,6 @@ ExternalProject_Add(jsoncpp-project
     URL_HASH SHA256=c49deac9e0933bcb7044f08516861a2d560988540b23de2ac1ad443b219afdb6
     CMAKE_COMMAND ${JSONCPP_CMAKE_COMMAND}
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-               -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                -DCMAKE_INSTALL_LIBDIR=lib
                # Build static lib but suitable to be included in a shared lib.
@@ -51,5 +57,6 @@ ExternalProject_Add(jsoncpp-project
 add_library(jsoncpp STATIC IMPORTED)
 file(MAKE_DIRECTORY ${JSONCPP_INCLUDE_DIR})  # Must exist.
 set_property(TARGET jsoncpp PROPERTY IMPORTED_LOCATION ${JSONCPP_LIBRARY})
+set_property(TARGET jsoncpp PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES ${JSONCPP_INCLUDE_DIR})
 set_property(TARGET jsoncpp PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${JSONCPP_INCLUDE_DIR})
 add_dependencies(jsoncpp jsoncpp-project)

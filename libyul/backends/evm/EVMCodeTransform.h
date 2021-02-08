@@ -18,82 +18,157 @@
  * Common code generator for translating Yul / inline assembly to EVM and EVM1.5.
  */
 
+#pragma once
+
 #include <libyul/backends/evm/EVMAssembly.h>
 
-#include <libyul/ASTDataForward.h>
-
-#include <libsolidity/inlineasm/AsmScope.h>
+#include <libyul/backends/evm/EVMDialect.h>
+#include <libyul/optimiser/ASTWalker.h>
+#include <libyul/AsmDataForward.h>
+#include <libyul/AsmScope.h>
 
 #include <boost/variant.hpp>
 #include <boost/optional.hpp>
 
-namespace dev
-{
-namespace solidity
+#include <stack>
+
+namespace langutil
 {
 class ErrorReporter;
-namespace assembly
-{
-struct AsmAnalysisInfo;
 }
-}
+
 namespace yul
 {
+struct AsmAnalysisInfo;
 class EVMAssembly;
+
+struct StackTooDeepError: virtual YulException
+{
+	StackTooDeepError(YulString _variable, int _depth): variable(_variable), depth(_depth) {}
+	StackTooDeepError(YulString _functionName, YulString _variable, int _depth):
+		functionName(_functionName), variable(_variable), depth(_depth)
+	{}
+	YulString functionName;
+	YulString variable;
+	int depth;
+};
+
+struct CodeTransformContext
+{
+	std::map<Scope::Label const*, AbstractAssembly::LabelID> labelIDs;
+	std::map<Scope::Function const*, AbstractAssembly::LabelID> functionEntryIDs;
+	std::map<Scope::Variable const*, int> variableStackHeights;
+	std::map<Scope::Variable const*, unsigned> variableReferences;
+
+	struct JumpInfo
+	{
+		AbstractAssembly::LabelID label;  ///< Jump's LabelID to jump to.
+		int targetStackHeight;            ///< Stack height after the jump.
+	};
+
+	struct ForLoopLabels
+	{
+		JumpInfo post; ///< Jump info for jumping to post branch.
+		JumpInfo done; ///< Jump info for jumping to done branch.
+	};
+
+	std::stack<ForLoopLabels> forLoopStack;
+};
+
+/**
+ * Counts the number of references to a variable. This includes actual (read) references
+ * but also assignments to the variable. It does not include the declaration itself or
+ * function parameters, but it does include function return parameters.
+ *
+ * This component can handle multiple variables of the same name.
+ *
+ * Can only be applied to strict assembly.
+ */
+class VariableReferenceCounter: public yul::ASTWalker
+{
+public:
+	explicit VariableReferenceCounter(
+		CodeTransformContext& _context,
+		AsmAnalysisInfo const& _assemblyInfo
+	): m_context(_context), m_info(_assemblyInfo)
+	{}
+
+public:
+	void operator()(Identifier const& _identifier);
+	void operator()(FunctionDefinition const&);
+	void operator()(ForLoop const&);
+	void operator()(Block const& _block);
+
+private:
+	void increaseRefIfFound(YulString _variableName);
+
+	CodeTransformContext& m_context;
+	AsmAnalysisInfo const& m_info;
+	Scope* m_scope = nullptr;
+};
 
 class CodeTransform: public boost::static_visitor<>
 {
 public:
 	/// Create the code transformer.
 	/// @param _identifierAccess used to resolve identifiers external to the inline assembly
+	/// As a side-effect of its construction, translates the Yul code and appends it to the
+	/// given assembly.
+	/// Throws StackTooDeepError if a variable is not accessible or if a function has too
+	/// many parameters.
 	CodeTransform(
-		yul::AbstractAssembly& _assembly,
-		solidity::assembly::AsmAnalysisInfo& _analysisInfo,
-		bool _yul = false,
+		AbstractAssembly& _assembly,
+		AsmAnalysisInfo& _analysisInfo,
+		Block const& _block,
+		EVMDialect const& _dialect,
+		BuiltinContext& _builtinContext,
+		bool _allowStackOpt = false,
 		bool _evm15 = false,
 		ExternalIdentifierAccess const& _identifierAccess = ExternalIdentifierAccess(),
 		bool _useNamedLabelsForFunctions = false
 	): CodeTransform(
 		_assembly,
 		_analysisInfo,
-		_yul,
+		_block,
+		_allowStackOpt,
+		_dialect,
+		_builtinContext,
 		_evm15,
 		_identifierAccess,
 		_useNamedLabelsForFunctions,
 		_assembly.stackHeight(),
-		std::make_shared<Context>()
+		nullptr
 	)
 	{
 	}
 
+	std::vector<StackTooDeepError> const& stackErrors() const { return m_stackErrors; }
+
 protected:
-	struct Context
-	{
-		using Scope = solidity::assembly::Scope;
-		std::map<Scope::Label const*, AbstractAssembly::LabelID> labelIDs;
-		std::map<Scope::Function const*, AbstractAssembly::LabelID> functionEntryIDs;
-		std::map<Scope::Variable const*, int> variableStackHeights;
-	};
+	using Context = CodeTransformContext;
 
 	CodeTransform(
-		yul::AbstractAssembly& _assembly,
-		solidity::assembly::AsmAnalysisInfo& _analysisInfo,
-		bool _yul,
+		AbstractAssembly& _assembly,
+		AsmAnalysisInfo& _analysisInfo,
+		Block const& _block,
+		bool _allowStackOpt,
+		EVMDialect const& _dialect,
+		BuiltinContext& _builtinContext,
 		bool _evm15,
 		ExternalIdentifierAccess const& _identifierAccess,
 		bool _useNamedLabelsForFunctions,
 		int _stackAdjustment,
 		std::shared_ptr<Context> _context
-	):
-		m_assembly(_assembly),
-		m_info(_analysisInfo),
-		m_yul(_yul),
-		m_evm15(_evm15),
-		m_useNamedLabelsForFunctions(_useNamedLabelsForFunctions),
-		m_identifierAccess(_identifierAccess),
-		m_stackAdjustment(_stackAdjustment),
-		m_context(_context)
-	{}
+	);
+
+	void decreaseReference(YulString _name, Scope::Variable const& _var);
+	bool unreferenced(Scope::Variable const& _var) const;
+	/// Marks slots of variables that are not used anymore
+	/// and were defined in the current scope for reuse.
+	/// Also POPs unused topmost stack slots.
+	void freeUnusedVariables();
+	/// Marks the stack slot of @a _var to be reused.
+	void deleteVariable(Scope::Variable const& _var);
 
 public:
 	void operator()(Instruction const& _instruction);
@@ -110,14 +185,16 @@ public:
 	void operator()(Switch const& _switch);
 	void operator()(FunctionDefinition const&);
 	void operator()(ForLoop const&);
+	void operator()(Break const&);
+	void operator()(Continue const&);
 	void operator()(Block const& _block);
 
 private:
 	AbstractAssembly::LabelID labelFromIdentifier(Identifier const& _identifier);
 	/// @returns the label ID corresponding to the given label, allocating a new one if
 	/// necessary.
-	AbstractAssembly::LabelID labelID(solidity::assembly::Scope::Label const& _label);
-	AbstractAssembly::LabelID functionEntryID(YulString _name, solidity::assembly::Scope::Function const& _function);
+	AbstractAssembly::LabelID labelID(Scope::Label const& _label);
+	AbstractAssembly::LabelID functionEntryID(YulString _name, Scope::Function const& _function);
 	/// Generates code for an expression that is supposed to return a single value.
 	void visitExpression(Expression const& _expression);
 
@@ -133,18 +210,28 @@ private:
 	/// Determines the stack height difference to the given variables. Throws
 	/// if it is not yet in scope or the height difference is too large. Returns
 	/// the (positive) stack height difference otherwise.
-	int variableHeightDiff(solidity::assembly::Scope::Variable const& _var, bool _forSwap) const;
+	int variableHeightDiff(Scope::Variable const& _var, YulString _name, bool _forSwap);
 
 	void expectDeposit(int _deposit, int _oldHeight) const;
 
 	void checkStackHeight(void const* _astElement) const;
 
-	yul::AbstractAssembly& m_assembly;
-	solidity::assembly::AsmAnalysisInfo& m_info;
-	solidity::assembly::Scope* m_scope = nullptr;
-	bool m_yul = false;
-	bool m_evm15 = false;
-	bool m_useNamedLabelsForFunctions = false;
+	/// Stores the stack error in the list of errors, appends an invalid opcode
+	/// and corrects the stack height to the target stack height.
+	void stackError(StackTooDeepError _error, int _targetStackSize);
+
+	/// Ensures stack height is down to @p _targetDepth by appending POP instructions to the output assembly.
+	/// Returns the number of POP statements that have been appended.
+	int appendPopUntil(int _targetDepth);
+
+	AbstractAssembly& m_assembly;
+	AsmAnalysisInfo& m_info;
+	Scope* m_scope = nullptr;
+	EVMDialect const& m_dialect;
+	BuiltinContext& m_builtinContext;
+	bool const m_allowStackOpt = true;
+	bool const m_evm15 = false;
+	bool const m_useNamedLabelsForFunctions = false;
 	ExternalIdentifierAccess m_identifierAccess;
 	/// Adjustment between the stack height as determined during the analysis phase
 	/// and the stack height in the assembly. This is caused by an initial stack being present
@@ -152,7 +239,14 @@ private:
 	/// (EVM 1.0 or 1.5).
 	int m_stackAdjustment = 0;
 	std::shared_ptr<Context> m_context;
+
+	/// Set of variables whose reference counter has reached zero,
+	/// and whose stack slot will be marked as unused once we reach
+	/// statement level in the scope where the variable was defined.
+	std::set<Scope::Variable const*> m_variablesScheduledForDeletion;
+	std::set<int> m_unusedStackSlots;
+
+	std::vector<StackTooDeepError> m_stackErrors;
 };
 
-}
 }

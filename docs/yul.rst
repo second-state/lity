@@ -6,21 +6,33 @@ Yul
 
 .. index:: ! assembly, ! asm, ! evmasm, ! yul, julia, iulia
 
-Yul (previously also called JULIA or IULIA) is an intermediate language that can
-compile to various different backends
-(EVM 1.0, EVM 1.5 and eWASM are planned).
-Because of that, it is designed to be a usable common denominator of all three
-platforms.
-It can already be used for "inline assembly" inside Solidity and
-future versions of the Solidity compiler will even use Yul as intermediate
-language. It should also be easy to build high-level optimizer stages for Yul.
+Yul (previously also called JULIA or IULIA) is an intermediate language that can be
+compiled to bytecode for different backends.
 
-.. note::
+Support for EVM 1.0, EVM 1.5 and eWASM is planned, and it is designed to be a usable common denominator of all three
+platforms. It can already be used for "inline assembly" inside Solidity and future versions of the Solidity compiler
+will use Yul as an intermediate language. Yul is a good target for high-level optimisation stages that can benefit all target platforms equally.
 
-    Note that the flavour used for "inline assembly" does not have types
-    (everything is ``u256``) and the built-in functions are identical
-    to the EVM opcodes. Please resort to the inline assembly documentation
-    for details.
+With the "inline assembly" flavour, Yul can be used as a language setting
+for the :ref:`standard-json interface <compiler-api>`:
+
+::
+
+    {
+        "language": "Yul",
+        "sources": { "input.yul": { "content": "{ sstore(0, 1) }" } },
+        "settings": {
+            "outputSelection": { "*": { "*": ["*"], "": [ "*" ] } },
+            "optimizer": { "enabled": true, "details": { "yul": true } }
+        }
+    }
+
+And on the command line interface with the ``--strict-assembly`` parameter.
+
+.. warning::
+
+    Yul is in active development and bytecode generation is fully implemented only for untyped Yul (everything is ``u256``)
+    and with EVM 1.0 as target, :ref:`EVM opcodes <opcodes>` are used as built-in functions.
 
 The core components of Yul are functions, blocks, variables, literals,
 for-loops, if-statements, switch-statements, expressions and assignments to variables.
@@ -35,20 +47,21 @@ if the backend changes. For a list of mandatory built-in functions, see the sect
 
 The following example program assumes that the EVM opcodes ``mul``, ``div``
 and ``mod`` are available either natively or as functions and computes exponentiation.
+As per the warning above, the following code is untyped and can be compiled using ``solc --strict-assembly``.
 
 .. code::
 
     {
-        function power(base:u256, exponent:u256) -> result:u256
+        function power(base, exponent) -> result
         {
             switch exponent
-            case 0:u256 { result := 1:u256 }
-            case 1:u256 { result := base }
+            case 0 { result := 1 }
+            case 1 { result := base }
             default
             {
-                result := power(mul(base, base), div(exponent, 2:u256))
-                switch mod(exponent, 2:u256)
-                    case 1:u256 { result := mul(base, result) }
+                result := power(mul(base, base), div(exponent, 2))
+                switch mod(exponent, 2)
+                    case 1 { result := mul(base, result) }
             }
         }
     }
@@ -60,10 +73,10 @@ and ``add`` to be available.
 .. code::
 
     {
-        function power(base:u256, exponent:u256) -> result:u256
+        function power(base, exponent) -> result
         {
-            result := 1:u256
-            for { let i := 0:u256 } lt(i, exponent) { i := add(i, 1:u256) }
+            result := 1
+            for { let i := 0 } lt(i, exponent) { i := add(i, 1) }
             {
                 result := mul(result, base)
             }
@@ -111,7 +124,7 @@ Grammar::
         'break' | 'continue'
     FunctionCall =
         Identifier '(' ( Expression ( ',' Expression )* )? ')'
-    Identifier = [a-zA-Z_$] [a-zA-Z_$0-9]*
+    Identifier = [a-zA-Z_$] [a-zA-Z_$0-9.]*
     IdentifierList = Identifier ( ',' Identifier)*
     TypeName = Identifier | BuiltinTypeName
     BuiltinTypeName = 'bool' | [us] ( '8' | '32' | '64' | '128' | '256' )
@@ -130,9 +143,10 @@ Restrictions on the Grammar
 ---------------------------
 
 Switches must have at least one case (including the default case).
-If all possible values of the expression is covered, the default case should
-not be allowed (i.e. a switch with a ``bool`` expression and having both a
-true and false case should not allow a default case).
+If all possible values of the expression are covered, a default case should
+not be allowed (i.e. a switch with a ``bool`` expression that has both a
+true and a false case should not allow a default case). All case values need to
+have the same type.
 
 Every expression evaluates to zero or more values. Identifiers and Literals
 evaluate to exactly
@@ -154,6 +168,7 @@ The ``continue`` and ``break`` statements can only be used inside loop bodies
 and have to be in the same function as the loop (or both have to be at the
 top level).
 The condition part of the for-loop has to evaluate to exactly one value.
+Functions cannot be defined inside for loop init blocks.
 
 Literals cannot be larger than the their type. The largest type defined is 256-bit wide.
 
@@ -171,7 +186,7 @@ As an exception, identifiers defined in the "init" part of the for-loop
 (the first block) are visible in all other parts of the for-loop
 (but not outside of the loop).
 Identifiers declared in the other parts of the for loop respect the regular
-syntatical scoping rules.
+syntactical scoping rules.
 The parameters and return parameters of functions are visible in the
 function body and their names cannot overlap.
 
@@ -229,14 +244,14 @@ We will use a destructuring notation for the AST nodes.
                 G1, L1, mode
     E(G, L, FunctionDefinition) =
         G, L, regular
-    E(G, L, <let var1, ..., varn := rhs>: VariableDeclaration) =
-        E(G, L, <var1, ..., varn := rhs>: Assignment)
-    E(G, L, <let var1, ..., varn>: VariableDeclaration) =
-        let L1 be a copy of L where L1[$vari] = 0 for i = 1, ..., n
+    E(G, L, <let var_1, ..., var_n := rhs>: VariableDeclaration) =
+        E(G, L, <var_1, ..., var_n := rhs>: Assignment)
+    E(G, L, <let var_1, ..., var_n>: VariableDeclaration) =
+        let L1 be a copy of L where L1[$var_i] = 0 for i = 1, ..., n
         G, L1, regular
-    E(G, L, <var1, ..., varn := rhs>: Assignment) =
+    E(G, L, <var_1, ..., var_n := rhs>: Assignment) =
         let G1, L1, v1, ..., vn = E(G, L, rhs)
-        let L2 be a copy of L1 where L2[$vari] = vi for i = 1, ..., n
+        let L2 be a copy of L1 where L2[$var_i] = vi for i = 1, ..., n
         G, L2, regular
     E(G, L, <for { i1, ..., in } condition post body>: ForLoop) =
         if n >= 1:
@@ -333,83 +348,83 @@ The following functions must be available:
 +---------------------------------------------------------------------------------------------------------------+
 | *Logic*                                                                                                       |
 +---------------------------------------------+-----------------------------------------------------------------+
-| not(x:bool) -> z:bool                       | logical not                                                     |
+| not(x:bool) ‑> z:bool                       | logical not                                                     |
 +---------------------------------------------+-----------------------------------------------------------------+
-| and(x:bool, y:bool) -> z:bool               | logical and                                                     |
+| and(x:bool, y:bool) ‑> z:bool               | logical and                                                     |
 +---------------------------------------------+-----------------------------------------------------------------+
-| or(x:bool, y:bool) -> z:bool                | logical or                                                      |
+| or(x:bool, y:bool) ‑> z:bool                | logical or                                                      |
 +---------------------------------------------+-----------------------------------------------------------------+
-| xor(x:bool, y:bool) -> z:bool               | xor                                                             |
+| xor(x:bool, y:bool) ‑> z:bool               | xor                                                             |
 +---------------------------------------------+-----------------------------------------------------------------+
 | *Arithmetic*                                                                                                  |
 +---------------------------------------------+-----------------------------------------------------------------+
-| addu256(x:u256, y:u256) -> z:u256           | x + y                                                           |
+| addu256(x:u256, y:u256) ‑> z:u256           | x + y                                                           |
 +---------------------------------------------+-----------------------------------------------------------------+
-| subu256(x:u256, y:u256) -> z:u256           | x - y                                                           |
+| subu256(x:u256, y:u256) ‑> z:u256           | x - y                                                           |
 +---------------------------------------------+-----------------------------------------------------------------+
-| mulu256(x:u256, y:u256) -> z:u256           | x * y                                                           |
+| mulu256(x:u256, y:u256) ‑> z:u256           | x * y                                                           |
 +---------------------------------------------+-----------------------------------------------------------------+
-| divu256(x:u256, y:u256) -> z:u256           | x / y                                                           |
+| divu256(x:u256, y:u256) ‑> z:u256           | x / y                                                           |
 +---------------------------------------------+-----------------------------------------------------------------+
-| divs256(x:s256, y:s256) -> z:s256           | x / y, for signed numbers in two's complement                   |
+| divs256(x:s256, y:s256) ‑> z:s256           | x / y, for signed numbers in two's complement                   |
 +---------------------------------------------+-----------------------------------------------------------------+
-| modu256(x:u256, y:u256) -> z:u256           | x % y                                                           |
+| modu256(x:u256, y:u256) ‑> z:u256           | x % y                                                           |
 +---------------------------------------------+-----------------------------------------------------------------+
-| mods256(x:s256, y:s256) -> z:s256           | x % y, for signed numbers in two's complement                   |
+| mods256(x:s256, y:s256) ‑> z:s256           | x % y, for signed numbers in two's complement                   |
 +---------------------------------------------+-----------------------------------------------------------------+
-| signextendu256(i:u256, x:u256) -> z:u256    | sign extend from (i*8+7)th bit counting from least significant  |
+| signextendu256(i:u256, x:u256) ‑> z:u256    | sign extend from (i*8+7)th bit counting from least significant  |
 +---------------------------------------------+-----------------------------------------------------------------+
-| expu256(x:u256, y:u256) -> z:u256           | x to the power of y                                             |
+| expu256(x:u256, y:u256) ‑> z:u256           | x to the power of y                                             |
 +---------------------------------------------+-----------------------------------------------------------------+
-| addmodu256(x:u256, y:u256, m:u256) -> z:u256| (x + y) % m with arbitrary precision arithmetic                 |
+| addmodu256(x:u256, y:u256, m:u256) ‑> z:u256| (x + y) % m with arbitrary precision arithmetic                 |
 +---------------------------------------------+-----------------------------------------------------------------+
-| mulmodu256(x:u256, y:u256, m:u256) -> z:u256| (x * y) % m with arbitrary precision arithmetic                 |
+| mulmodu256(x:u256, y:u256, m:u256) ‑> z:u256| (x * y) % m with arbitrary precision arithmetic                 |
 +---------------------------------------------+-----------------------------------------------------------------+
-| ltu256(x:u256, y:u256) -> z:bool            | true if x < y, false otherwise                                  |
+| ltu256(x:u256, y:u256) ‑> z:bool            | true if x < y, false otherwise                                  |
 +---------------------------------------------+-----------------------------------------------------------------+
-| gtu256(x:u256, y:u256) -> z:bool            | true if x > y, false otherwise                                  |
+| gtu256(x:u256, y:u256) ‑> z:bool            | true if x > y, false otherwise                                  |
 +---------------------------------------------+-----------------------------------------------------------------+
-| sltu256(x:s256, y:s256) -> z:bool           | true if x < y, false otherwise                                  |
+| lts256(x:s256, y:s256) ‑> z:bool            | true if x < y, false otherwise                                  |
 |                                             | (for signed numbers in two's complement)                        |
 +---------------------------------------------+-----------------------------------------------------------------+
-| sgtu256(x:s256, y:s256) -> z:bool           | true if x > y, false otherwise                                  |
+| gts256(x:s256, y:s256) ‑> z:bool            | true if x > y, false otherwise                                  |
 |                                             | (for signed numbers in two's complement)                        |
 +---------------------------------------------+-----------------------------------------------------------------+
-| equ256(x:u256, y:u256) -> z:bool            | true if x == y, false otherwise                                 |
+| equ256(x:u256, y:u256) ‑> z:bool            | true if x == y, false otherwise                                 |
 +---------------------------------------------+-----------------------------------------------------------------+
-| iszerou256(x:u256) -> z:bool                | true if x == 0, false otherwise                                 |
+| iszerou256(x:u256) ‑> z:bool                | true if x == 0, false otherwise                                 |
 +---------------------------------------------+-----------------------------------------------------------------+
-| notu256(x:u256) -> z:u256                   | ~x, every bit of x is negated                                   |
+| notu256(x:u256) ‑> z:u256                   | ~x, every bit of x is negated                                   |
 +---------------------------------------------+-----------------------------------------------------------------+
-| andu256(x:u256, y:u256) -> z:u256           | bitwise and of x and y                                          |
+| andu256(x:u256, y:u256) ‑> z:u256           | bitwise and of x and y                                          |
 +---------------------------------------------+-----------------------------------------------------------------+
-| oru256(x:u256, y:u256) -> z:u256            | bitwise or of x and y                                           |
+| oru256(x:u256, y:u256) ‑> z:u256            | bitwise or of x and y                                           |
 +---------------------------------------------+-----------------------------------------------------------------+
-| xoru256(x:u256, y:u256) -> z:u256           | bitwise xor of x and y                                          |
+| xoru256(x:u256, y:u256) ‑> z:u256           | bitwise xor of x and y                                          |
 +---------------------------------------------+-----------------------------------------------------------------+
-| shlu256(x:u256, y:u256) -> z:u256           | logical left shift of x by y                                    |
+| shlu256(x:u256, y:u256) ‑> z:u256           | logical left shift of x by y                                    |
 +---------------------------------------------+-----------------------------------------------------------------+
-| shru256(x:u256, y:u256) -> z:u256           | logical right shift of x by y                                   |
+| shru256(x:u256, y:u256) ‑> z:u256           | logical right shift of x by y                                   |
 +---------------------------------------------+-----------------------------------------------------------------+
-| saru256(x:u256, y:u256) -> z:u256           | arithmetic right shift of x by y                                |
+| sars256(x:s256, y:u256) ‑> z:u256           | arithmetic right shift of x by y                                |
 +---------------------------------------------+-----------------------------------------------------------------+
-| byte(n:u256, x:u256) -> v:u256              | nth byte of x, where the most significant byte is the 0th byte  |
+| byte(n:u256, x:u256) ‑> v:u256              | nth byte of x, where the most significant byte is the 0th byte  |
 |                                             | Cannot this be just replaced by and256(shr256(n, x), 0xff) and  |
 |                                             | let it be optimised out by the EVM backend?                     |
 +---------------------------------------------+-----------------------------------------------------------------+
 | *Memory and storage*                                                                                          |
 +---------------------------------------------+-----------------------------------------------------------------+
-| mload(p:u256) -> v:u256                     | mem[p..(p+32))                                                  |
+| mload(p:u256) ‑> v:u256                     | mem[p..(p+32))                                                  |
 +---------------------------------------------+-----------------------------------------------------------------+
 | mstore(p:u256, v:u256)                      | mem[p..(p+32)) := v                                             |
 +---------------------------------------------+-----------------------------------------------------------------+
 | mstore8(p:u256, v:u256)                     | mem[p] := v & 0xff    - only modifies a single byte             |
 +---------------------------------------------+-----------------------------------------------------------------+
-| sload(p:u256) -> v:u256                     | storage[p]                                                      |
+| sload(p:u256) ‑> v:u256                     | storage[p]                                                      |
 +---------------------------------------------+-----------------------------------------------------------------+
 | sstore(p:u256, v:u256)                      | storage[p] := v                                                 |
 +---------------------------------------------+-----------------------------------------------------------------+
-| msize() -> size:u256                        | size of memory, i.e. largest accessed memory index, albeit due  |
+| msize() ‑> size:u256                        | size of memory, i.e. largest accessed memory index, albeit due  |
 |                                             | due to the memory extension function, which extends by words,   |
 |                                             | this will always be a multiple of 32 bytes                      |
 +---------------------------------------------+-----------------------------------------------------------------+
@@ -427,15 +442,15 @@ The following functions must be available:
 | call(g:u256, a:u256, v:u256, in:u256,       | call contract at address a with input mem[in..(in+insize))      |
 | insize:u256, out:u256,                      | providing g gas and v wei and output area                       |
 | outsize:u256)                               | mem[out..(out+outsize)) returning 0 on error (eg. out of gas)   |
-| -> r:u256                                   | and 1 on success                                                |
+| ‑> r:u256                                   | and 1 on success                                                |
 +---------------------------------------------+-----------------------------------------------------------------+
 | callcode(g:u256, a:u256, v:u256, in:u256,   | identical to ``call`` but only use the code from a              |
 | insize:u256, out:u256,                      | and stay in the context of the                                  |
-| outsize:u256) -> r:u256                     | current contract otherwise                                      |
+| outsize:u256) ‑> r:u256                     | current contract otherwise                                      |
 +---------------------------------------------+-----------------------------------------------------------------+
 | delegatecall(g:u256, a:u256, in:u256,       | identical to ``callcode``,                                      |
 | insize:u256, out:u256,                      | but also keep ``caller``                                        |
-| outsize:u256) -> r:u256                     | and ``callvalue``                                               |
+| outsize:u256) ‑> r:u256                     | and ``callvalue``                                               |
 +---------------------------------------------+-----------------------------------------------------------------+
 | abort()                                     | abort (equals to invalid instruction on EVM)                    |
 +---------------------------------------------+-----------------------------------------------------------------+
@@ -459,43 +474,43 @@ The following functions must be available:
 +---------------------------------------------+-----------------------------------------------------------------+
 | *State queries*                                                                                               |
 +---------------------------------------------+-----------------------------------------------------------------+
-| blockcoinbase() -> address:u256             | current mining beneficiary                                      |
+| blockcoinbase() ‑> address:u256             | current mining beneficiary                                      |
 +---------------------------------------------+-----------------------------------------------------------------+
-| blockdifficulty() -> difficulty:u256        | difficulty of the current block                                 |
+| blockdifficulty() ‑> difficulty:u256        | difficulty of the current block                                 |
 +---------------------------------------------+-----------------------------------------------------------------+
-| blockgaslimit() -> limit:u256               | block gas limit of the current block                            |
+| blockgaslimit() ‑> limit:u256               | block gas limit of the current block                            |
 +---------------------------------------------+-----------------------------------------------------------------+
-| blockhash(b:u256) -> hash:u256              | hash of block nr b - only for last 256 blocks excluding current |
+| blockhash(b:u256) ‑> hash:u256              | hash of block nr b - only for last 256 blocks excluding current |
 +---------------------------------------------+-----------------------------------------------------------------+
-| blocknumber() -> block:u256                 | current block number                                            |
+| blocknumber() ‑> block:u256                 | current block number                                            |
 +---------------------------------------------+-----------------------------------------------------------------+
-| blocktimestamp() -> timestamp:u256          | timestamp of the current block in seconds since the epoch       |
+| blocktimestamp() ‑> timestamp:u256          | timestamp of the current block in seconds since the epoch       |
 +---------------------------------------------+-----------------------------------------------------------------+
-| txorigin() -> address:u256                  | transaction sender                                              |
+| txorigin() ‑> address:u256                  | transaction sender                                              |
 +---------------------------------------------+-----------------------------------------------------------------+
-| txgasprice() -> price:u256                  | gas price of the transaction                                    |
+| txgasprice() ‑> price:u256                  | gas price of the transaction                                    |
 +---------------------------------------------+-----------------------------------------------------------------+
-| gasleft() -> gas:u256                       | gas still available to execution                                |
+| gasleft() ‑> gas:u256                       | gas still available to execution                                |
 +---------------------------------------------+-----------------------------------------------------------------+
-| balance(a:u256) -> v:u256                   | wei balance at address a                                        |
+| balance(a:u256) ‑> v:u256                   | wei balance at address a                                        |
 +---------------------------------------------+-----------------------------------------------------------------+
-| this() -> address:u256                      | address of the current contract / execution context             |
+| this() ‑> address:u256                      | address of the current contract / execution context             |
 +---------------------------------------------+-----------------------------------------------------------------+
-| caller() -> address:u256                    | call sender (excluding delegatecall)                            |
+| caller() ‑> address:u256                    | call sender (excluding delegatecall)                            |
 +---------------------------------------------+-----------------------------------------------------------------+
-| callvalue() -> v:u256                       | wei sent together with the current call                         |
+| callvalue() ‑> v:u256                       | wei sent together with the current call                         |
 +---------------------------------------------+-----------------------------------------------------------------+
-| calldataload(p:u256) -> v:u256              | call data starting from position p (32 bytes)                   |
+| calldataload(p:u256) ‑> v:u256              | call data starting from position p (32 bytes)                   |
 +---------------------------------------------+-----------------------------------------------------------------+
-| calldatasize() -> v:u256                    | size of call data in bytes                                      |
+| calldatasize() ‑> v:u256                    | size of call data in bytes                                      |
 +---------------------------------------------+-----------------------------------------------------------------+
 | calldatacopy(t:u256, f:u256, s:u256)        | copy s bytes from calldata at position f to mem at position t   |
 +---------------------------------------------+-----------------------------------------------------------------+
-| codesize() -> size:u256                     | size of the code of the current contract / execution context    |
+| codesize() ‑> size:u256                     | size of the code of the current contract / execution context    |
 +---------------------------------------------+-----------------------------------------------------------------+
 | codecopy(t:u256, f:u256, s:u256)            | copy s bytes from code at position f to mem at position t       |
 +---------------------------------------------+-----------------------------------------------------------------+
-| extcodesize(a:u256) -> size:u256            | size of the code at address a                                   |
+| extcodesize(a:u256) ‑> size:u256            | size of the code at address a                                   |
 +---------------------------------------------+-----------------------------------------------------------------+
 | extcodecopy(a:u256, t:u256, f:u256, s:u256) | like codecopy(t, f, s) but take code at address a               |
 +---------------------------------------------+-----------------------------------------------------------------+
@@ -507,13 +522,23 @@ The following functions must be available:
 +---------------------------------------------+-----------------------------------------------------------------+
 | discardu256(unused:u256)                    | discard value                                                   |
 +---------------------------------------------+-----------------------------------------------------------------+
-| splitu256tou64(x:u256) -> (x1:u64, x2:u64,  | split u256 to four u64's                                        |
+| splitu256tou64(x:u256) ‑> (x1:u64, x2:u64,  | split u256 to four u64's                                        |
 | x3:u64, x4:u64)                             |                                                                 |
 +---------------------------------------------+-----------------------------------------------------------------+
 | combineu64tou256(x1:u64, x2:u64, x3:u64,    | combine four u64's into a single u256                           |
-| x4:u64) -> (x:u256)                         |                                                                 |
+| x4:u64) ‑> (x:u256)                         |                                                                 |
 +---------------------------------------------+-----------------------------------------------------------------+
-| keccak256(p:u256, s:u256) -> v:u256         | keccak(mem[p...(p+s)))                                          |
+| keccak256(p:u256, s:u256) ‑> v:u256         | keccak(mem[p...(p+s)))                                          |
++---------------------------------------------+-----------------------------------------------------------------+
+| *Object access*                             |                                                                 |
++---------------------------------------------+-----------------------------------------------------------------+
+| datasize(name:string) ‑> size:u256          | size of the data object in bytes, name has to be string literal |
++---------------------------------------------+-----------------------------------------------------------------+
+| dataoffset(name:string) ‑> offset:u256      | offset of the data object inside the data area in bytes,        |
+|                                             | name has to be string literal                                   |
++---------------------------------------------+-----------------------------------------------------------------+
+| datacopy(dst:u256, src:u256, len:u256)      | copy len bytes from the data area starting at offset src bytes  |
+|                                             | to memory at position dst                                       |
 +---------------------------------------------+-----------------------------------------------------------------+
 
 Backends
@@ -540,12 +565,18 @@ TBD
 Specification of Yul Object
 ===========================
 
+Yul objects are used to group named code and data sections.
+The functions ``datasize``, ``dataoffset`` and ``datacopy``
+can be used to access these sections from within code.
+Hex strings can be used to specify data in hex encoding,
+regular strings in native encoding. For code,
+``datacopy`` will access its assembled binary representation.
+
 Grammar::
 
-    TopLevelObject = 'object' '{' Code? ( Object | Data )* '}'
-    Object = 'object' StringLiteral '{' Code? ( Object | Data )* '}'
+    Object = 'object' StringLiteral '{' Code ( Object | Data )* '}'
     Code = 'code' Block
-    Data = 'data' StringLiteral HexLiteral
+    Data = 'data' StringLiteral ( HexLiteral | StringLiteral )
     HexLiteral = 'hex' ('"' ([0-9a-fA-F]{2})* '"' | '\'' ([0-9a-fA-F]{2})* '\'')
     StringLiteral = '"' ([^"\r\n\\] | '\\' .)* '"'
 
@@ -558,14 +589,34 @@ An example Yul Object is shown below:
     // Code consists of a single object. A single "code" node is the code of the object.
     // Every (other) named object or data section is serialized and
     // made accessible to the special built-in functions datacopy / dataoffset / datasize
-    object {
+    // Access to nested objects can be performed by joining the names using ``.``.
+    // The current object and sub-objects and data items inside the current object
+    // are in scope without nested access.
+    object "Contract1" {
         code {
-            let size = datasize("runtime")
-            let offset = allocate(size)
+            function allocate(size) -> ptr {
+                ptr := mload(0x40)
+                if iszero(ptr) { ptr := 0x60 }
+                mstore(0x40, add(ptr, size))
+            }
+
+            // first create "runtime.Contract2"
+            let size := datasize("runtime.Contract2")
+            let offset := allocate(size)
             // This will turn into a memory->memory copy for eWASM and
             // a codecopy for EVM
-            datacopy(dataoffset("runtime"), offset, size)
-            // this is a constructor and the runtime code is returned
+            datacopy(offset, dataoffset("runtime.Contract2"), size)
+            // constructor parameter is a single number 0x1234
+            mstore(add(offset, size), 0x1234)
+            pop(create(offset, add(size, 32), 0))
+
+            // now return the runtime object (this is
+            // constructor code)
+            size := datasize("runtime")
+            offset := allocate(size)
+            // This will turn into a memory->memory copy for eWASM and
+            // a codecopy for EVM
+            datacopy(offset, dataoffset("runtime"), size)
             return(offset, size)
         }
 
@@ -573,16 +624,22 @@ An example Yul Object is shown below:
 
         object "runtime" {
             code {
+                function allocate(size) -> ptr {
+                    ptr := mload(0x40)
+                    if iszero(ptr) { ptr := 0x60 }
+                    mstore(0x40, add(ptr, size))
+                }
+
                 // runtime code
 
-                let size = datasize("Contract2")
-                let offset = allocate(size)
+                let size := datasize("Contract2")
+                let offset := allocate(size)
                 // This will turn into a memory->memory copy for eWASM and
                 // a codecopy for EVM
-                datacopy(dataoffset("Contract2"), offset, size)
+                datacopy(offset, dataoffset("Contract2"), size)
                 // constructor parameter is a single number 0x1234
                 mstore(add(offset, size), 0x1234)
-                create(offset, add(size, 32))
+                pop(create(offset, add(size, 32), 0))
             }
 
             // Embedded object. Use case is that the outside is a factory contract,
@@ -596,9 +653,9 @@ An example Yul Object is shown below:
                     code {
                         // code here ...
                     }
-                 }
+                }
 
-                 data "Table1" hex"4123"
+                data "Table1" hex"4123"
             }
         }
     }

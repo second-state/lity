@@ -20,11 +20,11 @@
 
 #include <libyul/optimiser/NameCollector.h>
 
-#include <libsolidity/inlineasm/AsmData.h>
+#include <libyul/AsmData.h>
 
 using namespace std;
 using namespace dev;
-using namespace dev::yul;
+using namespace yul;
 
 void NameCollector::operator()(VariableDeclaration const& _varDecl)
 {
@@ -60,6 +60,13 @@ map<YulString, size_t> ReferencesCounter::countReferences(Block const& _block)
 	return counter.references();
 }
 
+map<YulString, size_t> ReferencesCounter::countReferences(FunctionDefinition const& _function)
+{
+	ReferencesCounter counter;
+	counter(_function);
+	return counter.references();
+}
+
 map<YulString, size_t> ReferencesCounter::countReferences(Expression const& _expression)
 {
 	ReferencesCounter counter;
@@ -71,4 +78,30 @@ void Assignments::operator()(Assignment const& _assignment)
 {
 	for (auto const& var: _assignment.variableNames)
 		m_names.emplace(var.name);
+}
+
+
+void AssignmentsSinceContinue::operator()(ForLoop const& _forLoop)
+{
+	m_forLoopDepth++;
+	ASTWalker::operator()(_forLoop);
+	m_forLoopDepth--;
+}
+
+void AssignmentsSinceContinue::operator()(Continue const&)
+{
+	if (m_forLoopDepth == 0)
+		m_continueFound = true;
+}
+
+void AssignmentsSinceContinue::operator()(Assignment const& _assignment)
+{
+	if (m_continueFound)
+		for (auto const& var: _assignment.variableNames)
+			m_names.emplace(var.name);
+}
+
+void AssignmentsSinceContinue::operator()(FunctionDefinition const&)
+{
+	yulAssert(false, "");
 }

@@ -21,14 +21,66 @@
  */
 
 #include <libsolidity/analysis/StaticAnalyzer.h>
+
 #include <libsolidity/analysis/ConstantEvaluator.h>
 #include <libsolidity/ast/AST.h>
-#include <libsolidity/interface/ErrorReporter.h>
+#include <liblangutil/ErrorReporter.h>
 #include <memory>
 
 using namespace std;
 using namespace dev;
+using namespace langutil;
 using namespace dev::solidity;
+
+/**
+ * Helper class that determines whether a contract's constructor uses inline assembly.
+ */
+class dev::solidity::ConstructorUsesAssembly
+{
+public:
+	/// @returns true if and only if the contract's or any of its bases' constructors
+	/// use inline assembly.
+	bool check(ContractDefinition const& _contract)
+	{
+		for (auto const* base: _contract.annotation().linearizedBaseContracts)
+			if (checkInternal(*base))
+				return true;
+		return false;
+	}
+
+
+private:
+	class Checker: public ASTConstVisitor
+	{
+	public:
+		Checker(FunctionDefinition const& _f) { _f.accept(*this); }
+		bool visit(InlineAssembly const&) override { assemblySeen = true; return false; }
+		bool assemblySeen = false;
+	};
+
+	bool checkInternal(ContractDefinition const& _contract)
+	{
+		if (!m_usesAssembly.count(&_contract))
+		{
+			bool usesAssembly = false;
+			if (_contract.constructor())
+				usesAssembly = Checker{*_contract.constructor()}.assemblySeen;
+			m_usesAssembly[&_contract] = usesAssembly;
+		}
+		return m_usesAssembly[&_contract];
+	}
+
+	map<ContractDefinition const*, bool> m_usesAssembly;
+};
+
+StaticAnalyzer::StaticAnalyzer(ErrorReporter& _errorReporter):
+	m_errorReporter(_errorReporter)
+{
+}
+
+StaticAnalyzer::~StaticAnalyzer()
+{
+}
 
 bool StaticAnalyzer::analyze(SourceUnit const& _sourceUnit)
 {
@@ -62,21 +114,21 @@ bool StaticAnalyzer::visit(FunctionDefinition const& _function)
 
 void StaticAnalyzer::endVisit(FunctionDefinition const&)
 {
-	m_currentFunction = nullptr;
-	m_constructor = false;
-	for (auto const& var: m_localVarUseCount)
-		if (var.second == 0)
-		{
-			if (var.first.second->isCallableParameter())
-				m_errorReporter.warning(
-					var.first.second->location(),
-					"Unused function parameter. Remove or comment out the variable name to silence this warning."
-				);
-			else
-				m_errorReporter.warning(var.first.second->location(), "Unused local variable.");
-		}
-
+	if (m_currentFunction && !m_currentFunction->body().statements().empty())
+		for (auto const& var: m_localVarUseCount)
+			if (var.second == 0)
+			{
+				if (var.first.second->isCallableParameter())
+					m_errorReporter.warning(
+						var.first.second->location(),
+						"Unused function parameter. Remove or comment out the variable name to silence this warning."
+					);
+				else
+					m_errorReporter.warning(var.first.second->location(), "Unused local variable.");
+			}
 	m_localVarUseCount.clear();
+	m_constructor = false;
+	m_currentFunction = nullptr;
 }
 
 bool StaticAnalyzer::visit(Identifier const& _identifier)
@@ -138,7 +190,7 @@ bool StaticAnalyzer::visit(ExpressionStatement const& _statement)
 
 bool StaticAnalyzer::visit(MemberAccess const& _memberAccess)
 {
-	if (MagicType const* type = dynamic_cast<MagicType const*>(_memberAccess.expression().annotation().type.get()))
+	if (MagicType const* type = dynamic_cast<MagicType const*>(_memberAccess.expression().annotation().type))
 	{
 		if (type->kind() == MagicType::Kind::Message && _memberAccess.memberName() == "gas")
 			m_errorReporter.typeError(
@@ -150,10 +202,22 @@ bool StaticAnalyzer::visit(MemberAccess const& _memberAccess)
 				_memberAccess.location(),
 				"\"block.blockhash()\" has been deprecated in favor of \"blockhash()\""
 			);
+		else if (type->kind() == MagicType::Kind::MetaType && _memberAccess.memberName() == "runtimeCode")
+		{
+			if (!m_constructorUsesAssembly)
+				m_constructorUsesAssembly = make_unique<ConstructorUsesAssembly>();
+			ContractType const& contract = dynamic_cast<ContractType const&>(*type->typeArgument());
+			if (m_constructorUsesAssembly->check(contract.contractDefinition()))
+				m_errorReporter.warning(
+					_memberAccess.location(),
+					"The constructor of the contract (or its base) uses inline assembly. "
+					"Because of that, it might be that the deployed bytecode is different from type(...).runtimeCode."
+				);
+		}
 	}
 
 	if (_memberAccess.memberName() == "callcode")
-		if (auto const* type = dynamic_cast<FunctionType const*>(_memberAccess.annotation().type.get()))
+		if (auto const* type = dynamic_cast<FunctionType const*>(_memberAccess.annotation().type))
 			if (type->kind() == FunctionType::Kind::BareCallCode)
 				m_errorReporter.typeError(
 					_memberAccess.location(),
@@ -224,7 +288,7 @@ bool StaticAnalyzer::visit(BinaryOperation const& _operation)
 		_operation.rightExpression().annotation().isPure &&
 		(_operation.getOperator() == Token::Div || _operation.getOperator() == Token::Mod)
 	)
-		if (auto rhs = dynamic_pointer_cast<RationalNumberType const>(
+		if (auto rhs = dynamic_cast<RationalNumberType const*>(
 			ConstantEvaluator(m_errorReporter).evaluate(_operation.rightExpression())
 		))
 			if (rhs->isZero())
@@ -240,13 +304,13 @@ bool StaticAnalyzer::visit(FunctionCall const& _functionCall)
 {
 	if (_functionCall.annotation().kind == FunctionCallKind::FunctionCall)
 	{
-		auto functionType = dynamic_pointer_cast<FunctionType const>(_functionCall.expression().annotation().type);
+		auto functionType = dynamic_cast<FunctionType const*>(_functionCall.expression().annotation().type);
 		solAssert(functionType, "");
 		if (functionType->kind() == FunctionType::Kind::AddMod || functionType->kind() == FunctionType::Kind::MulMod)
 		{
 			solAssert(_functionCall.arguments().size() == 3, "");
 			if (_functionCall.arguments()[2]->annotation().isPure)
-				if (auto lastArg = dynamic_pointer_cast<RationalNumberType const>(
+				if (auto lastArg = dynamic_cast<RationalNumberType const*>(
 					ConstantEvaluator(m_errorReporter).evaluate(*(_functionCall.arguments())[2])
 				))
 					if (lastArg->isZero())
@@ -255,6 +319,19 @@ bool StaticAnalyzer::visit(FunctionCall const& _functionCall)
 							"Arithmetic modulo zero."
 						);
 		}
+		if (
+			m_currentContract->isLibrary() &&
+			functionType->kind() == FunctionType::Kind::DelegateCall &&
+			functionType->declaration().scope() == m_currentContract
+		)
+			m_errorReporter.typeError(
+				_functionCall.location(),
+				SecondarySourceLocation().append(
+					"The function declaration is here:",
+					functionType->declaration().scope()->location()
+				),
+				"Libraries cannot call their own functions externally."
+			);
 	}
 	return true;
 }

@@ -22,13 +22,15 @@
 
 #include <string>
 #include <memory>
-#include <libsolidity/parsing/Scanner.h>
+#include <liblangutil/Scanner.h>
 #include <libsolidity/parsing/Parser.h>
-#include <libsolidity/interface/ErrorReporter.h>
+#include <liblangutil/ErrorReporter.h>
 #include <test/Options.h>
 #include <test/libsolidity/ErrorCheck.h>
+#include <libsolidity/ast/ASTVisitor.h>
 
 using namespace std;
+using namespace langutil;
 
 namespace dev
 {
@@ -39,10 +41,14 @@ namespace test
 
 namespace
 {
-ASTPointer<ContractDefinition> parseText(std::string const& _source, ErrorList& _errors)
+ASTPointer<ContractDefinition> parseText(std::string const& _source, ErrorList& _errors, bool errorRecovery = false)
 {
 	ErrorReporter errorReporter(_errors);
-	ASTPointer<SourceUnit> sourceUnit = Parser(errorReporter).parse(std::make_shared<Scanner>(CharStream(_source)));
+	ASTPointer<SourceUnit> sourceUnit = Parser(
+		errorReporter,
+		dev::test::Options::get().evmVersion(),
+		errorRecovery
+	).parse(std::make_shared<Scanner>(CharStream(_source, "")));
 	if (!sourceUnit)
 		return ASTPointer<ContractDefinition>();
 	for (ASTPointer<ASTNode> const& node: sourceUnit->nodes())
@@ -73,12 +79,12 @@ bool successParse(std::string const& _source)
 	return true;
 }
 
-Error getError(std::string const& _source)
+Error getError(std::string const& _source, bool errorRecovery = false)
 {
 	ErrorList errors;
 	try
 	{
-		parseText(_source, errors);
+		parseText(_source, errors, errorRecovery);
 	}
 	catch (FatalError const& /*_exception*/)
 	{
@@ -111,6 +117,35 @@ while(0)
 
 
 BOOST_AUTO_TEST_SUITE(SolidityParser)
+
+BOOST_AUTO_TEST_CASE(unsatisfied_version)
+{
+	char const* text = R"(
+		pragma solidity ^99.99.0;
+	)";
+	CHECK_PARSE_ERROR(text, "Source file requires different compiler version");
+}
+
+BOOST_AUTO_TEST_CASE(unsatisfied_version_followed_by_invalid_syntax)
+{
+	char const* text = R"(
+		pragma solidity ^99.99.0;
+		this is surely invalid
+	)";
+	CHECK_PARSE_ERROR(text, "Source file requires different compiler version");
+}
+
+BOOST_AUTO_TEST_CASE(unsatisfied_version_with_recovery)
+{
+	char const* text = R"(
+		pragma solidity ^99.99.0;
+		contract test {
+			uint ;
+		}
+	)";
+	Error err = getError(text, true);
+	BOOST_CHECK(searchErrorMessage(err, "Expected identifier but got ';'"));
+}
 
 BOOST_AUTO_TEST_CASE(function_natspec_documentation)
 {
@@ -521,13 +556,12 @@ BOOST_AUTO_TEST_CASE(keyword_is_reserved)
 		"supports",
 		"switch",
 		"try",
-		"type",
 		"typedef",
 		"typeof",
 		"unchecked"
 	};
 
-	for (const auto& keyword: keywords)
+	for (auto const& keyword: keywords)
 	{
 		auto text = std::string("contract ") + keyword + " {}";
 		CHECK_PARSE_ERROR(text.c_str(), string("Expected identifier but got reserved keyword '") + keyword + "'");
@@ -612,6 +646,42 @@ BOOST_AUTO_TEST_CASE(recursion_depth4)
 		text += "++)";
 	text += "}}";
 	CHECK_PARSE_ERROR(text, "Maximum recursion depth reached during parsing");
+}
+
+BOOST_AUTO_TEST_CASE(inline_asm_end_location)
+{
+	auto sourceCode = std::string(R"(
+	contract C {
+		function f() public pure returns (uint y) {
+			uint a;
+			assembly { a := 0x12345678 }
+			uint z = a;
+			y = z;
+		}
+	}
+	)");
+	ErrorList errors;
+	auto contract = parseText(sourceCode, errors);
+
+	class CheckInlineAsmLocation: public ASTConstVisitor
+	{
+	public:
+		bool visited = false;
+		virtual bool visit(InlineAssembly const& _inlineAsm)
+		{
+			auto loc = _inlineAsm.location();
+			auto asmStr = loc.source->source().substr(loc.start, loc.end - loc.start);
+			BOOST_CHECK_EQUAL(asmStr, "assembly { a := 0x12345678 }");
+			visited = true;
+
+			return false;
+		}
+	};
+
+	CheckInlineAsmLocation visitor;
+	contract->accept(visitor);
+
+	BOOST_CHECK_MESSAGE(visitor.visited, "No inline asm block found?!");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

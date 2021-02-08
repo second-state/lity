@@ -18,12 +18,12 @@
 #pragma once
 
 #include <libevmasm/Instruction.h>
-#include <libevmasm/SourceLocation.h>
+#include <liblangutil/SourceLocation.h>
 #include <libevmasm/AssemblyItem.h>
 #include <libevmasm/LinkerObject.h>
 #include <libevmasm/Exceptions.h>
 
-#include <libsolidity/interface/EVMVersion.h>
+#include <liblangutil/EVMVersion.h>
 
 #include <libdevcore/Common.h>
 #include <libdevcore/Assertions.h>
@@ -45,8 +45,6 @@ using AssemblyPointer = std::shared_ptr<Assembly>;
 class Assembly
 {
 public:
-	Assembly() {}
-
 	AssemblyItem newTag() { assertThrow(m_usedTags < 0xffffffff, AssemblyException, ""); return AssemblyItem(Tag, m_usedTags++); }
 	AssemblyItem newPushTag() { assertThrow(m_usedTags < 0xffffffff, AssemblyException, ""); return AssemblyItem(PushTag, m_usedTags++); }
 	/// Returns a tag identified by the given name. Creates it if it does not yet exist.
@@ -70,10 +68,10 @@ public:
 	void appendProgramSize() { append(AssemblyItem(PushProgramSize)); }
 	void appendLibraryAddress(std::string const& _identifier) { append(newPushLibraryAddress(_identifier)); }
 
-	AssemblyItem appendJump() { auto ret = append(newPushTag()); append(solidity::Instruction::JUMP); return ret; }
-	AssemblyItem appendJumpI() { auto ret = append(newPushTag()); append(solidity::Instruction::JUMPI); return ret; }
-	AssemblyItem appendJump(AssemblyItem const& _tag) { auto ret = append(_tag.pushTag()); append(solidity::Instruction::JUMP); return ret; }
-	AssemblyItem appendJumpI(AssemblyItem const& _tag) { auto ret = append(_tag.pushTag()); append(solidity::Instruction::JUMPI); return ret; }
+	AssemblyItem appendJump() { auto ret = append(newPushTag()); append(Instruction::JUMP); return ret; }
+	AssemblyItem appendJumpI() { auto ret = append(newPushTag()); append(Instruction::JUMPI); return ret; }
+	AssemblyItem appendJump(AssemblyItem const& _tag) { auto ret = append(_tag.pushTag()); append(Instruction::JUMP); return ret; }
+	AssemblyItem appendJumpI(AssemblyItem const& _tag) { auto ret = append(_tag.pushTag()); append(Instruction::JUMPI); return ret; }
 
 	/// Adds a subroutine to the code (in the data section) and pushes its size (via a tag)
 	/// on the stack. @returns the pushsub assembly item.
@@ -88,12 +86,15 @@ public:
 	/// Returns the assembly items.
 	AssemblyItems const& items() const { return m_items; }
 
+	/// Returns the mutable assembly items. Use with care!
+	AssemblyItems& items() { return m_items; }
+
 	int deposit() const { return m_deposit; }
 	void adjustDeposit(int _adjustment) { m_deposit += _adjustment; assertThrow(m_deposit >= 0, InvalidDeposit, ""); }
 	void setDeposit(int _deposit) { m_deposit = _deposit; assertThrow(m_deposit >= 0, InvalidDeposit, ""); }
 
 	/// Changes the source location used for each appended item.
-	void setSourceLocation(SourceLocation const& _location) { m_currentSourceLocation = _location; }
+	void setSourceLocation(langutil::SourceLocation const& _location) { m_currentSourceLocation = _location; }
 
 	/// Assembles the assembly into bytecode. The assembly should not be modified after this call, since the assembled version is cached.
 	LinkerObject const& assemble() const;
@@ -106,13 +107,14 @@ public:
 		bool runDeduplicate = false;
 		bool runCSE = false;
 		bool runConstantOptimiser = false;
-		solidity::EVMVersion evmVersion;
+		langutil::EVMVersion evmVersion;
 		/// This specifies an estimate on how often each opcode in this assembly will be executed,
 		/// i.e. use a small value to optimise for size and a large value to optimise for runtime gas usage.
 		size_t expectedExecutionsPerDeployment = 200;
 	};
 
-	/// Execute optimisation passes as defined by @a _settings and return the optimised assembly.
+	/// Modify and return the current assembly such that creation and execution gas usage
+	/// is optimised according to the settings in @a _settings.
 	Assembly& optimise(OptimiserSettings const& _settings);
 
 	/// Modify (if @a _enable is set) and return the current assembly such that creation and
@@ -120,7 +122,7 @@ public:
 	/// @a _runs specifes an estimate on how often each opcode in this assembly will be executed,
 	/// i.e. use a small value to optimise for size and a large value to optimise for runtime.
 	/// If @a _enable is not set, will perform some simple peephole optimizations.
-	Assembly& optimise(bool _enable, EVMVersion _evmVersion, bool _isCreation = true, size_t _runs = 200);
+	Assembly& optimise(bool _enable, langutil::EVMVersion _evmVersion, bool _isCreation, size_t _runs);
 
 	/// Create a text representation of the assembly.
 	std::string assemblyString(
@@ -153,7 +155,7 @@ protected:
 	/// Does the same operations as @a optimise, but should only be applied to a sub and
 	/// returns the replaced tags. Also takes an argument containing the tags of this assembly
 	/// that are referenced in a super-assembly.
-	std::map<u256, u256> optimiseInternal(OptimiserSettings const& _settings, std::set<size_t> const& _tagsReferencedFromOutside);
+	std::map<u256, u256> optimiseInternal(OptimiserSettings const& _settings, std::set<size_t> _tagsReferencedFromOutside);
 
 	unsigned bytesRequired(unsigned subTagSize) const;
 
@@ -178,7 +180,7 @@ protected:
 
 	int m_deposit = 0;
 
-	SourceLocation m_currentSourceLocation;
+	langutil::SourceLocation m_currentSourceLocation;
 };
 
 inline std::ostream& operator<<(std::ostream& _out, Assembly const& _a)

@@ -29,6 +29,7 @@
 #include <memory>
 
 using namespace std;
+using namespace dev::test;
 
 namespace dev
 {
@@ -107,6 +108,19 @@ BOOST_AUTO_TEST_CASE(variables)
 	)";
 	compileAndRun(sourceCode);
 	BOOST_CHECK(callFallback() == encodeArgs(u256(488)));
+}
+
+BOOST_AUTO_TEST_CASE(with)
+{
+	char const* sourceCode = R"(
+		(returnlll
+			(seq
+				(set 'x 11)
+				(with 'y 22 { [0]:(+ (get 'x) (get 'y)) })
+				(return 0 32)))
+	)";
+	compileAndRun(sourceCode);
+	BOOST_CHECK(callFallback() == toBigEndian(u256(33)));
 }
 
 BOOST_AUTO_TEST_CASE(when)
@@ -995,9 +1009,19 @@ BOOST_AUTO_TEST_CASE(sub_assemblies)
 	compileAndRun(sourceCode);
 	bytes ret = callFallback();
 	BOOST_REQUIRE(ret.size() == 32);
-	u256 rVal = u256(toHex(ret, 2, HexPrefix::Add));
+	u256 rVal = u256(toHex(ret, HexPrefix::Add));
 	BOOST_CHECK(rVal != 0);
 	BOOST_CHECK(rVal < u256("0x10000000000000000000000000000000000000000"));
+}
+
+BOOST_AUTO_TEST_CASE(string_literal)
+{
+	char const* sourceCode = R"(
+		(returnlll
+			(return "hello"))
+	)";
+	compileAndRun(sourceCode);
+	BOOST_CHECK(callFallback() == encodeArgs(u256("0x68656c6c6f000000000000000000000000000000000000000000000000000000")));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
