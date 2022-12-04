@@ -106,7 +106,7 @@ cp /tmp/${packagename}_${debversion}.orig.tar.gz ../
 # Create debian package information
 
 mkdir debian
-echo 9 > debian/compat
+echo 13 > debian/compat
 cat <<EOF > debian/control
 Source: solc
 Section: science
